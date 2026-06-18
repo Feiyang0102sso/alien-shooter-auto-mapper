@@ -106,12 +106,18 @@ namespace auto_mapper {
         // Output all levels to std::cout to prevent out-of-order printing in IDEs (like CLion) 
         // which read stdout and stderr via separate asynchronous pipes.
         std::cout << color_code << console_line << reset_code << "\n";
-        std::cout.flush();
 
         if (log_file.is_open()) {
             // log file no need for coloring, but includes source location
             log_file << file_line << "\n";
-            log_file.flush();
+        }
+
+        // Optimize flush: Only flush immediately on WARNING or ERROR to improve I/O performance
+        if (level == Level::WARNING || level == Level::ERROR) {
+            std::cout.flush();
+            if (log_file.is_open()) {
+                log_file.flush();
+            }
         }
     }
 
