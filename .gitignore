@@ -1,0 +1,56 @@
+# --- IDE configuration file ---
+.idea/
+.vscode/
+
+# --- Python cached files (standard ignore) ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# --- pyproject / env ---
+*.egg-info/
+.venv/
+venv/
+ENV/
+.env
+
+# --- LOGS ---
+*.log
+*.tmp
+
+# --- C / C++ / CMake ---
+build*/
+build_cmake/
+cmake-build-*/
+bin/
+obj/
+lib/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# --- Project Specific (Auto Mapper) ---
+*.map
+!empty.map
+!*_sample.map
+
+# --- testing / output ---
+tests/output/
+test_output.map
+
+# --- some personal note ---
+_personal_note/
+*.bat

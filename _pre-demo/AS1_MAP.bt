@@ -1,0 +1,318 @@
+//------------------------------------------------
+//--- 010 Editor v15.0.2 Binary Template
+//
+//      File: AS1_MAP.bt
+//   Authors: Feiyang
+//   Version: 1.0
+//   Purpose: Parse Alien Shooter 1 / Zombie Shooter 1 map files (RES container)
+//  Category: Game
+// File Mask: *.map
+//  ID Bytes: 52 45 53 20 // "RES "
+//   History: 1.0 - 2026-06-15 - Initial release
+//------------------------------------------------
+
+
+// MAP header fixed
+struct FileHeader {
+    char    RES_Magic[4];           // "RES "
+    uint32  mapSize;                // map size
+    char    MAP_Magic[4] ;          // "MAP "
+};
+
+// GRPH data fixed
+struct GRPH_Data {
+    char    GRAPH_Magic[4];         // "GRPH"
+    uint32  graphSize;              // graph data size fixed 0x24
+    
+    uint32  options <format=hex>;   // option, usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+          
+    uint32  envSize;                // sub section env size fixed 0x14
+    uint32  isShadow;               // whether turn on shadow ?
+    uint32  gammaDarker;            // BGR (UI * 2) (when GRB < 128)
+    uint32  gammaLighter;           // BGR 2 * (255 - UI) (when GRB > 128)
+    uint32  windDirection;          // wind direction default 200
+    float   windSpeed;              // wind speed default 25 / 1000 = 0.025
+};
+
+// HEAD data fixed
+struct HEAD_Data {
+    char    HEAD_Magic[4];          // "HEAD"
+    uint32  headSize;               // head data size fixed 0x28
+    
+    uint32  options <format=hex>;   // option, usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+    
+    uint32  mapInfoSize;            // sub section map info size fixed 0x18
+    float   mapSizeX;               // map width
+    float   mapSizeY;               // map height
+    float   mapCamaraX;             // Default camera X on load
+    float   mapCamaraY;             // Default camera Y on load
+    uint32  currentTime;            // elapsed time
+    int32   version;                // version number, AS1/ZS1 map is 0x0C  
+};
+
+// single spirit record fixed 0x1c bytes for AS1/ZS1
+struct SpriteRecord {
+    uint32  objectId;               // ID
+    int32   vid;                    // VID Num
+    float   posX;                   // Coor X
+    float   posY;                   // Coor Y
+    float   posZ;                   // Coor Z
+    uint32  direction;              // dir
+    int32   army;                   // Army
+};
+
+// SPR data variable
+struct SPR_Data
+{
+    char    SPR_Magic[4];          // "SPR "
+    uint32  sprSize;               // spr data size 
+    
+    uint32  options <format=hex>;  // option, usually 0x80000000
+    uint32  packedDiff;            // differ when packed or compressed, usually 0
+    uint32  subresourceCount;      // sub_no, here it is fixed 1
+    
+    uint32  sprInfoSize;           // sub section spr info size, variable
+
+   
+    local int count = (sprInfoSize - 4) / sizeof(SpriteRecord);
+    SpriteRecord sprites[count];
+
+    uint32 terminator <format=hex>;;
+};
+
+string commandIdFormat(uint32 val) {
+    switch(val) {
+        
+        // ANI_*
+        case 0: return "ANI_STAND (0)";
+        case 1: return "ANI_STOP_MOVE_ANI_BUILD (1)";
+        case 2: return "ANI_GO (2)";
+        case 3: return "ANI_START_MOVE (3)";
+        case 4: return "ANI_L_ROTATE (4)";
+        case 5: return "ANI_R_ROTATE (5)";
+        case 6: return "ANI_OPEN (6)";
+        case 7: return "ANI_HIT (7)";
+        case 8: return "ANI_FIGHT (8)";
+        case 9: return "ANI_SALUT (9)";
+        case 10: return "ANI_STAND_OPEN (10)";
+        case 11: return "ANI_CLASH_VERT (11)";
+        case 12: return "ANI_LAZY_ANI_CLASH (12)";
+        case 13: return "ANI_WOUND (13)";
+        case 14: return "ANI_BIRTH (14)";
+        case 15: return "ANI_DEATH (15)";
+        case 16: return "ANI_DEATH2 (16)";
+
+        // ACT_*
+        case 32: return "ACT_ATTACK (32)";
+        case 33: return "ACT_MOVE (33)";
+        case 34: return "ACT_MOVE_TO (34)";
+        case 35: return "ACT_BUILD_UNIT (35)";
+        case 36: return "ACT_PATROL (36)";
+        case 37: return "ACT_COOR_ATTACK (37)";
+        case 38: return "ACT_RANDOM (38)";
+        case 39: return "ACT_STOP (39)";
+        case 40: return "ACT_PAUSE (40)";
+        case 41: return "ACT_ROTATE (41)";
+        case 43: return "ACT_FLAGMAN_TRIGGER (43)";
+        case 62: return "ACT_CHANGE_VID (62)";
+        case 63: return "ACT_CHANGE_COOR (63)";
+        case 71: return "ACT_GOTO_STACK (71)";
+        case 72: return "ACT_CLEAR_STACK (72)";
+        case 73: return "ACT_STOP_STACK (73)";
+        case 79: return "ACT_WHILE_NOT_SCRIPT_VAR (79)";
+        case 85: return "ACT_DAMAGE (85)";
+        case 88: return "ACT_SET_HP (88)";
+        case 91: return "ACT_SET_GOAL_COOR (91)";
+        case 95: return "ACT_SET_BEHAVE (95)";
+        case 97: return "ACT_SET_ARMY (97)";
+        case 98: return "ACT_SET_INVISIBLE (98)";
+        case 102: return "ACT_SET_LINK (102)";
+        case 104: return "ACT_SET_UPLINK (104)";
+        case 131: return "ACT_SCRIPT_VAR (131)";
+        case 134: return "ACT_DESTROY_UNIT (134)";
+        case 135: return "ACT_PLAY_SFX (135)";
+        
+        default:
+            string s;
+            SPrintf(s, "ERROR: UNKNOWN_COMMAND (%u)", val);
+            // Warning("Unknown command ID: %u at 0x%X", val, FTell());
+            return s;
+    }
+}
+
+// single command in the stack with its paras 4 * 4 bytes
+// some paras can be -1 ... rare
+struct SingleCommandRecord {
+    uint32 actionId <read=commandIdFormat>;
+    uint32 param1;
+    uint32 param2;
+    uint32 param3;
+};
+
+// stack that contains all commands
+struct CommandStack {
+    uint32 cmdCount;
+
+    if(cmdCount > 0)
+        SingleCommandRecord commands[cmdCount];
+};
+
+// list that contain all drop loot
+struct DropList {
+    uint32 itemCount;
+
+    if(itemCount > 0)
+        uint32 itemVids[itemCount];
+};
+
+string BehaviorFormat(uint32 value)
+{
+    
+    // should not greater than 0x07
+    if(value > 7) 
+    {
+        string errorStr;
+        SPrintf(errorStr, "ERROR: Bahavior > 0x07"); 
+        return errorStr;
+    }
+    
+    string s = "";
+
+    if(value & 1)
+        s += "Aggressive ";
+
+    if(value & 2)
+        s += "Active ";
+
+    if(value & 4)
+        s += "Careful ";
+
+    if(s == "")
+        s = "None";
+
+    return s;
+}
+
+// struct for each sub section
+// size + ID + command stack (if has) + drop list (if has) + bahave (if has)
+// if no command or drop list, 00 00 00 00 will be filled
+struct SPRD_Sub
+{
+    uint32 subSize;                 // total size for each subs
+
+    if (subSize == 4)               // last sub with terminator
+    {
+        uint32 terminator <format=hex>;
+    }
+    else
+    {
+        // FTell return int64, so here use int64
+        local int64 payloadStart = FTell();
+
+        uint32 objectId;           // ID
+
+        CommandStack commandStack;
+        DropList     dropList;
+
+        local uint32 consumed =
+            (uint32)(FTell() - payloadStart);
+
+        local uint32 remaining =
+            subSize - consumed;
+
+        if (remaining == 4)
+        {
+            uint32 behavior <read=BehaviorFormat>;
+        }
+        else if (remaining > 0)
+        {
+            Warning(
+                "Unexpected %u bytes remaining in SPRD_Sub at 0x%X",
+                remaining,
+                FTell()
+            );
+
+            ubyte unknown[remaining];
+        }
+    }
+};
+
+
+// SPRD Data variable
+struct SPRD_Data {
+    char    SPRD_Magic[4];          // "SPRD"
+    uint32  sprdSize;               // sprd data size
+    
+    uint32  options  <format=hex>;  // option, usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, variable, spr_no + 1 (with terminator)
+    SPRD_Sub subs[subresourceCount] <optimize=false>; // all subs, including last terminator
+    
+};
+
+// PLAY data fixed
+struct PLAY_Data {
+    char    PLAY_Magic[4];          // "PLAY"
+    uint32  playSize;               // play data size fixed 0x20
+    
+    uint32  options <format=hex>;   // option, usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+    
+    uint32  playInfoSize;           // play info size fixed 0x10
+    
+    uint32  player1_ObjectId;       // P1 ID
+    uint32  player2_ObjectId;       // P2 ID
+    uint32  player3_ObjectId;       // P3 ID
+    uint32  player4_ObjectId;       // P4 ID
+};
+
+// each group and its member
+struct Group {
+    
+    while ( ReadUInt(FTell()) != 0xFFFFFFFF ) {
+        uint32 member_ObjectId; 
+    }
+    
+    uint32 groupTerminator <format=hex>;
+};
+
+
+// GROU data variable
+struct GROU_Data {
+    char    GROU_Magic[4];          // "GROU"
+    uint32  groupSize;              // group data size variable
+    
+    uint32  options <format=hex>;   // option, usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+    
+    uint32  groupInfoSize;          // group info size variable
+    
+    if ( groupInfoSize > 0 ) {
+        local int64 startPos = FTell();
+        
+        while ( (FTell() - startPos < groupInfoSize) && 
+                (ReadUInt(FTell()) != 0xFFFFFFFF) ) {
+            Group group; // add each group
+        }
+        
+        // last 4 byte is the global terminator
+        if ( FTell() - startPos < groupInfoSize ) {
+            uint32 globalTerminator <format=hex>; 
+        }
+    }
+    
+};
+
+FileHeader  fileHeader  <bgcolor=cLtBlue>;
+GRPH_Data   graph       <bgcolor=cLtGreen>;
+HEAD_Data   mapHead     <bgcolor=cLtPurple>;
+SPR_Data    spr         <bgcolor=cLtRed>;
+SPRD_Data   sprd        <bgcolor=cLtYellow>;
+PLAY_Data   play        <bgcolor=cAqua>;
+GROU_Data   group       <bgcolor=cDkPurple>;
