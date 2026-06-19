@@ -23,6 +23,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 # set src as root, so, #include "auto_mapper/common/logger.h"
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+include(FetchContent)
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG        v1.13.0
+)
+FetchContent_MakeAvailable(spdlog)
+
 # common/
 set(COMMON_SOURCES
     src/auto_mapper/common/config.cpp
@@ -31,7 +39,8 @@ set(COMMON_SOURCES
 
 # static libs
 add_library(auto_mapper_common STATIC ${COMMON_SOURCES})
+target_link_libraries(auto_mapper_common PUBLIC spdlog::spdlog)
 
 # main
-add_executable(manual_test tests/manual_test.cpp)
+add_executable(manual_test tests/manual_test_config.cpp)
 target_link_libraries(manual_test PRIVATE auto_mapper_common)
