@@ -41,6 +41,18 @@ set(COMMON_SOURCES
 add_library(auto_mapper_common STATIC ${COMMON_SOURCES})
 target_link_libraries(auto_mapper_common PUBLIC spdlog::spdlog)
 
+# io/
+set(IO_SOURCES
+    src/auto_mapper/io/map_writer.cpp
+)
+add_library(auto_mapper_io STATIC ${IO_SOURCES})
+target_link_libraries(auto_mapper_io PUBLIC auto_mapper_common)
+
 # main
 add_executable(manual_test tests/manual_test_config.cpp)
 target_link_libraries(manual_test PRIVATE auto_mapper_common)
+
+# test map writer
+add_executable(manual_test_map_writer tests/manual_test_map_writer.cpp)
+target_link_libraries(manual_test_map_writer PRIVATE auto_mapper_io)
+
