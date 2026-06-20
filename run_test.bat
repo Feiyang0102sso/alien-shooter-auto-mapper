@@ -10,10 +10,18 @@ echo === Running config ^& logger test ===
 
 echo.
 echo === Running map writer test ===
-.\bin\manual_test_map_writer.exe
+.\bin\test_map_writer.exe
+
+echo.
+echo === Running geometry test ===
+.\bin\test_geometry.exe
+
+echo.
+echo === Running wall builder test ===
+.\bin\test_wall_builder.exe
 
 echo.
 echo === Unpacking map output ===
-python _pre-demo\as1_map_unpack.py test_cpp_output.map
+python _pre-demo\as1_map_unpack.py test_wall_builder_output.map
 
 @pause

@@ -48,11 +48,30 @@ set(IO_SOURCES
 add_library(auto_mapper_io STATIC ${IO_SOURCES})
 target_link_libraries(auto_mapper_io PUBLIC auto_mapper_common)
 
-# main
+# core/
+set(CORE_SOURCES
+    src/auto_mapper/core/geometry.cpp
+    src/auto_mapper/core/wall_builder.cpp
+)
+add_library(auto_mapper_core STATIC ${CORE_SOURCES})
+target_link_libraries(auto_mapper_core PUBLIC auto_mapper_common auto_mapper_io)
+
+# main executable
+add_executable(auto_mapper src/auto_mapper/main.cpp)
+target_link_libraries(auto_mapper PRIVATE auto_mapper_core auto_mapper_io auto_mapper_common)
+
+# manual test config
 add_executable(manual_test tests/manual_test_config.cpp)
 target_link_libraries(manual_test PRIVATE auto_mapper_common)
 
 # test map writer
-add_executable(manual_test_map_writer tests/manual_test_map_writer.cpp)
-target_link_libraries(manual_test_map_writer PRIVATE auto_mapper_io)
+add_executable(test_map_writer tests/test_map_writer.cpp)
+target_link_libraries(test_map_writer PRIVATE auto_mapper_io)
 
+# test geometry
+add_executable(test_geometry tests/test_geometry.cpp)
+target_link_libraries(test_geometry PRIVATE auto_mapper_core)
+
+# test wall builder
+add_executable(test_wall_builder tests/test_wall_builder.cpp)
+target_link_libraries(test_wall_builder PRIVATE auto_mapper_core auto_mapper_io)
