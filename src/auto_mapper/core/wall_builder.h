@@ -19,13 +19,14 @@ struct Segment {
 
 class WallBuilder {
 public:
-    WallBuilder(float map_size_x = 600.0f, float map_size_y = 600.0f);
+    WallBuilder(int grid_size = 20, float map_size_x = 600.0f, float map_size_y = 600.0f);
 
     // Core pipeline: Segments -> Rasterize ->
     // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.
     std::vector<io::Sprite> build(const std::vector<Segment>& segments) const;
 
 private:
+    int grid_size_;
     float map_size_x_;
     float map_size_y_;
 };

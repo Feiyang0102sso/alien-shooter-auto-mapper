@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
     Logger::init();
     
     if (argc < 2) {
-        std::cerr << "Usage: auto_mapper.exe <output_map_path>\n";
+        std::cerr << "Usage: auto_mapper.exe <output_map_path> [grid_size]\n";
         std::cerr << "Provide segments via stdin in format: x1 y1 x2 y2\n";
         return 1;
     }
@@ -31,10 +31,22 @@ int main(int argc, char** argv) {
         std::cout << "WARNING: No segments received.\n";
     }
 
-    core::WallBuilder builder(600.0f, 600.0f);
+    int grid_size = 20;
+    float map_size_x = 600.0f;
+    float map_size_y = 600.0f;
+    
+    if (argc >= 3) {
+        grid_size = std::stoi(argv[2]);
+    }
+    if (argc >= 5) {
+        map_size_x = std::stof(argv[3]);
+        map_size_y = std::stof(argv[4]);
+    }
+
+    core::WallBuilder builder(grid_size, map_size_x, map_size_y);
     std::vector<io::Sprite> sprites = builder.build(segments);
     
-    if (io::write_map(sprites, output_path, 600.0f, 600.0f)) {
+    if (io::write_map(sprites, output_path, map_size_x, map_size_y)) {
         Logger::info("Successfully generated map: {}", output_path);
         std::cout << "SUCCESS: " << sprites.size() << " sprites generated into " << output_path << "\n";
         return 0;

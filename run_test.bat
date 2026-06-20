@@ -22,6 +22,6 @@ echo === Running wall builder test ===
 
 echo.
 echo === Unpacking map output ===
-python _pre-demo\as1_map_unpack.py test_wall_builder_output.map
+REM python _pre-demo\as1_map_unpack.py test_wall_builder_output.map
 
 @pause

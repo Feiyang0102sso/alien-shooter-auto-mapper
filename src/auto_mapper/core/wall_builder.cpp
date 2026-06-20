@@ -4,14 +4,18 @@
  */
 
 #include "auto_mapper/core/wall_builder.h"
-#include <set>
+#include "auto_mapper/core/geometry.h"
+#include "auto_mapper/common/logger.h"
 #include <algorithm>
+#include <cmath>
+#include <set>
+#include <map>
 #include <utility>
 
 namespace auto_mapper::core {
 
-WallBuilder::WallBuilder(float map_size_x, float map_size_y)
-    : map_size_x_(map_size_x), map_size_y_(map_size_y) {}
+WallBuilder::WallBuilder(int grid_size, float map_size_x, float map_size_y)
+    : grid_size_(grid_size), map_size_x_(map_size_x), map_size_y_(map_size_y) {}
 
 std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments) const {
     using Point = std::pair<int, int>;
@@ -98,7 +102,8 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
         return (a.gx + a.gy) < (b.gx + b.gy);
     });
 
-    // 5. Calculate global center shift using bounding box
+    // 5. Calculate global center shift using bbox for top-left alignment
+    // no longer used
     BoundingBox bbox;
     for (const auto& rs : raw_sprites) {
         MapPoint pos = to_iso({rs.gx, rs.gy}, {0.0f, 0.0f});
@@ -108,7 +113,20 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
         }
         bbox.expand(pos);
     }
-    MapPoint shift = calculate_shift(bbox, map_size_x_, map_size_y_);
+
+    // Origin Shift for grid (0,0)
+    MapPoint shift;
+    float raw_shift_x = map_size_x_ / 2.0f;
+    float raw_shift_y = 14.0f;
+
+    // Snap to Grid
+    float grid_x = std::round((raw_shift_x - 20.0f) / 40.0f);
+    shift.x = grid_x * 40.0f + 20.0f;
+    float grid_y = std::round((raw_shift_y - 14.0f) / 28.0f);
+    shift.y = grid_y * 28.0f + 14.0f;
+
+    // padding for top
+    shift.y += 28.0f;
 
     // 6. Generate final io::Sprite list
     std::vector<io::Sprite> final_sprites;

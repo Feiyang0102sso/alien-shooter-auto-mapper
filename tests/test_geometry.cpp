@@ -75,14 +75,14 @@ int main() {
     //
     // 吸附计算：
     // grid_x = round((300 - 20) / 40) = round(280 / 40) = 7
-    // final_shift_x = 7 * 40 + 20 = 300
+    // final_shift_x = 7 * 40 + 20 + 80(padding) = 380
     //
     // grid_y = round((300 - 14) / 28) = round(286 / 28) = 10
-    // final_shift_y = 10 * 28 + 14 = 294
+    // final_shift_y = 10 * 28 + 14 + 56(padding) = 350
 
     MapPoint calc_shift = calculate_shift(box2, 600.0f, 600.0f);
-    assert_eq(calc_shift.x, 300.0f, "calculate_shift.x");
-    assert_eq(calc_shift.y, 294.0f, "calculate_shift.y");
+    assert_eq(calc_shift.x, 380.0f, "calculate_shift.x");
+    assert_eq(calc_shift.y, 350.0f, "calculate_shift.y");
 
     Logger::info("====================================");
     if (failed == 0) {
