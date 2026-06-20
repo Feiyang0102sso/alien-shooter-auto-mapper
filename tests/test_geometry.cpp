@@ -30,24 +30,24 @@ int main() {
     // Test 1: to_iso WITHOUT shift
     Logger::info("--- Test to_iso (No Shift) ---");
     GridPoint g1{0, 0};
-    Point2D p1 = to_iso(g1);
+    MapPoint p1 = to_iso(g1);
     assert_eq(p1.x, 0.0f, "to_iso(0,0).x");
     assert_eq(p1.y, 0.0f, "to_iso(0,0).y");
 
     GridPoint g2{1, 0}; // x+1 -> posX +40, posY +28
-    Point2D p2 = to_iso(g2);
+    MapPoint p2 = to_iso(g2);
     assert_eq(p2.x, 40.0f, "to_iso(1,0).x");
     assert_eq(p2.y, 28.0f, "to_iso(1,0).y");
 
     GridPoint g3{0, 1}; // y+1 -> posX -40, posY +28
-    Point2D p3 = to_iso(g3);
+    MapPoint p3 = to_iso(g3);
     assert_eq(p3.x, -40.0f, "to_iso(0,1).x");
     assert_eq(p3.y, 28.0f, "to_iso(0,1).y");
 
     // Test 2: to_iso WITH shift
     Logger::info("--- Test to_iso (With Shift) ---");
-    Point2D shift{100.0f, 200.0f};
-    Point2D p4 = to_iso(g2, shift);
+    MapPoint shift{100.0f, 200.0f};
+    MapPoint p4 = to_iso(g2, shift);
     assert_eq(p4.x, 140.0f, "to_iso(1,0, shift).x");
     assert_eq(p4.y, 228.0f, "to_iso(1,0, shift).y");
 
@@ -80,7 +80,7 @@ int main() {
     // grid_y = round((300 - 14) / 28) = round(286 / 28) = 10
     // final_shift_y = 10 * 28 + 14 = 294
 
-    Point2D calc_shift = calculate_shift(box2, 600.0f, 600.0f);
+    MapPoint calc_shift = calculate_shift(box2, 600.0f, 600.0f);
     assert_eq(calc_shift.x, 300.0f, "calculate_shift.x");
     assert_eq(calc_shift.y, 294.0f, "calculate_shift.y");
 

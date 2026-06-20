@@ -1,3 +1,8 @@
+/**
+ * @file wall_builder.h
+ * @brief Builder class for generating wall and pillar sprites from segment sequences.
+ */
+
 #pragma once
 
 #include "auto_mapper/core/geometry.h"
@@ -6,7 +11,7 @@
 
 namespace auto_mapper::core {
 
-// 一条用户拖拽并被前端纠偏后的直线线段
+// A straight line segment drawn by the user and snapped to grid by frontend.
 struct Segment {
     GridPoint start;
     GridPoint end;
@@ -16,7 +21,8 @@ class WallBuilder {
 public:
     WallBuilder(float map_size_x = 600.0f, float map_size_y = 600.0f);
 
-    // 核心管线：线段 -> 光栅化 -> 交点计算 -> Z-Order 排序 -> 偏置应用 -> 精灵生成
+    // Core pipeline: Segments -> Rasterize ->
+    // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.
     std::vector<io::Sprite> build(const std::vector<Segment>& segments) const;
 
 private:

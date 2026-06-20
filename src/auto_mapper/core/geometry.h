@@ -1,21 +1,27 @@
+/**
+ * @file geometry.h
+ * @brief code for isometric projection coordinate transformation
+ * and geometric bounding boxes
+ */
+
 #pragma once
 #include <algorithm>
 
 namespace auto_mapper::core {
 
-// 物理坐标点 (像素)
-struct Point2D {
+// pixels that draw on Map Editor
+struct MapPoint {
     float x;
     float y;
 };
 
-// 逻辑网格点
+// grid user draw on canvas
 struct GridPoint {
     int x;
     int y;
 };
 
-// 物理空间的二维包围盒
+// bounding box for map points
 struct BoundingBox {
     float min_x = 0.0f;
     float max_x = 0.0f;
@@ -23,8 +29,8 @@ struct BoundingBox {
     float max_y = 0.0f;
     bool initialized = false;
 
-    // 工具方法：根据传入的点扩展自身的包围盒边界
-    void expand(const Point2D& p) {
+    // Expand its bounding box boundary based on the input point.
+    void expand(const MapPoint& p) {
         if (!initialized) {
             min_x = max_x = p.x;
             min_y = max_y = p.y;
@@ -38,26 +44,22 @@ struct BoundingBox {
     }
 };
 
-// 核心常量：等轴测投影跨度步长
+// Isometric projection span step for maps
 constexpr float STEP_X = 40.0f;
 constexpr float STEP_Y = 28.0f;
 
 /**
- * 将逻辑格点 (x, y) 转换为等轴测物理坐标
- * 公式:
+ * Convert grid points (x, y) to isometric ME coordinates.
+ * formular:
  *   posX = (gx - gy) * STEP_X + shift.x
  *   posY = (gx + gy) * STEP_Y + shift.y
  */
-Point2D to_iso(const GridPoint& grid, const Point2D& shift = {0.0f, 0.0f});
+MapPoint to_iso(const GridPoint& grid, const MapPoint& shift = {0.0f, 0.0f});
 
 /**
- * 计算居中偏移量，并强制进行编辑器引擎网格吸附
- *
- * @param bbox 在 shift=(0,0) 情况下，所有物件物理坐标构成的包围盒
- * @param map_size_x 地图物理尺寸宽度
- * @param map_size_y 地图物理尺寸高度
- * @return 计算出的偏置量 (shift_x, shift_y)
+ * Calculate and move the entire building to center of the map
+ * let them also snap to grid
  */
-Point2D calculate_shift(const BoundingBox& bbox, float map_size_x, float map_size_y);
+MapPoint calculate_shift(const BoundingBox& bbox, float map_size_x, float map_size_y);
 
 } // namespace auto_mapper::core
