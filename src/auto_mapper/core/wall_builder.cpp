@@ -102,17 +102,8 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
         return (a.gx + a.gy) < (b.gx + b.gy);
     });
 
-    // 5. Calculate global center shift using bbox for top-left alignment
-    // no longer used
-    BoundingBox bbox;
-    for (const auto& rs : raw_sprites) {
-        MapPoint pos = to_iso({rs.gx, rs.gy}, {0.0f, 0.0f});
-        if (rs.vid == 602) {
-            // Specific visual correction for wall 602 (Direction B)
-            pos.x -= 40.0f;
-        }
-        bbox.expand(pos);
-    }
+    // 5. Calculate global center shift
+    // (Old bbox method no longer used)
 
     // Origin Shift for grid (0,0)
     MapPoint shift;
