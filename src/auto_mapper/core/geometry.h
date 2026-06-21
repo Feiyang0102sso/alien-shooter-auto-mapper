@@ -26,10 +26,10 @@ constexpr float STEP_X = 40.0f;
 constexpr float STEP_Y = 28.0f;
 
 /**
- * Convert grid points (x, y) to isometric ME coordinates.
- * formular:
- *   posX = (gx - gy) * STEP_X + shift.x
- *   posY = (gx + gy) * STEP_Y + shift.y
+ * Project grid to map point
+ * Formula:
+ *   map_point.x = (grid.x - grid.y) * STEP_X + shift.x
+ *   map_point.y = (grid.x + grid.y) * STEP_Y + shift.y
  */
 MapPoint to_iso(const GridPoint& grid, const MapPoint& shift = {0.0f, 0.0f});
 
