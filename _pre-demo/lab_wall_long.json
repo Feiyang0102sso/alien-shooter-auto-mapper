@@ -1,0 +1,612 @@
+{
+  "sourceFile": "lab_wall.map",
+  "totalBytes": 1284,
+  "fileHeader": {
+    "RES_Magic": "RES ",
+    "mapSize": 1276,
+    "MAP_Magic": "MAP "
+  },
+  "GRPH": {
+    "GRPH_Magic": "GRPH",
+    "graphSize": 36,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "envSize": 20,
+    "isShadow": 0,
+    "gammaDarker": "0x000000",
+    "gammaLighter": "0x000000",
+    "windDirection": 200,
+    "windSpeed": 0.02500000037252903
+  },
+  "HEAD": {
+    "HEAD_Magic": "HEAD",
+    "headSize": 40,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "mapInfoSize": 24,
+    "mapSizeX": 800.0,
+    "mapSizeY": 800.0,
+    "mapCameraX": -121.0,
+    "mapCameraY": 54.0,
+    "currentTime": 74115,
+    "version": "0x0C"
+  },
+  "SPR": {
+    "SPR_Magic": "SPR ",
+    "sprSize": 692,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "sprInfoSize": 676,
+    "spriteCount": 24,
+    "sprites": [
+      {
+        "objectId": 282361984,
+        "vid": 652,
+        "posX": 112.0,
+        "posY": 400.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282361816,
+        "vid": 652,
+        "posX": 562.0,
+        "posY": 720.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282361648,
+        "vid": 652,
+        "posX": 562.0,
+        "posY": 80.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282361480,
+        "vid": 652,
+        "posX": 1012.0,
+        "posY": 400.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282361312,
+        "vid": 650,
+        "posX": 1012.0,
+        "posY": 400.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282361144,
+        "vid": 650,
+        "posX": 922.0,
+        "posY": 336.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282360976,
+        "vid": 650,
+        "posX": 832.0,
+        "posY": 272.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282358680,
+        "vid": 650,
+        "posX": 742.0,
+        "posY": 208.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282360720,
+        "vid": 650,
+        "posX": 652.0,
+        "posY": 144.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282360552,
+        "vid": 651,
+        "posX": 1012.0,
+        "posY": 464.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282360384,
+        "vid": 651,
+        "posX": 922.0,
+        "posY": 528.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282360048,
+        "vid": 651,
+        "posX": 832.0,
+        "posY": 592.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282359880,
+        "vid": 651,
+        "posX": 742.0,
+        "posY": 656.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282359712,
+        "vid": 651,
+        "posX": 652.0,
+        "posY": 720.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282359544,
+        "vid": 651,
+        "posX": 562.0,
+        "posY": 144.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282359376,
+        "vid": 651,
+        "posX": 472.0,
+        "posY": 208.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282359208,
+        "vid": 651,
+        "posX": 382.0,
+        "posY": 272.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282359040,
+        "vid": 651,
+        "posX": 292.0,
+        "posY": 336.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282358872,
+        "vid": 651,
+        "posX": 202.0,
+        "posY": 400.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282358000,
+        "vid": 650,
+        "posX": 562.0,
+        "posY": 720.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 21316000,
+        "vid": 650,
+        "posX": 472.0,
+        "posY": 656.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 22407560,
+        "vid": 650,
+        "posX": 382.0,
+        "posY": 592.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282358512,
+        "vid": 650,
+        "posX": 292.0,
+        "posY": 528.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 282358256,
+        "vid": 650,
+        "posX": 202.0,
+        "posY": 464.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      }
+    ],
+    "terminator": "0xFFFFFFFF"
+  },
+  "SPRD": {
+    "SPRD_Magic": "SPRD",
+    "sprdSize": 404,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 25,
+    "subs": [
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282361984,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282361816,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282361648,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282361480,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282361312,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282361144,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282360976,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282358680,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282360720,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282360552,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282360384,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282360048,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282359880,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282359712,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282359544,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282359376,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282359208,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282359040,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282358872,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282358000,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 21316000,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 22407560,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282358512,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 282358256,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 4,
+        "isTerminator": true,
+        "terminator": "0xFFFFFFFF"
+      }
+    ]
+  },
+  "PLAY": {
+    "PLAY_Magic": "PLAY",
+    "playSize": 32,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "playInfoSize": 16,
+    "player1_ObjectId": 0,
+    "player2_ObjectId": 0,
+    "player3_ObjectId": 0,
+    "player4_ObjectId": 0
+  },
+  "GROU": {
+    "GROU_Magic": "GROU",
+    "groupSize": 20,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "groupInfoSize": 4,
+    "groups": [],
+    "globalTerminator": "0xFFFFFFFF"
+  }
+}
