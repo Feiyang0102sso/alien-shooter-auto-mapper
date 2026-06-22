@@ -1,14 +1,10 @@
+#include <gtest/gtest.h>
 #include "auto_mapper/io/map_writer.h"
-#include "auto_mapper/common/logger.h"
-#include <iostream>
+#include <vector>
 
 using namespace auto_mapper;
 
-int main() {
-    Logger::init();
-    Logger::info("Starting map writer test...");
-
-    // 5 wall / (601)
+TEST(MapWriterTest, WriteMapSuccess) {
     std::vector<io::Sprite> sprites;
     for (int i = 0; i < 5; ++i) {
         io::Sprite spr;
@@ -21,19 +17,11 @@ int main() {
     }
 
     std::string output_file = "test_cpp_output.map";
-    const bool success = io::write_map(
+    bool success = io::write_map(
         sprites, 
         output_file, 
-        600.0f, 600.0f, 
-        "src/auto_mapper/io/templates/empty.map"
+        600.0f, 600.0f
     );
 
-    if (success) {
-        Logger::info("Successfully generated {}!", output_file);
-        Logger::info("You can test it by running: python _pre-demo/as1_map_unpack.py {}", output_file);
-    } else {
-        Logger::error("Failed to generate map.");
-    }
-
-    return 0;
+    EXPECT_TRUE(success);
 }

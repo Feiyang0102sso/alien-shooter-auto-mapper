@@ -6,19 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(MINGW)
-    add_link_options(-static)
-    # Strip symbols and optimize in Release mode
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_compile_options(-O3)
-        add_link_options(-Wl,-s)
-    endif()
-endif()
-
-# set output dir
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 # set src as root, so, #include "auto_mapper/common/logger.h"
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -29,7 +16,14 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG        v1.13.0
 )
-FetchContent_MakeAvailable(spdlog)
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        v1.14.0
+)
+FetchContent_MakeAvailable(spdlog googletest)
+
+enable_testing()
 
 # common/
 set(COMMON_SOURCES
@@ -56,22 +50,23 @@ set(CORE_SOURCES
 add_library(auto_mapper_core STATIC ${CORE_SOURCES})
 target_link_libraries(auto_mapper_core PUBLIC auto_mapper_common auto_mapper_io)
 
-# main executable
-add_executable(auto_mapper src/auto_mapper/main.cpp)
+# main shared library (DLL)
+add_library(auto_mapper SHARED src/auto_mapper/api.cpp)
+target_compile_definitions(auto_mapper PRIVATE AUTO_MAPPER_EXPORTS)
 target_link_libraries(auto_mapper PRIVATE auto_mapper_core auto_mapper_io auto_mapper_common)
+if(MINGW)
+    target_link_options(auto_mapper PRIVATE -static -static-libgcc -static-libstdc++)
+endif()
 
-# manual test config
-add_executable(manual_test tests/manual_test_config.cpp)
-target_link_libraries(manual_test PRIVATE auto_mapper_common)
 
-# test map writer
-add_executable(test_map_writer tests/test_map_writer.cpp)
-target_link_libraries(test_map_writer PRIVATE auto_mapper_io)
+# tests
+file(GLOB TEST_SOURCES CONFIGURE_DEPENDS "tests/test_*.cpp")
 
-# test geometry
-add_executable(test_geometry tests/test_geometry.cpp)
-target_link_libraries(test_geometry PRIVATE auto_mapper_core)
-
-# test wall builder
-add_executable(test_wall_builder tests/test_wall_builder.cpp)
-target_link_libraries(test_wall_builder PRIVATE auto_mapper_core auto_mapper_io)
+add_executable(auto_mapper_tests ${TEST_SOURCES})
+target_link_libraries(auto_mapper_tests PRIVATE 
+    auto_mapper_core 
+    auto_mapper_io 
+    auto_mapper_common 
+    GTest::gtest_main
+)
+add_test(NAME AllTests COMMAND auto_mapper_tests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})

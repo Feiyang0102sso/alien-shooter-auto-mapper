@@ -1,11 +1,12 @@
 /**
-* @file map_writer.cpp
+ * @file map_writer.cpp
  * @brief write map template for AS1
  */
 
 
 #include "map_writer.h"
 #include "auto_mapper/common/logger.h"
+#include "auto_mapper/io/templates.h"
 
 #include <fstream>
 #include <cstring>
@@ -144,21 +145,13 @@ void build_grou_section(std::vector<uint8_t>& buffer) {
 bool write_map(const std::vector<Sprite>& sprites, 
                const std::string& output_path, 
                float map_size_x, 
-               float map_size_y,
-               const std::string& template_path) {
+               float map_size_y) {
     
-    // 1. read empty.map template
-    std::ifstream tpl_file(template_path, std::ios::binary);
-    if (!tpl_file) {
-        Logger::error("Failed to open template file: {}", template_path);
-        return false;
-    }
-    
-    std::vector<uint8_t> template_data((std::istreambuf_iterator<char>(tpl_file)),
-                                        std::istreambuf_iterator<char>());
+    // 1. use AS1_empty template
+    std::vector<uint8_t> template_data(std::begin(templates::AS1_empty), std::end(templates::AS1_empty));
                                         
-    if (template_data.size() < 56) {
-        Logger::error("Template file is too small or corrupted: {}", template_path);
+    if (template_data.size() != 228) {
+        Logger::error("Template file is corrupted");
         return false;
     }
     

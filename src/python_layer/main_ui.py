@@ -3,6 +3,15 @@ from tkinter import messagebox
 import subprocess
 import sys
 import os
+import ctypes
+
+class CSegment(ctypes.Structure):
+    _fields_ = [
+        ("x1", ctypes.c_int),
+        ("y1", ctypes.c_int),
+        ("x2", ctypes.c_int),
+        ("y2", ctypes.c_int),
+    ]
 
 GRID_SIZE = 20
 CELL_SIZE = 30
@@ -342,36 +351,59 @@ class AutoMapperUI:
             messagebox.showerror("Error", "Map size must be numbers")
             return
             
-        # 准备数据给 C++
-        input_data = ""
-        for (x1, y1), (x2, y2) in self.segments:
-            input_data += f"{x1} {y1} {x2} {y2}\n"
-            
-        # 查找可执行文件
-        exe_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "bin", "auto_mapper.exe")
-        output_map = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "ui_output.map")
+        # 查找 DLL
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        dll_path = os.path.join(project_root, "build", "mingw-release", "libauto_mapper.dll")
+        output_map = os.path.join(project_root, "ui_output.map")
         
-        if not os.path.exists(exe_path):
-            messagebox.showerror("Error", f"Executable not found: {exe_path}\nPlease build C++ project first.")
+        if not os.path.exists(dll_path):
+            messagebox.showerror("Error", f"DLL not found: {dll_path}\nPlease build C++ project first.")
             return
             
         try:
-            # 调用 C++，通过 stdin 灌入数据，并且传入 GRID_SIZE(由于弃用了，这里传一个默认值20占位), MAP_X, MAP_Y
-            process = subprocess.Popen(
-                [exe_path, output_map, "20", map_x, map_y],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            stdout, stderr = process.communicate(input=input_data)
+            # 加载 DLL
+            lib = ctypes.CDLL(dll_path)
             
-            if process.returncode == 0:
-                messagebox.showinfo("Success", f"Map generated at:\n{output_map}\n\nOutput:\n{stdout}")
+            # 配置 C 函数签名
+            lib.generate_map_from_segments.argtypes = [
+                ctypes.c_char_p,                 # output_path
+                ctypes.POINTER(CSegment),        # segments
+                ctypes.c_int,                    # num_segments
+                ctypes.c_int,                    # grid_size
+                ctypes.c_float,                  # map_size_x
+                ctypes.c_float                   # map_size_y
+            ]
+            lib.generate_map_from_segments.restype = ctypes.c_bool
+            
+            # 准备数据
+            output_path_bytes = output_map.encode('utf-8')
+            num_segments = len(self.segments)
+            SegmentArray = CSegment * num_segments
+            segments_arr = SegmentArray()
+            
+            for i, ((x1, y1), (x2, y2)) in enumerate(self.segments):
+                segments_arr[i].x1 = int(x1)
+                segments_arr[i].y1 = int(y1)
+                segments_arr[i].x2 = int(x2)
+                segments_arr[i].y2 = int(y2)
+                
+            # 执行 C++ 引擎
+            success = lib.generate_map_from_segments(
+                output_path_bytes,
+                segments_arr,
+                num_segments,
+                GRID_SIZE,
+                float(map_x),
+                float(map_y)
+            )
+            
+            if success:
+                messagebox.showinfo("Success", f"Map generated at:\n{output_map}")
             else:
-                messagebox.showerror("Error", f"C++ Engine Failed!\n\nStderr:\n{stderr}\nStdout:\n{stdout}")
+                messagebox.showerror("Error", "C++ Engine Failed! Please check console logs.")
+                
         except Exception as e:
-            messagebox.showerror("Exception", str(e))
+            messagebox.showerror("Exception", f"Failed to interact with DLL: {str(e)}")
 
 if __name__ == "__main__":
     root = tk.Tk()

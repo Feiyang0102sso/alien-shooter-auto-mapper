@@ -1,0 +1,1 @@
+cmake --build --preset mingw-release --target auto_mapper 

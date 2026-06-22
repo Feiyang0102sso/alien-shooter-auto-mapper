@@ -32,7 +32,6 @@ struct Sprite {
 bool write_map(const std::vector<Sprite>& sprites, 
                const std::string& output_path, 
                float map_size_x = 600.0f, 
-               float map_size_y = 600.0f,
-               const std::string& template_path = "src/auto_mapper/io/templates/empty.map");
+               float map_size_y = 600.0f);
 
 } // namespace auto_mapper::io
