@@ -161,9 +161,16 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
 
         MapPoint pos = to_iso({rs.gx, rs.gy}, step_x, step_y, shift);
 
-        // Apply anchor offset for '\' direction walls
-        if (rs.vid == profile.id_dir_b) {
-            pos.x += profile.offset_x;
+        // Apply sprite-specific anchor offsets
+        if (rs.vid == profile.id_dir_a) {
+            pos.x += profile.offset_a_x;
+            pos.y += profile.offset_a_y;
+        } else if (rs.vid == profile.id_dir_b) {
+            pos.x += profile.offset_b_x;
+            pos.y += profile.offset_b_y;
+        } else if (rs.vid == profile.id_pillar) {
+            pos.x += profile.offset_p_x;
+            pos.y += profile.offset_p_y;
         }
 
         io::Sprite spr;

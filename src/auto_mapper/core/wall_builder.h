@@ -22,15 +22,28 @@ struct WallProfile {
     int id_pillar;  // pillar ID              (e.g. 604 for standard)
     float step_x;   // X-axis physical step   (e.g. 40.0 for standard, 90.0 for lab)
     float step_y;   // Y-axis physical step   (e.g. 28.0 for standard, 64.0 for lab)
-    float offset_x; // anchor correction for '\' direction walls (= -step_x)
+    float offset_a_x, offset_a_y;
+    float offset_b_x, offset_b_y;
+    float offset_p_x, offset_p_y;
 };
 
 // ── Pre-defined wall profiles ──
 constexpr int WALL_TYPE_STANDARD = 0;
 constexpr int WALL_TYPE_LAB      = 1;
 
-constexpr WallProfile WALL_STANDARD = {601, 602, 604, 40.0f, 28.0f, -40.0f};
-constexpr WallProfile WALL_LAB      = {651, 650, 652, 90.0f, 64.0f, -90.0f};
+constexpr WallProfile WALL_STANDARD = {
+    601, 602, 604, 40.0f, 28.0f,
+    0.0f, 0.0f,       // dir_a offset
+    -40.0f, 0.0f,     // dir_b offset
+    0.0f, 0.0f        // pillar offset
+};
+
+constexpr WallProfile WALL_LAB = {
+    651, 650, 652, 90.0f, 64.0f,
+    90.0f, 0.0f,      // dir_a offset
+    0.0f, 0.0f,       // dir_b offset
+    0.0f, 0.0f        // pillar offset
+};
 
 // A straight line segment drawn by the user, each segment carries its own wall type.
 struct Segment {
