@@ -31,5 +31,6 @@ struct GridPoint {
  * @param step_y  Y-axis step size (determined by wall type, e.g. 28.0 for standard, 64.0 for lab walls)
  */
 MapPoint to_iso(const GridPoint& grid, float step_x, float step_y, const MapPoint& shift = {0.0f, 0.0f});
+MapPoint to_iso(float gx, float gy, float step_x, float step_y, const MapPoint& shift = {0.0f, 0.0f});
 
 } // namespace auto_mapper::core

@@ -52,3 +52,33 @@ TEST(GeometryTest, ToIsoLabWallSteps) {
     EXPECT_FLOAT_EQ(p3.x, 0.0f);
     EXPECT_FLOAT_EQ(p3.y, 128.0f);
 }
+
+#include "auto_mapper/core/wall_builder.h"
+
+TEST(WallBuilderTest, FloodFillTopology) {
+    // 3x3 square room: (0,0) to (3,0), (3,0) to (3,3), (3,3) to (0,3), (0,3) to (0,0)
+    WallBuilder builder(20, 600.0f, 600.0f);
+    std::vector<Segment> segments = {
+        {{0, 0}, {3, 0}, WALL_TYPE_STANDARD, FLOOR_TYPE_STANDARD},
+        {{3, 0}, {3, 3}, WALL_TYPE_STANDARD, FLOOR_TYPE_STANDARD},
+        {{3, 3}, {0, 3}, WALL_TYPE_STANDARD, FLOOR_TYPE_STANDARD},
+        {{0, 3}, {0, 0}, WALL_TYPE_STANDARD, FLOOR_TYPE_STANDARD}
+    };
+    
+    auto sprites = builder.build(segments);
+    
+    int floor_count = 0;
+    int ceiling_count = 0;
+    int wall_count = 0;
+    for (const auto& spr : sprites) {
+        if (spr.vid == FLOOR_STANDARD.vid || spr.vid == FLOOR_LAB.vid) floor_count++;
+        else if (spr.vid == CEILING_STANDARD.vid) ceiling_count++;
+        else wall_count++;
+    }
+    
+    // We expect floors inside, ceilings outside, and walls along the boundary.
+    EXPECT_GT(floor_count, 0);
+    EXPECT_GT(ceiling_count, 0);
+    EXPECT_GT(wall_count, 0);
+}
+

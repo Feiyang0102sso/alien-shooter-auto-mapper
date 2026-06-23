@@ -14,7 +14,9 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_segments,
     int grid_size,
     float map_size_x,
-    float map_size_y
+    float map_size_y,
+    bool gen_floor,
+    bool gen_ceiling
 ) {
     // Initialize logger once
     static bool logger_initialized = false;
@@ -38,7 +40,7 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     auto_mapper::Logger::info("Received {} segments from API", cpp_segments.size());
 
     auto_mapper::core::WallBuilder builder(grid_size, map_size_x, map_size_y);
-    std::vector<auto_mapper::io::Sprite> sprites = builder.build(cpp_segments);
+    std::vector<auto_mapper::io::Sprite> sprites = builder.build(cpp_segments, gen_floor, gen_ceiling);
 
     if (auto_mapper::io::write_map(sprites, out_path, map_size_x, map_size_y)) {
         auto_mapper::Logger::info("Successfully generated map: {}", out_path);

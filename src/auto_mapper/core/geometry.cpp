@@ -15,6 +15,11 @@ MapPoint to_iso(const GridPoint& grid, float step_x, float step_y, const MapPoin
     return {map_x, map_y};
 }
 
-
+MapPoint to_iso(float gx, float gy, float step_x, float step_y, const MapPoint& shift) {
+    MapPoint pt;
+    pt.x = (gx - gy) * step_x + shift.x;
+    pt.y = (gx + gy) * step_y + shift.y;
+    return pt;
+}
 
 } // namespace auto_mapper::core

@@ -33,7 +33,9 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_segments,
     int grid_size,
     float map_size_x,
-    float map_size_y
+    float map_size_y,
+    bool gen_floor,
+    bool gen_ceiling
 );
 
 } // extern "C"

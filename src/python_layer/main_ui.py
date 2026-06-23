@@ -63,6 +63,12 @@ class AutoMapperUI:
         self.entry_map_y.pack(side=tk.LEFT)
         self.entry_map_y.bind("<KeyRelease>", lambda e: self.auto_zoom())
         
+        self.gen_floor_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(toolbar, text="Floor", variable=self.gen_floor_var).pack(side=tk.LEFT, padx=(10, 2))
+        
+        self.gen_ceiling_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(toolbar, text="Ceiling", variable=self.gen_ceiling_var).pack(side=tk.LEFT, padx=(2, 2))
+
         tk.Label(toolbar, text="Zoom: MouseWheel or Z/X. C to reset.", fg="gray").pack(side=tk.LEFT, padx=10)
 
         # Canvas Frame
@@ -429,7 +435,9 @@ class AutoMapperUI:
                 ctypes.c_int,                    # num_segments
                 ctypes.c_int,                    # grid_size
                 ctypes.c_float,                  # map_size_x
-                ctypes.c_float                   # map_size_y
+                ctypes.c_float,                  # map_size_y
+                ctypes.c_bool,                   # gen_floor
+                ctypes.c_bool                    # gen_ceiling
             ]
             lib.generate_map_from_segments.restype = ctypes.c_bool
             
@@ -453,7 +461,9 @@ class AutoMapperUI:
                 num_segments,
                 GRID_SIZE,
                 float(map_x),
-                float(map_y)
+                float(map_y),
+                self.gen_floor_var.get(),
+                self.gen_ceiling_var.get()
             )
             
             if success:

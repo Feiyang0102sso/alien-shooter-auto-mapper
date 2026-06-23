@@ -1,0 +1,2152 @@
+{
+  "sourceFile": "floor_celling.map",
+  "totalBytes": 4364,
+  "fileHeader": {
+    "RES_Magic": "RES ",
+    "mapSize": 4356,
+    "MAP_Magic": "MAP "
+  },
+  "GRPH": {
+    "GRPH_Magic": "GRPH",
+    "graphSize": 36,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "envSize": 20,
+    "isShadow": 0,
+    "gammaDarker": "0x000000",
+    "gammaLighter": "0x000000",
+    "windDirection": 200,
+    "windSpeed": 0.02500000037252903
+  },
+  "HEAD": {
+    "HEAD_Magic": "HEAD",
+    "headSize": 40,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "mapInfoSize": 24,
+    "mapSizeX": 1500.0,
+    "mapSizeY": 1500.0,
+    "mapCameraX": 63.0,
+    "mapCameraY": 216.0,
+    "currentTime": 50107,
+    "version": "0x0C"
+  },
+  "SPR": {
+    "SPR_Magic": "SPR ",
+    "sprSize": 2652,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "sprInfoSize": 2636,
+    "spriteCount": 94,
+    "sprites": [
+      {
+        "objectId": 297043952,
+        "vid": 503,
+        "posX": 720.0,
+        "posY": 700.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297043784,
+        "vid": 503,
+        "posX": 800.0,
+        "posY": 756.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297043616,
+        "vid": 503,
+        "posX": 880.0,
+        "posY": 700.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297043448,
+        "vid": 503,
+        "posX": 800.0,
+        "posY": 644.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297043280,
+        "vid": 500,
+        "posX": 280.0,
+        "posY": 350.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297056816,
+        "vid": 500,
+        "posX": 320.0,
+        "posY": 378.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297056648,
+        "vid": 500,
+        "posX": 240.0,
+        "posY": 378.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299183136,
+        "vid": 500,
+        "posX": 360.0,
+        "posY": 406.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297055928,
+        "vid": 500,
+        "posX": 400.0,
+        "posY": 434.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297055760,
+        "vid": 500,
+        "posX": 440.0,
+        "posY": 406.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297055592,
+        "vid": 500,
+        "posX": 400.0,
+        "posY": 378.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297055424,
+        "vid": 500,
+        "posX": 360.0,
+        "posY": 350.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297055256,
+        "vid": 500,
+        "posX": 320.0,
+        "posY": 322.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297055088,
+        "vid": 500,
+        "posX": 360.0,
+        "posY": 294.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297053320,
+        "vid": 500,
+        "posX": 400.0,
+        "posY": 322.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297053152,
+        "vid": 500,
+        "posX": 440.0,
+        "posY": 350.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297052896,
+        "vid": 500,
+        "posX": 480.0,
+        "posY": 378.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297052640,
+        "vid": 500,
+        "posX": 520.0,
+        "posY": 350.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297052472,
+        "vid": 500,
+        "posX": 480.0,
+        "posY": 322.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 20179336,
+        "vid": 500,
+        "posX": 440.0,
+        "posY": 294.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299653008,
+        "vid": 500,
+        "posX": 400.0,
+        "posY": 266.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297049952,
+        "vid": 601,
+        "posX": 220.0,
+        "posY": 378.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297049784,
+        "vid": 601,
+        "posX": 260.0,
+        "posY": 350.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297049616,
+        "vid": 601,
+        "posX": 300.0,
+        "posY": 322.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297049448,
+        "vid": 601,
+        "posX": 340.0,
+        "posY": 294.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297049280,
+        "vid": 601,
+        "posX": 380.0,
+        "posY": 266.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297049112,
+        "vid": 602,
+        "posX": 420.0,
+        "posY": 266.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297048944,
+        "vid": 602,
+        "posX": 460.0,
+        "posY": 294.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297048776,
+        "vid": 602,
+        "posX": 500.0,
+        "posY": 322.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297048608,
+        "vid": 602,
+        "posX": 540.0,
+        "posY": 350.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297048440,
+        "vid": 602,
+        "posX": 580.0,
+        "posY": 378.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297048272,
+        "vid": 602,
+        "posX": 220.0,
+        "posY": 406.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297048104,
+        "vid": 602,
+        "posX": 260.0,
+        "posY": 434.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297047936,
+        "vid": 602,
+        "posX": 300.0,
+        "posY": 462.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297047768,
+        "vid": 602,
+        "posX": 340.0,
+        "posY": 490.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297047600,
+        "vid": 602,
+        "posX": 380.0,
+        "posY": 518.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297047432,
+        "vid": 601,
+        "posX": 420.0,
+        "posY": 518.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299183896,
+        "vid": 601,
+        "posX": 460.0,
+        "posY": 490.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299183728,
+        "vid": 601,
+        "posX": 500.0,
+        "posY": 462.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299178560,
+        "vid": 601,
+        "posX": 540.0,
+        "posY": 434.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299182968,
+        "vid": 601,
+        "posX": 580.0,
+        "posY": 406.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299182800,
+        "vid": 601,
+        "posX": 780.0,
+        "posY": 602.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299182632,
+        "vid": 601,
+        "posX": 740.0,
+        "posY": 630.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299182464,
+        "vid": 601,
+        "posX": 700.0,
+        "posY": 658.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299182296,
+        "vid": 601,
+        "posX": 660.0,
+        "posY": 686.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299182128,
+        "vid": 601,
+        "posX": 620.0,
+        "posY": 714.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299181960,
+        "vid": 602,
+        "posX": 820.0,
+        "posY": 602.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299181792,
+        "vid": 602,
+        "posX": 860.0,
+        "posY": 630.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299181624,
+        "vid": 602,
+        "posX": 900.0,
+        "posY": 658.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299181456,
+        "vid": 602,
+        "posX": 940.0,
+        "posY": 686.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299181288,
+        "vid": 602,
+        "posX": 980.0,
+        "posY": 714.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299181120,
+        "vid": 602,
+        "posX": 620.0,
+        "posY": 742.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299180952,
+        "vid": 602,
+        "posX": 660.0,
+        "posY": 770.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299180784,
+        "vid": 602,
+        "posX": 700.0,
+        "posY": 798.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299180616,
+        "vid": 602,
+        "posX": 740.0,
+        "posY": 826.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299180448,
+        "vid": 602,
+        "posX": 780.0,
+        "posY": 854.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299179944,
+        "vid": 601,
+        "posX": 820.0,
+        "posY": 854.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299179776,
+        "vid": 601,
+        "posX": 860.0,
+        "posY": 826.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299179608,
+        "vid": 601,
+        "posX": 900.0,
+        "posY": 798.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299179440,
+        "vid": 601,
+        "posX": 940.0,
+        "posY": 770.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299179272,
+        "vid": 601,
+        "posX": 980.0,
+        "posY": 742.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299179104,
+        "vid": 604,
+        "posX": 820.0,
+        "posY": 574.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299178936,
+        "vid": 604,
+        "posX": 1020.0,
+        "posY": 714.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299178768,
+        "vid": 604,
+        "posX": 820.0,
+        "posY": 854.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299178392,
+        "vid": 604,
+        "posX": 620.0,
+        "posY": 714.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297035824,
+        "vid": 604,
+        "posX": 420.0,
+        "posY": 238.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297035656,
+        "vid": 604,
+        "posX": 620.0,
+        "posY": 378.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297035488,
+        "vid": 604,
+        "posX": 420.0,
+        "posY": 518.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297035176,
+        "vid": 604,
+        "posX": 220.0,
+        "posY": 378.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297054920,
+        "vid": 504,
+        "posX": 600.0,
+        "posY": 350.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297054752,
+        "vid": 504,
+        "posX": 520.0,
+        "posY": 294.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297054584,
+        "vid": 504,
+        "posX": 440.0,
+        "posY": 238.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297054416,
+        "vid": 504,
+        "posX": 320.0,
+        "posY": 266.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297054248,
+        "vid": 504,
+        "posX": 240.0,
+        "posY": 322.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297054080,
+        "vid": 504,
+        "posX": 160.0,
+        "posY": 378.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297053912,
+        "vid": 504,
+        "posX": 200.0,
+        "posY": 462.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297053744,
+        "vid": 504,
+        "posX": 280.0,
+        "posY": 518.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297053576,
+        "vid": 504,
+        "posX": 360.0,
+        "posY": 574.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299180280,
+        "vid": 504,
+        "posX": 480.0,
+        "posY": 546.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299180112,
+        "vid": 504,
+        "posX": 560.0,
+        "posY": 490.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 299183432,
+        "vid": 504,
+        "posX": 640.0,
+        "posY": 434.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297052136,
+        "vid": 504,
+        "posX": 800.0,
+        "posY": 546.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297051968,
+        "vid": 504,
+        "posX": 720.0,
+        "posY": 602.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297051800,
+        "vid": 504,
+        "posX": 640.0,
+        "posY": 658.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297051632,
+        "vid": 504,
+        "posX": 560.0,
+        "posY": 714.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297051464,
+        "vid": 504,
+        "posX": 600.0,
+        "posY": 798.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297051296,
+        "vid": 504,
+        "posX": 680.0,
+        "posY": 854.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297051128,
+        "vid": 504,
+        "posX": 760.0,
+        "posY": 910.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297050960,
+        "vid": 504,
+        "posX": 880.0,
+        "posY": 882.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297050792,
+        "vid": 504,
+        "posX": 960.0,
+        "posY": 826.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297050624,
+        "vid": 504,
+        "posX": 1040.0,
+        "posY": 770.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297050456,
+        "vid": 504,
+        "posX": 880.0,
+        "posY": 602.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297050288,
+        "vid": 504,
+        "posX": 960.0,
+        "posY": 658.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297050120,
+        "vid": 504,
+        "posX": 1040.0,
+        "posY": 714.0,
+        "posZ": 90.0,
+        "direction": 0,
+        "army": 0
+      }
+    ],
+    "terminator": "0xFFFFFFFF"
+  },
+  "SPRD": {
+    "SPRD_Magic": "SPRD",
+    "sprdSize": 1524,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 95,
+    "subs": [
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297043952,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297043784,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297043616,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297043448,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297043280,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297056816,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297056648,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299183136,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297055928,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297055760,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297055592,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297055424,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297055256,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297055088,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297053320,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297053152,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297052896,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297052640,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297052472,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20179336,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299653008,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297049952,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297049784,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297049616,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297049448,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297049280,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297049112,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297048944,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297048776,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297048608,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297048440,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297048272,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297048104,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297047936,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297047768,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297047600,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297047432,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299183896,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299183728,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299178560,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299182968,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299182800,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299182632,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299182464,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299182296,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299182128,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299181960,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299181792,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299181624,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299181456,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299181288,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299181120,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299180952,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299180784,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299180616,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299180448,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299179944,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299179776,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299179608,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299179440,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299179272,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299179104,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299178936,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299178768,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299178392,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297035824,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297035656,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297035488,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297035176,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297054920,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297054752,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297054584,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297054416,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297054248,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297054080,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297053912,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297053744,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297053576,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299180280,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299180112,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299183432,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297052136,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297051968,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297051800,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297051632,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297051464,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297051296,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297051128,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297050960,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297050792,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297050624,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297050456,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297050288,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297050120,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 4,
+        "isTerminator": true,
+        "terminator": "0xFFFFFFFF"
+      }
+    ]
+  },
+  "PLAY": {
+    "PLAY_Magic": "PLAY",
+    "playSize": 32,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "playInfoSize": 16,
+    "player1_ObjectId": 0,
+    "player2_ObjectId": 0,
+    "player3_ObjectId": 0,
+    "player4_ObjectId": 0
+  },
+  "GROU": {
+    "GROU_Magic": "GROU",
+    "groupSize": 20,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "groupInfoSize": 4,
+    "groups": [],
+    "globalTerminator": "0xFFFFFFFF"
+  }
+}

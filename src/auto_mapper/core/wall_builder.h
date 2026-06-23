@@ -27,6 +27,23 @@ struct WallProfile {
     float offset_p_x, offset_p_y;
 };
 
+struct FloorProfile {
+    int vid;
+    float step_x;
+    float step_y;
+    float pos_z;
+    // shift is computed dynamically from map_size in WallBuilder::build()
+};
+
+struct CeilingProfile {
+    int vid;
+    float step_x;
+    float step_y;
+    float pos_z;
+    float shift_offset_x = 0.0f;
+    float shift_offset_y = 0.0f;
+};
+
 // ── Pre-defined wall profiles ──
 constexpr int WALL_TYPE_STANDARD = 0;
 constexpr int WALL_TYPE_LAB      = 1;
@@ -45,11 +62,22 @@ constexpr WallProfile WALL_LAB = {
     0.0f, 0.0f        // pillar offset
 };
 
+// ── Pre-defined floor and ceiling profiles ──
+constexpr int FLOOR_TYPE_STANDARD = 0;
+constexpr int FLOOR_TYPE_LAB      = 1;
+
+constexpr FloorProfile FLOOR_STANDARD = {500, 40.0f, 28.0f, 0.0f};
+constexpr FloorProfile FLOOR_LAB      = {503, 80.0f, 56.0f, 0.0f};
+
+constexpr int CEILING_TYPE_STANDARD = 0;
+constexpr CeilingProfile CEILING_STANDARD = {504, 80.0f, 56.0f, 90.0f};
+
 // A straight line segment drawn by the user, each segment carries its own wall type.
 struct Segment {
     GridPoint start;
     GridPoint end;
     int wall_type = WALL_TYPE_STANDARD;
+    int floor_type = FLOOR_TYPE_STANDARD;
 };
 
 class WallBuilder {
@@ -58,11 +86,13 @@ public:
 
     // Core pipeline: Group by wall_type -> Rasterize per group ->
     // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.
-    std::vector<io::Sprite> build(const std::vector<Segment>& segments) const;
+    std::vector<io::Sprite> build(const std::vector<Segment>& segments, bool gen_floor = true, bool gen_ceiling = true) const;
 
 private:
-    // Look up WallProfile by wall_type id. Falls back to WALL_STANDARD.
-    static const WallProfile& get_profile(int wall_type);
+    // Look up profiles
+    static const WallProfile& get_wall_profile(int wall_type);
+    static const FloorProfile& get_floor_profile(int floor_type);
+    static const CeilingProfile& get_ceiling_profile(int ceiling_type);
 
     int grid_size_;
     float map_size_x_;
