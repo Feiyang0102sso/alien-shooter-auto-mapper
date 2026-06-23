@@ -1,7 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
-import subprocess
-import sys
+from tkinter import messagebox, ttk
 import os
 import ctypes
 
@@ -11,11 +9,22 @@ class CSegment(ctypes.Structure):
         ("y1", ctypes.c_int),
         ("x2", ctypes.c_int),
         ("y2", ctypes.c_int),
+        ("wall_type", ctypes.c_int),
     ]
 
 GRID_SIZE = 20
 CELL_SIZE = 30
 CANVAS_SIZE = GRID_SIZE * CELL_SIZE
+
+# ── Wall type constants (mirror C++ api.h) ──
+WALL_TYPE_STANDARD = 0
+WALL_TYPE_LAB = 1
+
+# ── Wall profiles: (step_x, step_y, display_label, line_color) ──
+WALL_PROFILES = {
+    WALL_TYPE_STANDARD: (40.0, 28.0, "Standard (40×28)", "blue"),
+    WALL_TYPE_LAB:      (90.0, 64.0, "Lab (90×64)",      "#00AA00"),
+}
 
 class AutoMapperUI:
     def __init__(self, root):
@@ -31,6 +40,15 @@ class AutoMapperUI:
         
         btn_clear = tk.Button(toolbar, text="Clear", command=self.clear_canvas)
         btn_clear.pack(side=tk.LEFT, padx=5)
+        
+        # Wall type selector
+        tk.Label(toolbar, text="Wall:").pack(side=tk.LEFT, padx=(10, 2))
+        self.wall_type_var = tk.IntVar(value=WALL_TYPE_STANDARD)
+        wall_labels = [WALL_PROFILES[wt][2] for wt in sorted(WALL_PROFILES.keys())]
+        self.wall_combo = ttk.Combobox(toolbar, values=wall_labels, width=16, state="readonly")
+        self.wall_combo.current(0)
+        self.wall_combo.pack(side=tk.LEFT)
+        self.wall_combo.bind("<<ComboboxSelected>>", lambda e: self._on_wall_type_changed())
         
         # Map Size inputs
         tk.Label(toolbar, text="Map X:").pack(side=tk.LEFT, padx=(10, 2))
@@ -57,7 +75,7 @@ class AutoMapperUI:
         self.pan_y = 0.0
         self._initial_zoom_done = False
         
-        self.segments = [] # list of ((x1,y1), (x2,y2))
+        self.segments = []  # list of ((x1,y1), (x2,y2), wall_type)
         self.start_point = None
         self.temp_line = None
         self._pan_start_x = None
@@ -90,20 +108,54 @@ class AutoMapperUI:
         try: return float(self.entry_map_y.get())
         except: return 600.0
 
-    def to_physical(self, gx, gy):
+    @property
+    def wall_type(self):
+        return self.wall_combo.current()
+
+    @property
+    def step_x(self):
+        return WALL_PROFILES[self.wall_type][0]
+
+    @property
+    def step_y(self):
+        return WALL_PROFILES[self.wall_type][1]
+
+    def _on_wall_type_changed(self):
+        """切换墙壁类型时重绘画布（网格密度会变化）"""
+        self.draw_all()
+
+    def to_physical(self, gx, gy, sx=None, sy=None):
+        """Grid -> Physical coords. Uses current brush steps unless overridden."""
+        if sx is None:
+            sx = self.step_x
+        if sy is None:
+            sy = self.step_y
+        half_sx = sx / 2.0
+        half_sy = sy / 2.0
+
         raw_shift_x = self.map_x / 2.0
-        grid_shift_x = round((raw_shift_x - 20.0) / 40.0) * 40.0 + 20.0
-        grid_shift_y = 42.0
-        px = (gx - gy) * 40.0 + grid_shift_x
-        py = (gx + gy) * 28.0 + grid_shift_y
+        grid_shift_x = round((raw_shift_x - half_sx) / sx) * sx + half_sx
+        grid_shift_y = half_sy + sy  # half_step + one full step as top padding
+
+        px = (gx - gy) * sx + grid_shift_x
+        py = (gx + gy) * sy + grid_shift_y
         return px, py
 
-    def physical_to_logical(self, px, py):
+    def physical_to_logical(self, px, py, sx=None, sy=None):
+        """Physical -> Grid coords. Uses current brush steps unless overridden."""
+        if sx is None:
+            sx = self.step_x
+        if sy is None:
+            sy = self.step_y
+        half_sx = sx / 2.0
+        half_sy = sy / 2.0
+
         raw_shift_x = self.map_x / 2.0
-        grid_shift_x = round((raw_shift_x - 20.0) / 40.0) * 40.0 + 20.0
-        grid_shift_y = 42.0
-        A = (px - grid_shift_x) / 40.0
-        B = (py - grid_shift_y) / 28.0
+        grid_shift_x = round((raw_shift_x - half_sx) / sx) * sx + half_sx
+        grid_shift_y = half_sy + sy
+
+        A = (px - grid_shift_x) / sx
+        B = (py - grid_shift_y) / sy
         gx = (A + B) / 2.0
         gy = (B - A) / 2.0
         return gx, gy
@@ -132,17 +184,22 @@ class AutoMapperUI:
 
     @property
     def grid_bounds(self):
-        min_px = 20.0
-        k = int((self.map_x - 20) / 40)
-        max_px = k * 40.0 + 20.0
-        
-        min_py = 14.0
-        j = int((self.map_y - 14) / 28)
-        max_py = j * 28.0 + 14.0
-        
+        sx = self.step_x
+        sy = self.step_y
+        half_sx = sx / 2.0
+        half_sy = sy / 2.0
+
+        min_px = half_sx
+        k = int((self.map_x - half_sx) / sx)
+        max_px = k * sx + half_sx
+
+        min_py = half_sy
+        j = int((self.map_y - half_sy) / sy)
+        max_py = j * sy + half_sy
+
         if max_px < min_px: max_px = min_px
         if max_py < min_py: max_py = min_py
-            
+
         return min_px, min_py, max_px, max_py
 
     def snap_to_grid(self, sx, sy):
@@ -236,13 +293,14 @@ class AutoMapperUI:
             sx2, sy2 = self.to_screen(px2, py2)
             self.canvas.create_line(sx1, sy1, sx2, sy2, fill="#e0e0e0")
 
-        # draw segments
-        for (gx1, gy1), (gx2, gy2) in self.segments:
-            px1, py1 = self.to_physical(gx1, gy1)
-            px2, py2 = self.to_physical(gx2, gy2)
+        # Draw segments (each uses its own wall_type's step sizes and color)
+        for (gx1, gy1), (gx2, gy2), seg_wt in self.segments:
+            seg_sx, seg_sy, _, seg_color = WALL_PROFILES[seg_wt]
+            px1, py1 = self.to_physical(gx1, gy1, seg_sx, seg_sy)
+            px2, py2 = self.to_physical(gx2, gy2, seg_sx, seg_sy)
             s_x1, s_y1 = self.to_screen(px1, py1)
             s_x2, s_y2 = self.to_screen(px2, py2)
-            self.canvas.create_line(s_x1, s_y1, s_x2, s_y2, fill="blue", width=3)
+            self.canvas.create_line(s_x1, s_y1, s_x2, s_y2, fill=seg_color, width=3)
             
         # 标注原点 (gx=0, gy=0)
         opx, opy = self.to_physical(0, 0)
@@ -310,7 +368,7 @@ class AutoMapperUI:
             gx, gy = self.get_clamped_orthogonal(self.start_point[0], self.start_point[1], gx, gy)
             
         if (gx, gy) != self.start_point:
-            self.segments.append((self.start_point, (gx, gy)))
+            self.segments.append((self.start_point, (gx, gy), self.wall_type))
             self.draw_all()
             
         if self.temp_line:
@@ -364,7 +422,7 @@ class AutoMapperUI:
             # 加载 DLL
             lib = ctypes.CDLL(dll_path)
             
-            # 配置 C 函数签名
+            # 配置 C 函数签名 (no global wall_type, it's per-segment now)
             lib.generate_map_from_segments.argtypes = [
                 ctypes.c_char_p,                 # output_path
                 ctypes.POINTER(CSegment),        # segments
@@ -381,11 +439,12 @@ class AutoMapperUI:
             SegmentArray = CSegment * num_segments
             segments_arr = SegmentArray()
             
-            for i, ((x1, y1), (x2, y2)) in enumerate(self.segments):
+            for i, ((x1, y1), (x2, y2), wt) in enumerate(self.segments):
                 segments_arr[i].x1 = int(x1)
                 segments_arr[i].y1 = int(y1)
                 segments_arr[i].x2 = int(x2)
                 segments_arr[i].y2 = int(y2)
+                segments_arr[i].wall_type = wt
                 
             # 执行 C++ 引擎
             success = lib.generate_map_from_segments(

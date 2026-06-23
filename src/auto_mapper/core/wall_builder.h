@@ -22,32 +22,35 @@ struct WallProfile {
     int id_pillar;  // pillar ID              (e.g. 604 for standard)
     float step_x;   // X-axis physical step   (e.g. 40.0 for standard, 90.0 for lab)
     float step_y;   // Y-axis physical step   (e.g. 28.0 for standard, 64.0 for lab)
-    float offset_x; // anchor correction for '\' direction walls (e.g. -40.0 for standard, -45.0 for lab)
+    float offset_x; // anchor correction for '\' direction walls (= -step_x)
 };
 
 // ── Pre-defined wall profiles ──
-constexpr WallProfile WALL_STANDARD = {601, 602, 604, 40.0f, 28.0f, -40.0f};
-constexpr WallProfile WALL_LAB      = {651, 650, 652, 90.0f, 64.0f, -45.0f};
+constexpr int WALL_TYPE_STANDARD = 0;
+constexpr int WALL_TYPE_LAB      = 1;
 
-// A straight line segment drawn by the user and snapped to grid by frontend.
+constexpr WallProfile WALL_STANDARD = {601, 602, 604, 40.0f, 28.0f, -40.0f};
+constexpr WallProfile WALL_LAB      = {651, 650, 652, 90.0f, 64.0f, -90.0f};
+
+// A straight line segment drawn by the user, each segment carries its own wall type.
 struct Segment {
     GridPoint start;
     GridPoint end;
+    int wall_type = WALL_TYPE_STANDARD;
 };
 
 class WallBuilder {
 public:
-    WallBuilder(const WallProfile& profile = WALL_STANDARD,
-                int grid_size = 20,
-                float map_size_x = 600.0f,
-                float map_size_y = 600.0f);
+    WallBuilder(int grid_size = 20, float map_size_x = 600.0f, float map_size_y = 600.0f);
 
-    // Core pipeline: Segments -> Rasterize ->
+    // Core pipeline: Group by wall_type -> Rasterize per group ->
     // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.
     std::vector<io::Sprite> build(const std::vector<Segment>& segments) const;
 
 private:
-    WallProfile profile_;
+    // Look up WallProfile by wall_type id. Falls back to WALL_STANDARD.
+    static const WallProfile& get_profile(int wall_type);
+
     int grid_size_;
     float map_size_x_;
     float map_size_y_;

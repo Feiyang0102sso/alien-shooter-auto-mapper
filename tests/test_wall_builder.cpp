@@ -7,12 +7,11 @@ using namespace auto_mapper;
 using namespace auto_mapper::core;
 
 TEST(WallBuilderTest, BuildCrossShapeStandard) {
-    // Use standard wall profile (601/602/604, step 40x28)
-    WallBuilder builder(WALL_STANDARD, 20, 600.0f, 600.0f);
+    WallBuilder builder(20, 600.0f, 600.0f);
 
     std::vector<Segment> segments = {
-        {{0, 5}, {5, 5}},
-        {{2, 0}, {2, 10}}
+        {{0, 5}, {5, 5}, WALL_TYPE_STANDARD},
+        {{2, 0}, {2, 10}, WALL_TYPE_STANDARD}
     };
 
     std::vector<io::Sprite> sprites = builder.build(segments);
@@ -36,12 +35,10 @@ TEST(WallBuilderTest, BuildCrossShapeStandard) {
 }
 
 TEST(WallBuilderTest, BuildLineLabWall) {
-    // Use lab wall profile (651/650/652, step 90x64)
-    WallBuilder builder(WALL_LAB, 20, 600.0f, 600.0f);
+    WallBuilder builder(20, 600.0f, 600.0f);
 
-    // Simple horizontal line: 3 wall units
     std::vector<Segment> segments = {
-        {{0, 0}, {3, 0}}
+        {{0, 0}, {3, 0}, WALL_TYPE_LAB}
     };
 
     std::vector<io::Sprite> sprites = builder.build(segments);
@@ -54,7 +51,31 @@ TEST(WallBuilderTest, BuildLineLabWall) {
         else if (spr.vid == WALL_LAB.id_pillar) num_pillars++;
     }
 
-    // 3 wall segments + 2 endpoint pillars
     EXPECT_EQ(num_walls, 3);
     EXPECT_EQ(num_pillars, 2);
+}
+
+TEST(WallBuilderTest, BuildMixedWallTypes) {
+    // Mixed: standard + lab walls in the same build
+    WallBuilder builder(20, 600.0f, 600.0f);
+
+    std::vector<Segment> segments = {
+        {{0, 0}, {3, 0}, WALL_TYPE_STANDARD},  // 3 standard walls
+        {{0, 0}, {0, 2}, WALL_TYPE_LAB}         // 2 lab walls
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments);
+
+    int num_standard = 0;
+    int num_lab = 0;
+
+    for (const auto& spr : sprites) {
+        if (spr.vid == WALL_STANDARD.id_dir_b) num_standard++;
+        if (spr.vid == WALL_LAB.id_dir_a) num_lab++;
+    }
+
+    EXPECT_EQ(num_standard, 3);
+    EXPECT_EQ(num_lab, 2);
+    // Total sprites should include both types + their respective pillars
+    EXPECT_GT(sprites.size(), 5u);
 }
