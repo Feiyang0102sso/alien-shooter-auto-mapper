@@ -1,6 +1,9 @@
 /**
  * @file wall_builder.cpp
- * @brief Implements core wall generation pipeline:
+ * @brief Implements core wall generation pipeline.
+ *
+ * All wall IDs, step sizes and anchor offsets are sourced from
+ * the WallProfile passed at construction time — no hardcoded magic numbers.
  */
 
 #include "auto_mapper/core/wall_builder.h"
@@ -14,8 +17,8 @@
 
 namespace auto_mapper::core {
 
-WallBuilder::WallBuilder(int grid_size, float map_size_x, float map_size_y)
-    : grid_size_(grid_size), map_size_x_(map_size_x), map_size_y_(map_size_y) {}
+WallBuilder::WallBuilder(const WallProfile& profile, int grid_size, float map_size_x, float map_size_y)
+    : profile_(profile), grid_size_(grid_size), map_size_x_(map_size_x), map_size_y_(map_size_y) {}
 
 std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments) const {
     using Point = std::pair<int, int>;
@@ -30,14 +33,14 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
         int y2 = seg.end.y;
 
         if (x1 == x2) {
-            // Parallel to Y axis, Direction A
+            // Parallel to Y axis -> Direction A
             int minY = std::min(y1, y2);
             int maxY = std::max(y1, y2);
             for (int y = minY + 1; y <= maxY; ++y) {
                 edges_a.insert({x1, y});
             }
         } else if (y1 == y2) {
-            // Parallel to X axis, Direction B
+            // Parallel to X axis -> Direction B
             int minX = std::min(x1, x2);
             int maxX = std::max(x1, x2);
             for (int x = minX + 1; x <= maxX; ++x) {
@@ -54,15 +57,13 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
     };
     std::vector<RawSprite> raw_sprites;
 
-    // 2. Assign basic wall sprites
+    // 2. Assign wall sprites using profile IDs
     for (const auto& p : edges_a) {
-        // TODO: Support variant walls, currently fixed to 601
-        raw_sprites.push_back({601, p.first, p.second});
+        raw_sprites.push_back({profile_.id_dir_a, p.first, p.second});
     }
 
     for (const auto& p : edges_b) {
-        // TODO: Support variant walls, currently fixed to 602
-        raw_sprites.push_back({602, p.first, p.second});
+        raw_sprites.push_back({profile_.id_dir_b, p.first, p.second});
     }
 
     // 3. Extract topological vertices and place pillars
@@ -79,7 +80,7 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
     for (const auto& v : vertices) {
         int x = v.first;
         int y = v.second;
-        
+
         // Detect connectivity in 4 directions
         bool up    = edges_a.count({x, y}) > 0;
         bool down  = edges_a.count({x, y + 1}) > 0;
@@ -93,7 +94,7 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
 
         // Place a pillar if it's an isolated endpoint, or an intersection (corner, T-junction, cross).
         if (total_conns == 1 || (conn_a && conn_b)) {
-            raw_sprites.push_back({604, x, y});
+            raw_sprites.push_back({profile_.id_pillar, x, y});
         }
     }
 
@@ -102,31 +103,37 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
         return (a.gx + a.gy) < (b.gx + b.gy);
     });
 
-    // 5. Calculate global center shift
-    // (Old bbox method no longer used)
+    // 5. Calculate global center shift using profile step sizes
+    float step_x = profile_.step_x;
+    float step_y = profile_.step_y;
 
-    // Origin Shift for grid (0,0)
+    // half_step: anchor point within a single wall unit
+    float half_step_x = step_x / 2.0f;
+    float half_step_y = step_y / 2.0f;
+
+    // Origin Shift for grid (0,0): center horizontally, align to step grid
     MapPoint shift;
     float raw_shift_x = map_size_x_ / 2.0f;
-    float raw_shift_y = 14.0f;
+    float grid_x = std::round((raw_shift_x - half_step_x) / step_x);
+    shift.x = grid_x * step_x + half_step_x;
 
-    // Snap to Grid
-    float grid_x = std::round((raw_shift_x - 20.0f) / 40.0f);
-    shift.x = grid_x * 40.0f + 20.0f;
-    float grid_y = std::round((raw_shift_y - 14.0f) / 28.0f);
-    shift.y = grid_y * 28.0f + 14.0f;
+    float raw_shift_y = half_step_y;
+    float grid_y = std::round((raw_shift_y - half_step_y) / step_y);
+    shift.y = grid_y * step_y + half_step_y;
 
-    // padding for top
-    shift.y += 28.0f;
+    // Padding for top (one full step)
+    shift.y += step_y;
 
     // 6. Generate final io::Sprite list
     std::vector<io::Sprite> final_sprites;
     for (const auto& rs : raw_sprites) {
-        MapPoint pos = to_iso({rs.gx, rs.gy}, shift);
-        if (rs.vid == 602) {
-            pos.x -= 40.0f;
+        MapPoint pos = to_iso({rs.gx, rs.gy}, step_x, step_y, shift);
+
+        // Apply anchor offset for '\' direction walls
+        if (rs.vid == profile_.id_dir_b) {
+            pos.x += profile_.offset_x;
         }
-        
+
         io::Sprite spr;
         spr.vid = rs.vid;
         spr.posX = pos.x;
@@ -134,7 +141,7 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments)
         spr.posZ = 0.0f;
         spr.direction = 32; // Default direction
         spr.army = 0;       // Neutral object
-        
+
         final_sprites.push_back(spr);
     }
 

@@ -21,16 +21,15 @@ struct GridPoint {
     int y;
 };
 
-// Isometric projection span step for maps
-constexpr float STEP_X = 40.0f;
-constexpr float STEP_Y = 28.0f;
-
 /**
- * Project grid to map point
+ * Project grid to map point using given step sizes.
  * Formula:
- *   map_point.x = (grid.x - grid.y) * STEP_X + shift.x
- *   map_point.y = (grid.x + grid.y) * STEP_Y + shift.y
+ *   map_point.x = (grid.x - grid.y) * step_x + shift.x
+ *   map_point.y = (grid.x + grid.y) * step_y + shift.y
+ *
+ * @param step_x  X-axis step size (determined by wall type, e.g. 40.0 for standard, 90.0 for lab walls)
+ * @param step_y  Y-axis step size (determined by wall type, e.g. 28.0 for standard, 64.0 for lab walls)
  */
-MapPoint to_iso(const GridPoint& grid, const MapPoint& shift = {0.0f, 0.0f});
+MapPoint to_iso(const GridPoint& grid, float step_x, float step_y, const MapPoint& shift = {0.0f, 0.0f});
 
 } // namespace auto_mapper::core

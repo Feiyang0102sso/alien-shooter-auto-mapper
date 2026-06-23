@@ -14,13 +14,26 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_segments,
     int grid_size,
     float map_size_x,
-    float map_size_y
+    float map_size_y,
+    int wall_type
 ) {
-    // initial log
+    // Initialize logger once
     static bool logger_initialized = false;
     if (!logger_initialized) {
         auto_mapper::Config::init_env();
         logger_initialized = true;
+    }
+
+    // Select WallProfile based on wall_type
+    auto_mapper::core::WallProfile profile;
+    switch (wall_type) {
+        case WALL_TYPE_LAB:
+            profile = auto_mapper::core::WALL_LAB;
+            break;
+        case WALL_TYPE_STANDARD:
+        default:
+            profile = auto_mapper::core::WALL_STANDARD;
+            break;
     }
 
     std::string out_path(output_path);
@@ -34,9 +47,9 @@ AUTO_MAPPER_API bool generate_map_from_segments(
         });
     }
 
-    auto_mapper::Logger::info("Received {} segments from API", cpp_segments.size());
+    auto_mapper::Logger::info("Received {} segments, wall_type={}", cpp_segments.size(), wall_type);
 
-    auto_mapper::core::WallBuilder builder(grid_size, map_size_x, map_size_y);
+    auto_mapper::core::WallBuilder builder(profile, grid_size, map_size_x, map_size_y);
     std::vector<auto_mapper::io::Sprite> sprites = builder.build(cpp_segments);
 
     if (auto_mapper::io::write_map(sprites, out_path, map_size_x, map_size_y)) {

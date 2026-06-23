@@ -9,9 +9,9 @@
 
 namespace auto_mapper::core {
 
-MapPoint to_iso(const GridPoint& grid, const MapPoint& shift) {
-    float map_x = (grid.x - grid.y) * STEP_X + shift.x;
-    float map_y = (grid.x + grid.y) * STEP_Y + shift.y;
+MapPoint to_iso(const GridPoint& grid, float step_x, float step_y, const MapPoint& shift) {
+    float map_x = (grid.x - grid.y) * step_x + shift.x;
+    float map_y = (grid.x + grid.y) * step_y + shift.y;
     return {map_x, map_y};
 }
 
