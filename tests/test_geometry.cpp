@@ -57,7 +57,7 @@ TEST(GeometryTest, ToIsoLabWallSteps) {
 
 TEST(WallBuilderTest, FloodFillTopology) {
     // 3x3 square room: (0,0) to (3,0), (3,0) to (3,3), (3,3) to (0,3), (0,3) to (0,0)
-    WallBuilder builder(20, 600.0f, 600.0f);
+    WallBuilder builder(600.0f, 600.0f);
     std::vector<Segment> segments = {
         {{0, 0}, {3, 0}, WALL_TYPE_STANDARD, FLOOR_TYPE_STANDARD},
         {{3, 0}, {3, 3}, WALL_TYPE_STANDARD, FLOOR_TYPE_STANDARD},

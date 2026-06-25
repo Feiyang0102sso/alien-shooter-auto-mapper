@@ -82,7 +82,7 @@ struct Segment {
 
 class WallBuilder {
 public:
-    WallBuilder(int grid_size = 20, float map_size_x = 600.0f, float map_size_y = 600.0f);
+    WallBuilder(float map_size_x = 600.0f, float map_size_y = 600.0f);
 
     // Core pipeline: Group by wall_type -> Rasterize per group ->
     // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.
@@ -94,7 +94,6 @@ private:
     static const FloorProfile& get_floor_profile(int floor_type);
     static const CeilingProfile& get_ceiling_profile(int ceiling_type);
 
-    int grid_size_;
     float map_size_x_;
     float map_size_y_;
 };

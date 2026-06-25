@@ -19,8 +19,8 @@
 
 namespace auto_mapper::core {
 
-WallBuilder::WallBuilder(int grid_size, float map_size_x, float map_size_y)
-    : grid_size_(grid_size), map_size_x_(map_size_x), map_size_y_(map_size_y) {}
+WallBuilder::WallBuilder(float map_size_x, float map_size_y)
+    : map_size_x_(map_size_x), map_size_y_(map_size_y) {}
 
 const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
     // Static lookup table for wall profiles

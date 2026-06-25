@@ -31,7 +31,6 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     const char* output_path,
     const CSegment* segments,
     int num_segments,
-    int grid_size,
     float map_size_x,
     float map_size_y,
     bool gen_floor,

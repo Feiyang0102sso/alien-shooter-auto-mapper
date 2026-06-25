@@ -433,7 +433,6 @@ class AutoMapperUI:
                 ctypes.c_char_p,                 # output_path
                 ctypes.POINTER(CSegment),        # segments
                 ctypes.c_int,                    # num_segments
-                ctypes.c_int,                    # grid_size
                 ctypes.c_float,                  # map_size_x
                 ctypes.c_float,                  # map_size_y
                 ctypes.c_bool,                   # gen_floor
@@ -459,7 +458,6 @@ class AutoMapperUI:
                 output_path_bytes,
                 segments_arr,
                 num_segments,
-                GRID_SIZE,
                 float(map_x),
                 float(map_y),
                 self.gen_floor_var.get(),

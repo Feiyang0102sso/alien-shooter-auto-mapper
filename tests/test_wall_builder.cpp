@@ -7,7 +7,7 @@ using namespace auto_mapper;
 using namespace auto_mapper::core;
 
 TEST(WallBuilderTest, BuildCrossShapeStandard) {
-    WallBuilder builder(20, 600.0f, 600.0f);
+    WallBuilder builder(600.0f, 600.0f);
 
     std::vector<Segment> segments = {
         {{0, 5}, {5, 5}, WALL_TYPE_STANDARD},
@@ -35,7 +35,7 @@ TEST(WallBuilderTest, BuildCrossShapeStandard) {
 }
 
 TEST(WallBuilderTest, BuildLineLabWall) {
-    WallBuilder builder(20, 600.0f, 600.0f);
+    WallBuilder builder(600.0f, 600.0f);
 
     std::vector<Segment> segments = {
         {{0, 0}, {3, 0}, WALL_TYPE_LAB}
@@ -57,7 +57,7 @@ TEST(WallBuilderTest, BuildLineLabWall) {
 
 TEST(WallBuilderTest, BuildMixedWallTypes) {
     // Mixed: standard + lab walls in the same build
-    WallBuilder builder(20, 600.0f, 600.0f);
+    WallBuilder builder(600.0f, 600.0f);
 
     std::vector<Segment> segments = {
         {{0, 0}, {3, 0}, WALL_TYPE_STANDARD},  // 3 standard walls
