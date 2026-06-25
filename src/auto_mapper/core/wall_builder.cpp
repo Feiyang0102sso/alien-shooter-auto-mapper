@@ -92,10 +92,7 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
         float grid_y_shift = std::round((raw_shift_y - half_step_y) / step_y);
         float shift_y = grid_y_shift * step_y + half_step_y + step_y;
 
-        MapPoint pt;
-        pt.x = (lx - ly) * step_x + shift_x;
-        pt.y = (lx + ly) * step_y + shift_y;
-        return pt;
+        return to_iso(GridPoint{lx, ly}, step_x, step_y, {shift_x, shift_y});
     };
 
     // 1. Process Wall Sprites
@@ -308,8 +305,9 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
 
             for (int gx = -150; gx <= 150; ++gx) {
                 for (int gy = -150; gy <= 150; ++gy) {
-                    float px = (gx - gy) * f_prof.step_x + f_shift_x;
-                    float py = (gx + gy) * f_prof.step_y + f_shift_y;
+                    MapPoint pt = to_iso(GridPoint{gx, gy}, f_prof.step_x, f_prof.step_y, {f_shift_x, f_shift_y});
+                    float px = pt.x;
+                    float py = pt.y;
 
                     if (px < b_min_px || px > b_max_px || py < b_min_py || py > b_max_py) continue;
 
@@ -371,8 +369,9 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
 
         for (int gx = min_gx; gx <= max_gx; ++gx) {
             for (int gy = min_gy; gy <= max_gy; ++gy) {
-                float px = (gx - gy) * c_prof.step_x + c_shift_x;
-                float py = (gx + gy) * c_prof.step_y + c_shift_y;
+                MapPoint pt = to_iso(GridPoint{gx, gy}, c_prof.step_x, c_prof.step_y, {c_shift_x, c_shift_y});
+                float px = pt.x;
+                float py = pt.y;
 
                 int grid_x = (px - min_px) / cell_size;
                 int grid_y = (py - min_py) / cell_size;
@@ -418,9 +417,7 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
         shift.y = grid_y * step_y + half_step_y;
         shift.y += step_y;
 
-        MapPoint pos;
-        pos.x = (rs.gx - rs.gy) * step_x + shift.x;
-        pos.y = (rs.gx + rs.gy) * step_y + shift.y;
+        MapPoint pos = to_iso(GridPoint{rs.gx, rs.gy}, step_x, step_y, shift);
 
         if (rs.vid == profile.id_dir_a) {
             pos.x += profile.offset_a_x;
