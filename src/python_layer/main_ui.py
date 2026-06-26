@@ -134,18 +134,37 @@ class AutoMapperUI:
         """切换墙壁类型时重绘画布（网格密度会变化）"""
         self.draw_all()
 
+    def _get_grid_shift(self, sx, sy):
+        # Determine if it's lab wall or standard wall
+        # Standard: sx = 40, sy = 28. Grid step = (40, 28), remainder = (20, 14)
+        # Lab: sx = 90, sy = 64. Grid step = (45, 32), remainder = (22.5, 16)
+        grid_step_x = sx
+        grid_step_y = sy
+        remainder_x = sx / 2.0
+        remainder_y = sy / 2.0
+
+        if abs(sx - 90.0) < 0.01:
+            grid_step_x = 45.0
+            grid_step_y = 32.0
+            remainder_x = 22.5
+            remainder_y = 16.0
+
+        raw_shift_x = self.map_x / 2.0
+        grid_shift_x = round((raw_shift_x - remainder_x) / grid_step_x) * grid_step_x + remainder_x
+
+        raw_shift_y = remainder_y
+        grid_shift_y = round((raw_shift_y - remainder_y) / grid_step_y) * grid_step_y + remainder_y + sy
+
+        return grid_shift_x, grid_shift_y
+
     def to_physical(self, gx, gy, sx=None, sy=None):
         """Grid -> Physical coords. Uses current brush steps unless overridden."""
         if sx is None:
             sx = self.step_x
         if sy is None:
             sy = self.step_y
-        half_sx = sx / 2.0
-        half_sy = sy / 2.0
-
-        raw_shift_x = self.map_x / 2.0
-        grid_shift_x = round((raw_shift_x - half_sx) / sx) * sx + half_sx
-        grid_shift_y = half_sy + sy  # half_step + one full step as top padding
+        
+        grid_shift_x, grid_shift_y = self._get_grid_shift(sx, sy)
 
         px = (gx - gy) * sx + grid_shift_x
         py = (gx + gy) * sy + grid_shift_y
@@ -157,12 +176,8 @@ class AutoMapperUI:
             sx = self.step_x
         if sy is None:
             sy = self.step_y
-        half_sx = sx / 2.0
-        half_sy = sy / 2.0
 
-        raw_shift_x = self.map_x / 2.0
-        grid_shift_x = round((raw_shift_x - half_sx) / sx) * sx + half_sx
-        grid_shift_y = half_sy + sy
+        grid_shift_x, grid_shift_y = self._get_grid_shift(sx, sy)
 
         A = (px - grid_shift_x) / sx
         B = (py - grid_shift_y) / sy
