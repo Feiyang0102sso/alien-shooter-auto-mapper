@@ -51,6 +51,7 @@ include/
 # --- testing / output ---
 tests/output/
 test_output.map
+!tests/golden/*.map
 
 # --- some personal note ---
 _personal_note/

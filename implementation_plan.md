@@ -1,100 +1,24 @@
-# 引入 Golden 二进制回归测试实现计划
+# 重构墙体生成测试并引入 Golden 回归测试
 
-为了彻底免去人工肉眼在游戏或 UI 中确认地图对齐的繁琐过程，本计划拟在测试框架中引入 **Golden 二进制回归测试（黄金文件测试）**。通过对生成的地图 `.map` 文件进行逐字节（Byte-by-Byte）的严格比对，确保任何代码重构或算法优化都不会在无意中改变地图精灵的输出结果，实现“差一个字节都不行”的防退化保障。
+为了提供更高质量的防退化保障，本计划重构 `tests/test_wall_builder.cpp`。我们将使用用户已在 `tests/golden/` 目录下准备好的黄金测试数据（`wall_builder.gold.json` 和 `wall_builder.gold.map`）进行完全的二进制回归测试，并删除旧有的、无意义的零散测试。
 
-同时，为了彻底简化复杂测试场景的数据构造过程，本计划拟**为地图编辑器 UI 新增一个“一键导出绘制线段与地图大小”的功能**。该功能能够将用户在 UI 上直观绘制的复杂关卡导出为结构化数据，作为测试套件的输入，打通“UI 绘制 -> 数据导出 -> 自动化测试”的完整工程闭环。
+为了保持测试架构的优雅与轻量，所有通用的辅助逻辑（如文件逐字节比对、极简 JSON 解析等）将以 **Header-only** 的形式实现在新文件 `tests/utils/test_utils.h` 中，免去修改 CMake 配置的繁琐。
 
 ---
 
 ## Goal Description
 
-1. **摆脱人工确认**：将当前已验证正确的算法输出（`.map` 二进制文件）保存为“黄金基准（Golden Master）”。
-2. **严格逐字节比对**：在自动化单元测试中，每次运行生成的新地图文件均与对应的黄金基准进行逐字节对比。若文件大小不一致或任意一字节有偏差，测试立刻报错。
-3. **UI 场景一键导出**：在地图编辑器 UI 中提供导出功能，将当前所画的所有线段（Segments）及地图大小（Map Size）序列化导出为轻量文本文件（JSON 格式），直接作为复杂单元测试的输入数据。
-4. **极简基准更新**：当未来主动升级对齐算法且确认改动正确时，可一键将新生成的地图覆盖为新的黄金基准，无需繁琐的手工比对。
+1. **废弃旧测试**：删除 `tests/test_wall_builder.cpp` 中现有的 `BuildCrossShapeStandard` 等琐碎且意义不大的单元测试。
+2. **引入 Header-only 工具库**：新建 [test_utils.h](file:///d:/c%20coding/auto_mapper/tests/utils/test_utils.h)，包含：
+   - 极其稳健且轻量的专用 JSON 扫描解析器，将 `wall_builder.gold.json` 解析为地图大小与线段数组。
+   - `compare_binary_files` 函数，对生成的 `.map` 二进制文件进行严格的逐字节比对。
+3. **Golden 回归测试**：在 `tests/test_wall_builder.cpp` 中编写全新的测试用例，从 JSON 加载线段，调用 `WallBuilder::build`，将结果写入临时文件 `current_wall_builder.map`，与 `wall_builder.gold.map` 逐字节比对。
+4. **自动清理临时文件**：比对完成后（无论成功与否，最好在测试析构/RAII 中，或者在验证后），主动删除测试生成的临时文件，确保工作区干净。
 
 ---
 
 ## Proposed Changes
 
-### 1. 建立黄金文件存储目录
-* **[NEW]** 建立目录 `tests/goldens/` 用于存放各个场景的黄金基准文件（例如 `cross_shape.gold.map`、`lab_wall.gold.map` 等）以及从 UI 导出的线段描述文件（如 `complex_maze.json`）。
-
-### 2. UI 扩展：一键导出所绘线段与地图大小
-为了使测试数据来源更加自然、免去在 C++ 中手工硬编码复杂坐标，拟在地图编辑器 UI 层（或通过辅助导出工具）增加导出功能，其导出的标准数据格式（JSON）示例如下：
-
-```json
-{
-  "map_size_x": 600.0,
-  "map_size_y": 600.0,
-  "segments": [
-    {
-      "start": {"x": 0, "y": 5},
-      "end": {"x": 5, "y": 5},
-      "wall_type": 0,
-      "floor_type": 0
-    },
-    {
-      "start": {"x": 2, "y": 0},
-      "end": {"x": 2, "y": 10},
-      "wall_type": 0,
-      "floor_type": 0
-    }
-  ]
-}
-```
-* **长远价值**：该导出格式不仅能作为测试的输入源，也为后续开发关卡保存/加载、地图编辑器工程存档等功能打下了坚实的基础。
-
-### 3. 引入二进制对比辅助函数
-在 [test_wall_builder.cpp](file:///d:/c%20coding/auto_mapper/tests/test_wall_builder.cpp) 中实现以下对比逻辑：
-
-```cpp
-#include <fstream>
-#include <iterator>
-#include <algorithm>
-#include <string>
-
-/**
- * @brief 严格逐字节对比两个文件是否完全一致
- * @param path1 实际输出文件路径
- * @param path2 黄金基准文件路径
- * @return 若完全一致则返回 true，否则返回 false
- */
-inline bool compare_binary_files(const std::string& path1, const std::string& path2) {
-    std::ifstream f1(path1, std::ios::binary);
-    std::ifstream f2(path2, std::ios::binary);
-
-    if (!f1.is_open() || !f2.is_open()) {
-        return false; // 文件打开失败（例如基准文件缺失）
-    }
-
-    // 1. 比较文件大小
-    f1.seekg(0, std::ios::end);
-    f2.seekg(0, std::ios::end);
-    if (f1.tellg() != f2.tellg()) {
-        return false; 
-    }
-
-    // 2. 回到起点逐字节比较
-    f1.seekg(0, std::ios::beg);
-    f2.seekg(0, std::ios::beg);
-
-    return std::equal(
-        std::istreambuf_iterator<char>(f1), std::istreambuf_iterator<char>(),
-        std::istreambuf_iterator<char>(f2)
-    );
-}
-```
-
-### 4. 在 [test_wall_builder.cpp](file:///d:/c%20coding/auto_mapper/tests/test_wall_builder.cpp) 中引入 JSON 测试场景加载
-
-编写辅助解析逻辑（或使用轻量 JSON 解析），读取 UI 导出的 `.json` 场景描述，转换为 `std::vector<Segment>` 作为 `WallBuilder` 的输入：
-
-```cpp
-// 伪代码示例：读取导出的测试场景 JSON
-struct TestScene {
-    float map_size_x;
-    float map_size_y;
     std::vector<Segment> segments;
 };
 
