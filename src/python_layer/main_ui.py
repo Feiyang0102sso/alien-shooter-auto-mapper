@@ -1,7 +1,8 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, filedialog
 import os
 import ctypes
+import json
 
 class CSegment(ctypes.Structure):
     _fields_ = [
@@ -40,6 +41,9 @@ class AutoMapperUI:
         
         btn_clear = tk.Button(toolbar, text="Clear", command=self.clear_canvas)
         btn_clear.pack(side=tk.LEFT, padx=5)
+
+        btn_export = tk.Button(toolbar, text="Export JSON", command=self.export_segments, bg="#EAEAEA")
+        btn_export.pack(side=tk.LEFT, padx=5)
         
         # Wall type selector
         tk.Label(toolbar, text="Wall:").pack(side=tk.LEFT, padx=(10, 2))
@@ -403,7 +407,42 @@ class AutoMapperUI:
     def clear_canvas(self):
         self.segments.clear()
         self.draw_all()
-        
+
+    def export_segments(self):
+        if not self.segments:
+            messagebox.showwarning("Warning", "Draw something to export first!")
+            return
+            
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Export Drawn Segments"
+        )
+        if not file_path:
+            return
+            
+        try:
+            data = {
+                "map_size_x": self.map_x,
+                "map_size_y": self.map_y,
+                "segments": [
+                    {
+                        "start": {"x": x1, "y": y1},
+                        "end": {"x": x2, "y": y2},
+                        "wall_type": wt,
+                        "floor_type": 0
+                    }
+                    for (x1, y1), (x2, y2), wt in self.segments
+                ]
+            }
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+                
+            messagebox.showinfo("Success", f"Segments exported successfully to:\n{file_path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to export segments: {str(e)}")
+
     def generate_map(self):
         if not self.segments:
             messagebox.showwarning("Warning", "Draw something first!")

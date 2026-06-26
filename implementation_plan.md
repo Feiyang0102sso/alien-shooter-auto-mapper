@@ -1,74 +1,144 @@
-# 实现地板与天花板自动铺设 (Flood Fill方案)
+# 引入 Golden 二进制回归测试实现计划
 
-该计划详述了如何通过“大水漫灌”（Flood Fill）算法区分建筑内部与外部，从而自动在墙体内部铺设可配置的地板，在墙体外部铺设泥土地天花板。
+为了彻底免去人工肉眼在游戏或 UI 中确认地图对齐的繁琐过程，本计划拟在测试框架中引入 **Golden 二进制回归测试（黄金文件测试）**。通过对生成的地图 `.map` 文件进行逐字节（Byte-by-Byte）的严格比对，确保任何代码重构或算法优化都不会在无意中改变地图精灵的输出结果，实现“差一个字节都不行”的防退化保障。
+
+同时，为了彻底简化复杂测试场景的数据构造过程，本计划拟**为地图编辑器 UI 新增一个“一键导出绘制线段与地图大小”的功能**。该功能能够将用户在 UI 上直观绘制的复杂关卡导出为结构化数据，作为测试套件的输入，打通“UI 绘制 -> 数据导出 -> 自动化测试”的完整工程闭环。
+
+---
 
 ## Goal Description
 
-基于网格坐标系，利用墙体的包围盒（Bounding Box）进行 Flood Fill。
-- 蔓延到达的区域为 **外部 (OUTSIDE)**，铺设天花板材质。
-- 无法到达的区域为 **内部 (INSIDE)**，根据设定铺设对应的地板材质。
-- **不同对齐支持**：由于地板和天花板尺寸不一（如 500标准地板为 40x28，而 503大地板和 504天花板为 80x56，相当于 2x2 的标准格子），生成时将根据材质自身的跨度进行降频采样对齐（例如每 2x2 基础网格放置一个大 Sprite）。
+1. **摆脱人工确认**：将当前已验证正确的算法输出（`.map` 二进制文件）保存为“黄金基准（Golden Master）”。
+2. **严格逐字节比对**：在自动化单元测试中，每次运行生成的新地图文件均与对应的黄金基准进行逐字节对比。若文件大小不一致或任意一字节有偏差，测试立刻报错。
+3. **UI 场景一键导出**：在地图编辑器 UI 中提供导出功能，将当前所画的所有线段（Segments）及地图大小（Map Size）序列化导出为轻量文本文件（JSON 格式），直接作为复杂单元测试的输入数据。
+4. **极简基准更新**：当未来主动升级对齐算法且确认改动正确时，可一键将新生成的地图覆盖为新的黄金基准，无需繁琐的手工比对。
 
-## 确认的设计决策
-根据讨论，采取**方案A（基于全图/多边形属性）**：
-- 在 `Segment` 中增加 `int floor_type = 0;`。
-- 如果某格子属于 `INSIDE`，我们将根据最近的墙壁或划定该区域的 Segment 来决定它的 `floor_type`。
+---
 
 ## Proposed Changes
 
-### 1. 材质配置层 (`auto_mapper/core/wall_builder.h`)
+### 1. 建立黄金文件存储目录
+* **[NEW]** 建立目录 `tests/goldens/` 用于存放各个场景的黄金基准文件（例如 `cross_shape.gold.map`、`lab_wall.gold.map` 等）以及从 UI 导出的线段描述文件（如 `complex_maze.json`）。
 
-#### [MODIFY] `wall_builder.h`
-新增地板和天花板配置，参考 JSON 提取的尺寸和高度数据：
-```cpp
-struct FloorProfile {
-    int vid;
-    float step_x, step_y;
-    float pos_z;
-};
+### 2. UI 扩展：一键导出所绘线段与地图大小
+为了使测试数据来源更加自然、免去在 C++ 中手工硬编码复杂坐标，拟在地图编辑器 UI 层（或通过辅助导出工具）增加导出功能，其导出的标准数据格式（JSON）示例如下：
 
-struct CeilingProfile {
-    int vid;
-    float step_x, step_y;
-    float pos_z;
-};
-
-// 预定义 Profile
-constexpr FloorProfile FLOOR_STANDARD = {500, 40.0f, 28.0f, 0.0f};  // 占用 1x1 标准网格
-constexpr FloorProfile FLOOR_LAB      = {503, 80.0f, 56.0f, 0.0f};  // 占用 2x2 标准网格
-
-constexpr CeilingProfile CEILING_STANDARD = {504, 80.0f, 56.0f, 90.0f}; // 占用 2x2 标准网格，高度更高以遮挡墙壁
+```json
+{
+  "map_size_x": 600.0,
+  "map_size_y": 600.0,
+  "segments": [
+    {
+      "start": {"x": 0, "y": 5},
+      "end": {"x": 5, "y": 5},
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {"x": 2, "y": 0},
+      "end": {"x": 2, "y": 10},
+      "wall_type": 0,
+      "floor_type": 0
+    }
+  ]
+}
 ```
-给 `Segment` 增加 `int floor_type = 0;`。
+* **长远价值**：该导出格式不仅能作为测试的输入源，也为后续开发关卡保存/加载、地图编辑器工程存档等功能打下了坚实的基础。
 
-### 2. 网格拓扑与填充算法 (`auto_mapper/core/wall_builder.cpp`)
+### 3. 引入二进制对比辅助函数
+在 [test_wall_builder.cpp](file:///d:/c%20coding/auto_mapper/tests/test_wall_builder.cpp) 中实现以下对比逻辑：
 
-#### [MODIFY] `wall_builder.cpp`
-- **步骤 A: Bounding Box 计算** 
-  计算出完整的最小外包矩形，向外扩展两格形成物理边界。
-- **步骤 B: 初始化网格图状态** 
-  使用二维图，默认均为 `UNEXPLORED`。并且为每个格子记录它属于哪种 `floor_type`（可以通过离格子最近的墙体/Segment 赋值）。
-- **步骤 C: 栅格化墙壁阻挡层** 
-  将带有墙体的网格坐标标记为 `WALL_BLOCK`。
-- **步骤 D: 洪水填充** 
-  从最外围触发 BFS，凡能连通的非 `WALL_BLOCK` 格子标记为 `OUTSIDE`。
-- **步骤 E: 生成地砖与天花板 Sprite (双重对齐逻辑)** 
-  由于存在不同的 `step` 大小，我们在渲染时按材质的网格跨度（跨度=材质step/基础step）进行遍历对齐。
-  - **天花板 (80x56跨度)**：以 2x2 为步长遍历 `OUTSIDE` 区域，放置 504。
-  - **大地板 (80x56跨度)**：以 2x2 为步长遍历 `INSIDE` 区域，若 `floor_type` 是 LAB，放置 503。
-  - **小地板 (40x28跨度)**：以 1x1 为步长遍历 `INSIDE` 区域，若 `floor_type` 是 STANDARD，放置 500。
-  
-  *对齐不严格的处理*：只要当前遍历点处于 `OUTSIDE` 或 `INSIDE`，就可以放置对应的大格子，即使大格子边缘可能会略微穿模，但这正是我们期望的“被墙体/天花板遮挡掩盖”。
-- **步骤 F: Z-Order 及高度处理** 
-  - 地板：`posZ = 0.0`
-  - 天花板：`posZ = 90.0` (高过墙体)
-  渲染列表组装顺序：地板块先添加，墙壁其次，最后添天花板。
+```cpp
+#include <fstream>
+#include <iterator>
+#include <algorithm>
+#include <string>
 
-## Verification Plan
-### Automated Tests
-- 在 `test_geometry.cpp` 中验证 Flood Fill 能否正确给出 `INSIDE` 和 `OUTSIDE` 集合。
-- 验证大尺寸材质（如 80x56）生成时，坐标系跨度确实为 2 的整数倍。
+/**
+ * @brief 严格逐字节对比两个文件是否完全一致
+ * @param path1 实际输出文件路径
+ * @param path2 黄金基准文件路径
+ * @return 若完全一致则返回 true，否则返回 false
+ */
+inline bool compare_binary_files(const std::string& path1, const std::string& path2) {
+    std::ifstream f1(path1, std::ios::binary);
+    std::ifstream f2(path2, std::ios::binary);
 
-### Manual Verification
-- 生成地图，在 Alien Shooter 中确认 504 泥土高过墙体遮盖了外部。
-- 确认实验室大房间中铺了 503，标准小房间铺了 500。
+    if (!f1.is_open() || !f2.is_open()) {
+        return false; // 文件打开失败（例如基准文件缺失）
+    }
+
+    // 1. 比较文件大小
+    f1.seekg(0, std::ios::end);
+    f2.seekg(0, std::ios::end);
+    if (f1.tellg() != f2.tellg()) {
+        return false; 
+    }
+
+    // 2. 回到起点逐字节比较
+    f1.seekg(0, std::ios::beg);
+    f2.seekg(0, std::ios::beg);
+
+    return std::equal(
+        std::istreambuf_iterator<char>(f1), std::istreambuf_iterator<char>(),
+        std::istreambuf_iterator<char>(f2)
+    );
+}
+```
+
+### 4. 在 [test_wall_builder.cpp](file:///d:/c%20coding/auto_mapper/tests/test_wall_builder.cpp) 中引入 JSON 测试场景加载
+
+编写辅助解析逻辑（或使用轻量 JSON 解析），读取 UI 导出的 `.json` 场景描述，转换为 `std::vector<Segment>` 作为 `WallBuilder` 的输入：
+
+```cpp
+// 伪代码示例：读取导出的测试场景 JSON
+struct TestScene {
+    float map_size_x;
+    float map_size_y;
+    std::vector<Segment> segments;
+};
+
+TestScene load_test_scene(const std::string& json_path);
+```
+
+通过此方式，在测试复杂场景（如 `BuildComplexMaze`）时，只需在 UI 中画好并导出为 `maze.json`，测试代码将极为精简：
+```cpp
+TEST(WallBuilderTest, GoldRegression_ComplexMaze) {
+    // 1. 从 UI 导出的 JSON 中加载输入数据和地图大小
+    TestScene scene = load_test_scene("tests/goldens/complex_maze.json");
+    WallBuilder builder(scene.map_size_x, scene.map_size_y);
+
+    // 2. 运行生成
+    std::vector<io::Sprite> sprites = builder.build(scene.segments);
+    
+    // 3. 写入临时输出
+    std::string current_output = "current_complex_maze.map";
+    ASSERT_TRUE(io::write_map(sprites, current_output));
+
+    // 4. 与对应的黄金二进制进行比对，锁死物理表现
+    std::string gold_file = "tests/goldens/complex_maze.gold.map";
+    EXPECT_TRUE(compare_binary_files(current_output, gold_file));
+}
+```
+
+---
+
+## Verification & Workflow Plan
+
+### 1. 建立初代基准 (Bootstrap)
+1. 编译并运行当前测试，程序会在根目录下生成最新的测试地图文件（如 `test_wall_builder_output.map` 等）。
+2. 在项目根目录下创建 `tests/goldens/` 目录。
+3. 将生成的 `.map` 文件复制到 `tests/goldens/` 目录中，作为各场景的初代黄金基准。
+4. 提交这些黄金 `.map` 二进制文件到 Git。
+
+### 2. 测试严格性验证 (Fault Injection)
+为了证明测试能灵敏地捕捉到对齐偏差，我们将进行故障注入测试：
+1. 故意修改 `wall_builder.cpp` 中微小的对齐逻辑（例如将某个 offset 加上 `0.1f`）。
+2. 编译并运行测试，**验证测试立刻报错失败**，并精确指出是哪个黄金测试用例的二进制不匹配。
+3. 还原对齐逻辑，**验证测试重新 100% 通过**。
+
+### 3. 日常基准更新工作流 (Update Workflow)
+当未来主动进行了对齐优化、并确信新生成的效果更佳时：
+* 运行测试会触发失败。
+* 开发者只需将最新生成的 `current_xxx.map` 覆盖 `tests/goldens/xxx.gold.map`。
+* 使用 `git diff` 观察二进制文件的变化大小，然后直接 commit 提交，即完成了基准的安全升级。

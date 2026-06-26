@@ -89,6 +89,34 @@ public:
     std::vector<io::Sprite> build(const std::vector<Segment>& segments, bool gen_floor = true, bool gen_ceiling = true) const;
 
 private:
+    struct RawSprite {
+        int gx;
+        int gy;
+        int wall_type;
+        int vid;
+        bool operator==(const RawSprite& other) const {
+            return gx == other.gx && gy == other.gy && wall_type == other.wall_type && vid == other.vid;
+        }
+    };
+
+    struct PhysicalGridContext {
+        int grid_w;
+        int grid_h;
+        float min_px;
+        float min_py;
+        std::vector<bool> physical_grid;
+        std::vector<bool> outside_grid;
+        std::vector<int> floor_type_grid;
+    };
+
+    // Helper methods for each stage
+    MapPoint get_phys(int lx, int ly, int w_type) const;
+    std::vector<RawSprite> process_wall_sprites(const std::vector<Segment>& segments) const;
+    PhysicalGridContext build_physical_grid(const std::vector<Segment>& segments) const;
+    std::vector<io::Sprite> place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
+    std::vector<io::Sprite> place_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
+    std::vector<io::Sprite> convert_to_wall_sprites(const std::vector<RawSprite>& raw_sprites) const;
+
     // Look up profiles
     static const WallProfile& get_wall_profile(int wall_type);
     static const FloorProfile& get_floor_profile(int floor_type);

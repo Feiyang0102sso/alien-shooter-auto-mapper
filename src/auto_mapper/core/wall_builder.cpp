@@ -61,41 +61,26 @@ const CeilingProfile& WallBuilder::get_ceiling_profile(int ceiling_type) {
     return profiles.at(CEILING_TYPE_STANDARD);
 }
 
-std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments, bool gen_floor, bool gen_ceiling) const {
-    struct RawSprite {
-        int gx;
-        int gy;
-        int wall_type;
-        int vid;
-        bool operator==(const RawSprite& other) const {
-            return gx == other.gx && gy == other.gy && wall_type == other.wall_type && vid == other.vid;
-        }
-    };
+MapPoint WallBuilder::get_phys(int lx, int ly, int w_type) const {
+    const WallProfile& profile = get_wall_profile(w_type);
+    float step_x = profile.step_x;
+    float step_y = profile.step_y;
+    float half_step_x = step_x / 2.0f;
+    float half_step_y = step_y / 2.0f;
+
+    float raw_shift_x = map_size_x_ / 2.0f;
+    float grid_x_shift = std::round((raw_shift_x - half_step_x) / step_x);
+    float shift_x = grid_x_shift * step_x + half_step_x;
+
+    float raw_shift_y = half_step_y;
+    float grid_y_shift = std::round((raw_shift_y - half_step_y) / step_y);
+    float shift_y = grid_y_shift * step_y + half_step_y + step_y;
+
+    return to_iso(GridPoint{lx, ly}, step_x, step_y, {shift_x, shift_y});
+}
+
+std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(const std::vector<Segment>& segments) const {
     std::vector<RawSprite> raw_sprites;
-    std::vector<io::Sprite> floor_sprites;
-    std::vector<io::Sprite> ceiling_sprites;
-
-    if (segments.empty()) return {};
-
-    auto get_phys = [&](int lx, int ly, int w_type) {
-        const WallProfile& profile = get_wall_profile(w_type);
-        float step_x = profile.step_x;
-        float step_y = profile.step_y;
-        float half_step_x = step_x / 2.0f;
-        float half_step_y = step_y / 2.0f;
-
-        float raw_shift_x = map_size_x_ / 2.0f;
-        float grid_x_shift = std::round((raw_shift_x - half_step_x) / step_x);
-        float shift_x = grid_x_shift * step_x + half_step_x;
-
-        float raw_shift_y = half_step_y;
-        float grid_y_shift = std::round((raw_shift_y - half_step_y) / step_y);
-        float shift_y = grid_y_shift * step_y + half_step_y + step_y;
-
-        return to_iso(GridPoint{lx, ly}, step_x, step_y, {shift_x, shift_y});
-    };
-
-    // 1. Process Wall Sprites
     using Point = std::pair<int, int>;
     std::map<int, std::vector<const Segment*>> groups;
     for (const auto& seg : segments) {
@@ -168,7 +153,10 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
         return a.gx == b.gx && a.gy == b.gy && a.wall_type == b.wall_type && a.vid == b.vid;
     }), raw_sprites.end());
 
-    // 2. Global Physical Grid for Flood Fill
+    return raw_sprites;
+}
+
+WallBuilder::PhysicalGridContext WallBuilder::build_physical_grid(const std::vector<Segment>& segments) const {
     int cell_size = 5;
     float min_px = 0.0f, max_px = map_size_x_;
     float min_py = 0.0f, max_py = map_size_y_;
@@ -212,7 +200,6 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
                     if (nx >= 0 && nx < grid_w && ny >= 0 && ny < grid_h) {
                         int idx = ny * grid_w + nx;
                         physical_grid[idx] = true;
-                        // Infer floor_type from wall_type (they share the same ID mapping)
                         physical_floor_type[idx] = seg.wall_type;
                     }
                 }
@@ -271,133 +258,133 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
         }
     }
 
-    // 3. Place Floors and Ceilings
-    if (gen_floor) {
-        // Floor should be bounded closely to the walls
-        float b_min_px = 1e9, b_max_px = -1e9, b_min_py = 1e9, b_max_py = -1e9;
-        for (const auto& seg : segments) {
-            MapPoint p1 = get_phys(seg.start.x, seg.start.y, seg.wall_type);
-            MapPoint p2 = get_phys(seg.end.x, seg.end.y, seg.wall_type);
-            b_min_px = std::min({b_min_px, p1.x, p2.x});
-            b_max_px = std::max({b_max_px, p1.x, p2.x});
-            b_min_py = std::min({b_min_py, p1.y, p2.y});
-            b_max_py = std::max({b_max_py, p1.y, p2.y});
-        }
-        b_min_px -= 200.0f; b_max_px += 200.0f;
-        b_min_py -= 200.0f; b_max_py += 200.0f;
+    return PhysicalGridContext{grid_w, grid_h, min_px, min_py, std::move(physical_grid), std::move(outside_grid), std::move(floor_type_grid)};
+}
 
-        std::vector<int> floor_types = {FLOOR_TYPE_STANDARD, FLOOR_TYPE_LAB};
-        for (int ft : floor_types) {
-            const FloorProfile& f_prof = get_floor_profile(ft);
-            float half_step_x = f_prof.step_x / 2.0f;
-            float half_step_y = f_prof.step_y / 2.0f;
+std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const {
+    std::vector<io::Sprite> floor_sprites;
+    int cell_size = 5;
 
-            // n = multiplier that aligns the floor grid to this map size
-            // Same formula as wall shift but without the final +half_step_x
-            int n = (int)std::round((map_size_x_ / 2.0f - half_step_x) / f_prof.step_x);
-            float f_shift_x = n * f_prof.step_x;
+    // Floor should be bounded closely to the walls
+    float b_min_px = 1e9, b_max_px = -1e9, b_min_py = 1e9, b_max_py = -1e9;
+    for (const auto& seg : segments) {
+        MapPoint p1 = get_phys(seg.start.x, seg.start.y, seg.wall_type);
+        MapPoint p2 = get_phys(seg.end.x, seg.end.y, seg.wall_type);
+        b_min_px = std::min({b_min_px, p1.x, p2.x});
+        b_max_px = std::max({b_max_px, p1.x, p2.x});
+        b_min_py = std::min({b_min_py, p1.y, p2.y});
+        b_max_py = std::max({b_max_py, p1.y, p2.y});
+    }
+    b_min_px -= 200.0f; b_max_px += 200.0f;
+    b_min_py -= 200.0f; b_max_py += 200.0f;
 
-            // Parity rule: when n is even, shift_y uses the 'full offset' variant;
-            // when n is odd, uses the 'half-only' variant.
-            // This ensures gx and gy are always integers at valid tile positions.
-            bool n_is_even = (n % 2 == 0);
-            float f_shift_y = n_is_even ? (f_prof.step_y + half_step_y) : half_step_y;
+    std::vector<int> floor_types = {FLOOR_TYPE_STANDARD, FLOOR_TYPE_LAB};
+    for (int ft : floor_types) {
+        const FloorProfile& f_prof = get_floor_profile(ft);
+        float half_step_x = f_prof.step_x / 2.0f;
+        float half_step_y = f_prof.step_y / 2.0f;
 
-            for (int gx = -150; gx <= 150; ++gx) {
-                for (int gy = -150; gy <= 150; ++gy) {
-                    MapPoint pt = to_iso(GridPoint{gx, gy}, f_prof.step_x, f_prof.step_y, {f_shift_x, f_shift_y});
-                    float px = pt.x;
-                    float py = pt.y;
+        int n = (int)std::round((map_size_x_ / 2.0f - half_step_x) / f_prof.step_x);
+        float f_shift_x = n * f_prof.step_x;
 
-                    if (px < b_min_px || px > b_max_px || py < b_min_py || py > b_max_py) continue;
+        bool n_is_even = (n % 2 == 0);
+        float f_shift_y = n_is_even ? (f_prof.step_y + half_step_y) : half_step_y;
 
-                    int grid_x = (px - min_px) / cell_size;
-                    int grid_y = (py - min_py) / cell_size;
+        for (int gx = -150; gx <= 150; ++gx) {
+            for (int gy = -150; gy <= 150; ++gy) {
+                MapPoint pt = to_iso(GridPoint{gx, gy}, f_prof.step_x, f_prof.step_y, {f_shift_x, f_shift_y});
+                float px = pt.x;
+                float py = pt.y;
 
-                    if (grid_x >= 0 && grid_x < grid_w && grid_y >= 0 && grid_y < grid_h) {
-                        bool is_outside = outside_grid[grid_y * grid_w + grid_x];
-                        // Pave floor if it's NOT outside (includes wall lines to prevent gaps!)
-                        if (!is_outside) {
-                            int cell_ft = floor_type_grid[grid_y * grid_w + grid_x];
-                            if (cell_ft == -1) cell_ft = FLOOR_TYPE_STANDARD;
-                            
-                            if (cell_ft == ft) {
-                                io::Sprite spr;
-                                spr.vid = f_prof.vid;
-                                spr.posX = px;
-                                spr.posY = py;
-                                spr.posZ = f_prof.pos_z;
-                                spr.direction = 0;
-                                spr.army = 0;
-                                floor_sprites.push_back(spr);
-                            }
+                if (px < b_min_px || px > b_max_px || py < b_min_py || py > b_max_py) continue;
+
+                int grid_x = (px - grid_ctx.min_px) / cell_size;
+                int grid_y = (py - grid_ctx.min_py) / cell_size;
+
+                if (grid_x >= 0 && grid_x < grid_ctx.grid_w && grid_y >= 0 && grid_y < grid_ctx.grid_h) {
+                    bool is_outside = grid_ctx.outside_grid[grid_y * grid_ctx.grid_w + grid_x];
+                    if (!is_outside) {
+                        int cell_ft = grid_ctx.floor_type_grid[grid_y * grid_ctx.grid_w + grid_x];
+                        if (cell_ft == -1) cell_ft = FLOOR_TYPE_STANDARD;
+                        
+                        if (cell_ft == ft) {
+                            io::Sprite spr;
+                            spr.vid = f_prof.vid;
+                            spr.posX = px;
+                            spr.posY = py;
+                            spr.posZ = f_prof.pos_z;
+                            spr.direction = 0;
+                            spr.army = 0;
+                            floor_sprites.push_back(spr);
                         }
                     }
                 }
             }
         }
     }
+    return floor_sprites;
+}
 
-    if (gen_ceiling) {
-        const CeilingProfile& c_prof = get_ceiling_profile(CEILING_TYPE_STANDARD);
-        // Ceiling shift IS map-size dependent (verified against reference data)
-        float c_shift_x = std::round(map_size_x_ / 2.0f / c_prof.step_x) * c_prof.step_x + c_prof.shift_offset_x;
-        float c_shift_y = std::round(map_size_y_ / 2.0f / c_prof.step_y) * c_prof.step_y + c_prof.shift_offset_y;
+std::vector<io::Sprite> WallBuilder::place_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const {
+    std::vector<io::Sprite> ceiling_sprites;
+    int cell_size = 5;
 
-        // Ceiling should be bounded by a LOGICAL rectangle to form a straight diamond in screen space!
-        int min_gx = 1e9, max_gx = -1e9, min_gy = 1e9, max_gy = -1e9;
-        for (const auto& seg : segments) {
-            MapPoint p1 = get_phys(seg.start.x, seg.start.y, seg.wall_type);
-            MapPoint p2 = get_phys(seg.end.x, seg.end.y, seg.wall_type);
-            
-            int gx1 = std::round(((p1.x - c_shift_x) / c_prof.step_x + (p1.y - c_shift_y) / c_prof.step_y) / 2.0f);
-            int gy1 = std::round(((p1.y - c_shift_y) / c_prof.step_y - (p1.x - c_shift_x) / c_prof.step_x) / 2.0f);
-            
-            int gx2 = std::round(((p2.x - c_shift_x) / c_prof.step_x + (p2.y - c_shift_y) / c_prof.step_y) / 2.0f);
-            int gy2 = std::round(((p2.y - c_shift_y) / c_prof.step_y - (p2.x - c_shift_x) / c_prof.step_x) / 2.0f);
-            
-            min_gx = std::min({min_gx, gx1, gx2});
-            max_gx = std::max({max_gx, gx1, gx2});
-            min_gy = std::min({min_gy, gy1, gy2});
-            max_gy = std::max({max_gy, gy1, gy2});
-        }
+    const CeilingProfile& c_prof = get_ceiling_profile(CEILING_TYPE_STANDARD);
+    float c_shift_x = std::round(map_size_x_ / 2.0f / c_prof.step_x) * c_prof.step_x + c_prof.shift_offset_x;
+    float c_shift_y = std::round(map_size_y_ / 2.0f / c_prof.step_y) * c_prof.step_y + c_prof.shift_offset_y;
+
+    int min_gx = 1e9, max_gx = -1e9, min_gy = 1e9, max_gy = -1e9;
+    for (const auto& seg : segments) {
+        MapPoint p1 = get_phys(seg.start.x, seg.start.y, seg.wall_type);
+        MapPoint p2 = get_phys(seg.end.x, seg.end.y, seg.wall_type);
         
-        // Margin of logical tiles (e.g., 6 tiles = 480 physical pixels width of black mask)
-        int margin_g = 6;
-        min_gx -= margin_g; max_gx += margin_g;
-        min_gy -= margin_g; max_gy += margin_g;
+        int gx1 = std::round(((p1.x - c_shift_x) / c_prof.step_x + (p1.y - c_shift_y) / c_prof.step_y) / 2.0f);
+        int gy1 = std::round(((p1.y - c_shift_y) / c_prof.step_y - (p1.x - c_shift_x) / c_prof.step_x) / 2.0f);
+        
+        int gx2 = std::round(((p2.x - c_shift_x) / c_prof.step_x + (p2.y - c_shift_y) / c_prof.step_y) / 2.0f);
+        int gy2 = std::round(((p2.y - c_shift_y) / c_prof.step_y - (p2.x - c_shift_x) / c_prof.step_x) / 2.0f);
+        
+        min_gx = std::min({min_gx, gx1, gx2});
+        max_gx = std::max({max_gx, gx1, gx2});
+        min_gy = std::min({min_gy, gy1, gy2});
+        max_gy = std::max({max_gy, gy1, gy2});
+    }
+    
+    int margin_g = 6;
+    min_gx -= margin_g; max_gx += margin_g;
+    min_gy -= margin_g; max_gy += margin_g;
 
-        for (int gx = min_gx; gx <= max_gx; ++gx) {
-            for (int gy = min_gy; gy <= max_gy; ++gy) {
-                MapPoint pt = to_iso(GridPoint{gx, gy}, c_prof.step_x, c_prof.step_y, {c_shift_x, c_shift_y});
-                float px = pt.x;
-                float py = pt.y;
+    for (int gx = min_gx; gx <= max_gx; ++gx) {
+        for (int gy = min_gy; gy <= max_gy; ++gy) {
+            MapPoint pt = to_iso(GridPoint{gx, gy}, c_prof.step_x, c_prof.step_y, {c_shift_x, c_shift_y});
+            float px = pt.x;
+            float py = pt.y;
 
-                int grid_x = (px - min_px) / cell_size;
-                int grid_y = (py - min_py) / cell_size;
+            int grid_x = (px - grid_ctx.min_px) / cell_size;
+            int grid_y = (py - grid_ctx.min_py) / cell_size;
 
-                if (grid_x >= 0 && grid_x < grid_w && grid_y >= 0 && grid_y < grid_h) {
-                    bool is_wall = physical_grid[grid_y * grid_w + grid_x];
-                    bool is_outside = outside_grid[grid_y * grid_w + grid_x];
-                    // Pave ceiling ONLY if it's strictly outside to prevent covering walls/rooms
-                    // Since it has pos_z=90, covering walls will hide them.
-                    if (is_outside && !is_wall) {
-                        io::Sprite spr;
-                        spr.vid = c_prof.vid;
-                        spr.posX = px;
-                        spr.posY = py;
-                        spr.posZ = c_prof.pos_z;
-                        spr.direction = 0;
-                        spr.army = 0;
-                        ceiling_sprites.push_back(spr);
-                    }
+            if (grid_x >= 0 && grid_x < grid_ctx.grid_w && grid_y >= 0 && grid_y < grid_ctx.grid_h) {
+                bool is_wall = grid_ctx.physical_grid[grid_y * grid_ctx.grid_w + grid_x];
+                bool is_outside = grid_ctx.outside_grid[grid_y * grid_ctx.grid_w + grid_x];
+                if (is_outside && !is_wall) {
+                    io::Sprite spr;
+                    spr.vid = c_prof.vid;
+                    spr.posX = px;
+                    spr.posY = py;
+                    spr.posZ = c_prof.pos_z;
+                    spr.direction = 0;
+                    spr.army = 0;
+                    ceiling_sprites.push_back(spr);
                 }
             }
         }
     }
-    // 4. Construct Final Sprites List
-    std::vector<io::Sprite> final_sprites;
-    final_sprites.insert(final_sprites.end(), floor_sprites.begin(), floor_sprites.end());
+    return ceiling_sprites;
+}
+
+std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<RawSprite>& raw_sprites) const {
+    std::vector<io::Sprite> wall_sprites;
+    wall_sprites.reserve(raw_sprites.size());
 
     for (const auto& rs : raw_sprites) {
         const WallProfile& profile = get_wall_profile(rs.wall_type);
@@ -437,9 +424,44 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
         spr.posZ = 0.0f;
         spr.direction = 32;
         spr.army = 0;
-        final_sprites.push_back(spr);
+        wall_sprites.push_back(spr);
+    }
+    return wall_sprites;
+}
+
+std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments, bool gen_floor, bool gen_ceiling) const {
+    if (segments.empty()) return {};
+
+    // 1. wall and  pillar
+    std::vector<RawSprite> raw_sprites = process_wall_sprites(segments);
+
+    std::vector<io::Sprite> floor_sprites;
+    std::vector<io::Sprite> ceiling_sprites;
+
+    // 2. grid and calculate area
+    if (gen_floor || gen_ceiling) {
+        PhysicalGridContext grid_ctx = build_physical_grid(segments);
+        
+        // 3. floor
+        if (gen_floor) {
+            floor_sprites = place_floors(segments, grid_ctx);
+        }
+        
+        // 4. celling
+        if (gen_ceiling) {
+            ceiling_sprites = place_ceilings(segments, grid_ctx);
+        }
     }
 
+    // 5. project physical coordinates and transform wall sprites
+    std::vector<io::Sprite> wall_sprites = convert_to_wall_sprites(raw_sprites);
+
+    // 6. combine all spirit lists
+    std::vector<io::Sprite> final_sprites;
+    final_sprites.reserve(floor_sprites.size() + wall_sprites.size() + ceiling_sprites.size());
+    
+    final_sprites.insert(final_sprites.end(), floor_sprites.begin(), floor_sprites.end());
+    final_sprites.insert(final_sprites.end(), wall_sprites.begin(), wall_sprites.end());
     final_sprites.insert(final_sprites.end(), ceiling_sprites.begin(), ceiling_sprites.end());
 
     return final_sprites;
