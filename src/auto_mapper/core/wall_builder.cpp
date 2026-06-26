@@ -61,21 +61,13 @@ const CeilingProfile& WallBuilder::get_ceiling_profile(int ceiling_type) {
     return profiles.at(CEILING_TYPE_STANDARD);
 }
 
-static MapPoint get_wall_shift(float map_size_x, int wall_type, const WallProfile& profile) {
-    float step_x = profile.step_x;
-    float step_y = profile.step_y;
+static MapPoint get_wall_shift(float map_size_x, const WallProfile& profile) {
+    float divisor = static_cast<float>(profile.grid_divisor);
+    float grid_step_x = profile.step_x / divisor;
+    float grid_step_y = profile.step_y / divisor;
 
-    float grid_step_x = step_x;
-    float grid_step_y = step_y;
-    float remainder_x = step_x / 2.0f;
-    float remainder_y = step_y / 2.0f;
-
-    if (wall_type == WALL_TYPE_LAB) {
-        grid_step_x = 45.0f;
-        grid_step_y = 32.0f;
-        remainder_x = 22.5f;
-        remainder_y = 16.0f;
-    }
+    float remainder_x = grid_step_x / 2.0f;
+    float remainder_y = grid_step_y / 2.0f;
 
     float raw_shift_x = map_size_x / 2.0f;
     float grid_x_shift = std::round((raw_shift_x - remainder_x) / grid_step_x);
@@ -83,14 +75,14 @@ static MapPoint get_wall_shift(float map_size_x, int wall_type, const WallProfil
 
     float raw_shift_y = remainder_y;
     float grid_y_shift = std::round((raw_shift_y - remainder_y) / grid_step_y);
-    float shift_y = grid_y_shift * grid_step_y + remainder_y + step_y;
+    float shift_y = grid_y_shift * grid_step_y + remainder_y + profile.step_y;
 
     return {shift_x, shift_y};
 }
 
 MapPoint WallBuilder::get_phys(int lx, int ly, int w_type) const {
     const WallProfile& profile = get_wall_profile(w_type);
-    MapPoint shift = get_wall_shift(map_size_x_, w_type, profile);
+    MapPoint shift = get_wall_shift(map_size_x_, profile);
     return to_iso(GridPoint{lx, ly}, profile.step_x, profile.step_y, shift);
 }
 
@@ -406,7 +398,7 @@ std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<R
         float step_x = profile.step_x;
         float step_y = profile.step_y;
 
-        MapPoint shift = get_wall_shift(map_size_x_, rs.wall_type, profile);
+        MapPoint shift = get_wall_shift(map_size_x_, profile);
         MapPoint pos = to_iso(GridPoint{rs.gx, rs.gy}, step_x, step_y, shift);
 
         if (rs.vid == profile.id_dir_a) {

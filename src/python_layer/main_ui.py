@@ -21,10 +21,10 @@ CANVAS_SIZE = GRID_SIZE * CELL_SIZE
 WALL_TYPE_STANDARD = 0
 WALL_TYPE_LAB = 1
 
-# ── Wall profiles: (step_x, step_y, display_label, line_color) ──
+# ── Wall profiles: (step_x, step_y, grid_divisor, display_label, line_color) ──
 WALL_PROFILES = {
-    WALL_TYPE_STANDARD: (40.0, 28.0, "Standard (40×28)", "blue"),
-    WALL_TYPE_LAB:      (90.0, 64.0, "Lab (90×64)",      "#00AA00"),
+    WALL_TYPE_STANDARD: (40.0, 28.0, 1, "Standard (40×28)", "blue"),
+    WALL_TYPE_LAB:      (90.0, 64.0, 2, "Lab (90×64)",      "#00AA00"),
 }
 
 class AutoMapperUI:
@@ -48,7 +48,7 @@ class AutoMapperUI:
         # Wall type selector
         tk.Label(toolbar, text="Wall:").pack(side=tk.LEFT, padx=(10, 2))
         self.wall_type_var = tk.IntVar(value=WALL_TYPE_STANDARD)
-        wall_labels = [WALL_PROFILES[wt][2] for wt in sorted(WALL_PROFILES.keys())]
+        wall_labels = [WALL_PROFILES[wt][3] for wt in sorted(WALL_PROFILES.keys())]
         self.wall_combo = ttk.Combobox(toolbar, values=wall_labels, width=16, state="readonly")
         self.wall_combo.current(0)
         self.wall_combo.pack(side=tk.LEFT)
@@ -135,19 +135,17 @@ class AutoMapperUI:
         self.draw_all()
 
     def _get_grid_shift(self, sx, sy):
-        # Determine if it's lab wall or standard wall
-        # Standard: sx = 40, sy = 28. Grid step = (40, 28), remainder = (20, 14)
-        # Lab: sx = 90, sy = 64. Grid step = (45, 32), remainder = (22.5, 16)
-        grid_step_x = sx
-        grid_step_y = sy
-        remainder_x = sx / 2.0
-        remainder_y = sy / 2.0
+        # Determine step and remainder dynamically using grid_divisor from WALL_PROFILES
+        divisor = 1
+        for wt, prof in WALL_PROFILES.items():
+            if abs(prof[0] - sx) < 0.01:
+                divisor = prof[2]
+                break
 
-        if abs(sx - 90.0) < 0.01:
-            grid_step_x = 45.0
-            grid_step_y = 32.0
-            remainder_x = 22.5
-            remainder_y = 16.0
+        grid_step_x = sx / divisor
+        grid_step_y = sy / divisor
+        remainder_x = grid_step_x / 2.0
+        remainder_y = grid_step_y / 2.0
 
         raw_shift_x = self.map_x / 2.0
         grid_shift_x = round((raw_shift_x - remainder_x) / grid_step_x) * grid_step_x + remainder_x
@@ -320,7 +318,7 @@ class AutoMapperUI:
 
         # Draw segments (each uses its own wall_type's step sizes and color)
         for (gx1, gy1), (gx2, gy2), seg_wt in self.segments:
-            seg_sx, seg_sy, _, seg_color = WALL_PROFILES[seg_wt]
+            seg_sx, seg_sy, _, _, seg_color = WALL_PROFILES[seg_wt]
             px1, py1 = self.to_physical(gx1, gy1, seg_sx, seg_sy)
             px2, py2 = self.to_physical(gx2, gy2, seg_sx, seg_sy)
             s_x1, s_y1 = self.to_screen(px1, py1)

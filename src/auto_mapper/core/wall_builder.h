@@ -25,6 +25,7 @@ struct WallProfile {
     float offset_a_x, offset_a_y;
     float offset_b_x, offset_b_y;
     float offset_p_x, offset_p_y;
+    int grid_divisor; // division divisor     (1 for standard, 2 for lab)
 };
 
 struct FloorProfile {
@@ -52,14 +53,16 @@ constexpr WallProfile WALL_STANDARD = {
     601, 602, 604, 40.0f, 28.0f,
     0.0f, 0.0f,       // dir_a offset
     -40.0f, 0.0f,     // dir_b offset
-    0.0f, 0.0f        // pillar offset
+    0.0f, 0.0f,       // pillar offset
+    1                          // grid_divisor
 };
 
 constexpr WallProfile WALL_LAB = {
     651, 650, 652, 90.0f, 64.0f,
     90.0f, 0.0f,      // dir_a offset
     0.0f, 0.0f,       // dir_b offset
-    0.0f, 0.0f        // pillar offset
+    0.0f, 0.0f,       // pillar offset
+    2                          // grid_divisor
 };
 
 // ── Pre-defined floor and ceiling profiles ──
