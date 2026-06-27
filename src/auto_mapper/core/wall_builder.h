@@ -90,6 +90,10 @@ public:
     // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.
     std::vector<io::Sprite> build(const std::vector<Segment>& segments, bool gen_floor = true, bool gen_ceiling = true) const;
 
+    // Place a single tile/wall sprite at logical grid coordinates
+    io::Sprite place_single_floor_celling(int gx, int gy, int vid, float step_x, float step_y, float pos_z, int grid_divisor) const;
+    io::Sprite place_single_wall(int gx, int gy, int wall_type, int vid) const;
+
 private:
     struct RawSprite {
         int gx;

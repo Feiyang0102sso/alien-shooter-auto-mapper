@@ -18,6 +18,10 @@ struct Sprite {
     float posZ = 0.0f;
     uint32_t direction = 32;
     int32_t army = 0;
+
+    Sprite() = default;
+    Sprite(int32_t v, float x, float y, float z = 0.0f, uint32_t dir = 32)
+        : vid(v), posX(x), posY(y), posZ(z), direction(dir), army(0) {}
 };
 
 /**

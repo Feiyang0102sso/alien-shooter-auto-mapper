@@ -42,6 +42,13 @@ inline std::string resolve_test_path(const std::string& relative_path) {
     return fallback;
 }
 
+// Get absolute path of the project root directory
+inline std::string get_project_root() {
+    namespace fs = std::filesystem;
+    std::string resolved = resolve_test_path("tests/golden/wall_builder.gold.json");
+    return fs::path(resolved).parent_path().parent_path().parent_path().string();
+}
+
 // compare 2 .map file
 inline bool compare_binary_files(const std::string& path1, const std::string& path2) {
     namespace fs = std::filesystem;
@@ -293,8 +300,8 @@ inline TestScene parse_test_scene(const std::vector<Token>& tokens) {
 }
 
 
-// load json and build TestScene
-inline TestScene load_test_scene(const std::string& json_path) {
+// load file and tokenize helper
+inline std::vector<Token> load_json_tokens(const std::string& json_path) {
     namespace fs = std::filesystem;
     std::ifstream file(json_path);
     if (!file.is_open()) {
@@ -305,10 +312,12 @@ inline TestScene load_test_scene(const std::string& json_path) {
     }
     std::stringstream buffer;
     buffer << file.rdbuf();
-    std::string content = buffer.str();
-    
-    std::vector<Token> tokens = tokenize(content);
-    return parse_test_scene(tokens);
+    return tokenize(buffer.str());
+}
+
+// load json and build TestScene
+inline TestScene load_test_scene(const std::string& json_path) {
+    return parse_test_scene(load_json_tokens(json_path));
 }
 
 } // namespace auto_mapper::test

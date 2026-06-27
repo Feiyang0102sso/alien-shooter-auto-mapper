@@ -299,15 +299,14 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
     b_min_px -= 200.0f; b_max_px += 200.0f;
     b_min_py -= 200.0f; b_max_py += 200.0f;
 
-    MapPoint base_shift = get_floor_ceiling_shift(map_size_x_, 40.0f, 28.0f, 1);
-
     std::vector<int> floor_types = {FLOOR_TYPE_STANDARD, FLOOR_TYPE_LAB};
     for (int ft : floor_types) {
         const FloorProfile& f_prof = get_floor_profile(ft);
+        MapPoint shift = get_floor_ceiling_shift(map_size_x_, f_prof.step_x, f_prof.step_y, f_prof.grid_divisor);
 
         for (int gx = -150; gx <= 150; ++gx) {
             for (int gy = -150; gy <= 150; ++gy) {
-                MapPoint pt = to_iso(GridPoint{gx, gy}, f_prof.step_x, f_prof.step_y, base_shift);
+                MapPoint pt = to_iso(GridPoint{gx, gy}, f_prof.step_x, f_prof.step_y, shift);
                 float px = pt.x;
                 float py = pt.y;
 
@@ -323,14 +322,7 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
                         if (cell_ft == -1) cell_ft = FLOOR_TYPE_STANDARD;
                         
                         if (cell_ft == ft) {
-                            io::Sprite spr;
-                            spr.vid = f_prof.vid;
-                            spr.posX = px;
-                            spr.posY = py;
-                            spr.posZ = f_prof.pos_z;
-                            spr.direction = 0;
-                            spr.army = 0;
-                            floor_sprites.push_back(spr);
+                            floor_sprites.push_back(place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor));
                         }
                     }
                 }
@@ -345,7 +337,7 @@ std::vector<io::Sprite> WallBuilder::place_ceilings(const std::vector<Segment>& 
     int cell_size = 5;
 
     const CeilingProfile& c_prof = get_ceiling_profile(CEILING_TYPE_STANDARD);
-    MapPoint c_shift = get_floor_ceiling_shift(map_size_x_, 40.0f, 28.0f, 1);
+    MapPoint c_shift = get_floor_ceiling_shift(map_size_x_, c_prof.step_x, c_prof.step_y, c_prof.grid_divisor);
 
     int min_gx = 1e9, max_gx = -1e9, min_gy = 1e9, max_gy = -1e9;
     for (const auto& seg : segments) {
@@ -381,14 +373,7 @@ std::vector<io::Sprite> WallBuilder::place_ceilings(const std::vector<Segment>& 
                 bool is_wall = grid_ctx.physical_grid[grid_y * grid_ctx.grid_w + grid_x];
                 bool is_outside = grid_ctx.outside_grid[grid_y * grid_ctx.grid_w + grid_x];
                 if (is_outside && !is_wall) {
-                    io::Sprite spr;
-                    spr.vid = c_prof.vid;
-                    spr.posX = px;
-                    spr.posY = py;
-                    spr.posZ = c_prof.pos_z;
-                    spr.direction = 0;
-                    spr.army = 0;
-                    ceiling_sprites.push_back(spr);
+                    ceiling_sprites.push_back(place_single_floor_celling(gx, gy, c_prof.vid, c_prof.step_x, c_prof.step_y, c_prof.pos_z, c_prof.grid_divisor));
                 }
             }
         }
@@ -401,32 +386,7 @@ std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<R
     wall_sprites.reserve(raw_sprites.size());
 
     for (const auto& rs : raw_sprites) {
-        const WallProfile& profile = get_wall_profile(rs.wall_type);
-        float step_x = profile.step_x;
-        float step_y = profile.step_y;
-
-        MapPoint shift = get_wall_shift(map_size_x_, profile);
-        MapPoint pos = to_iso(GridPoint{rs.gx, rs.gy}, step_x, step_y, shift);
-
-        if (rs.vid == profile.id_dir_a) {
-            pos.x += profile.offset_a_x;
-            pos.y += profile.offset_a_y;
-        } else if (rs.vid == profile.id_dir_b) {
-            pos.x += profile.offset_b_x;
-            pos.y += profile.offset_b_y;
-        } else if (rs.vid == profile.id_pillar) {
-            pos.x += profile.offset_p_x;
-            pos.y += profile.offset_p_y;
-        }
-
-        io::Sprite spr;
-        spr.vid = rs.vid;
-        spr.posX = pos.x;
-        spr.posY = pos.y;
-        spr.posZ = 0.0f;
-        spr.direction = 32;
-        spr.army = 0;
-        wall_sprites.push_back(spr);
+        wall_sprites.push_back(place_single_wall(rs.gx, rs.gy, rs.wall_type, rs.vid));
     }
     return wall_sprites;
 }
@@ -467,6 +427,31 @@ std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments,
     final_sprites.insert(final_sprites.end(), ceiling_sprites.begin(), ceiling_sprites.end());
 
     return final_sprites;
+}
+
+io::Sprite WallBuilder::place_single_floor_celling(int gx, int gy, int vid, float step_x, float step_y, float pos_z, int grid_divisor) const {
+    MapPoint shift = get_floor_ceiling_shift(map_size_x_, step_x, step_y, grid_divisor);
+    MapPoint pt = to_iso(GridPoint{gx, gy}, step_x, step_y, shift);
+    return io::Sprite(vid, pt.x, pt.y, pos_z, 0);
+}
+
+io::Sprite WallBuilder::place_single_wall(int gx, int gy, int wall_type, int vid) const {
+    const WallProfile& profile = get_wall_profile(wall_type);
+    MapPoint shift = get_wall_shift(map_size_x_, profile);
+    MapPoint pos = to_iso(GridPoint{gx, gy}, profile.step_x, profile.step_y, shift);
+
+    if (vid == profile.id_dir_a) {
+        pos.x += profile.offset_a_x;
+        pos.y += profile.offset_a_y;
+    } else if (vid == profile.id_dir_b) {
+        pos.x += profile.offset_b_x;
+        pos.y += profile.offset_b_y;
+    } else if (vid == profile.id_pillar) {
+        pos.x += profile.offset_p_x;
+        pos.y += profile.offset_p_y;
+    }
+
+    return io::Sprite(vid, pos.x, pos.y);
 }
 
 } // namespace auto_mapper::core
