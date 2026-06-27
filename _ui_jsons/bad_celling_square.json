@@ -1,0 +1,54 @@
+{
+  "map_size_x": 600.0,
+  "map_size_y": 600.0,
+  "segments": [
+    {
+      "start": {
+        "x": 3,
+        "y": 8
+      },
+      "end": {
+        "x": 3,
+        "y": 4
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 3,
+        "y": 4
+      },
+      "end": {
+        "x": 9,
+        "y": 4
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 9,
+        "y": 4
+      },
+      "end": {
+        "x": 9,
+        "y": 8
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 9,
+        "y": 8
+      },
+      "end": {
+        "x": 3,
+        "y": 8
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    }
+  ]
+}

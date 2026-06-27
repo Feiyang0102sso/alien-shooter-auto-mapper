@@ -3,6 +3,9 @@
 #include "auto_mapper/io/map_writer.h"
 #include "utils/test_utils.h"
 #include <vector>
+#include <cmath>
+#include <set>
+#include <utility>
 
 using namespace auto_mapper;
 using namespace auto_mapper::core;
@@ -41,3 +44,4 @@ TEST(WallBuilderTest, WallOnlyGolden) {
     
     EXPECT_TRUE(files_match);
 }
+

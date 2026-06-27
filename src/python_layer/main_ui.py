@@ -44,6 +44,9 @@ class AutoMapperUI:
 
         btn_export = tk.Button(toolbar, text="Export JSON", command=self.export_segments, bg="#EAEAEA")
         btn_export.pack(side=tk.LEFT, padx=5)
+
+        btn_import = tk.Button(toolbar, text="Import JSON", command=self.import_segments, bg="#EAEAEA")
+        btn_import.pack(side=tk.LEFT, padx=5)
         
         # Wall type selector
         tk.Label(toolbar, text="Wall:").pack(side=tk.LEFT, padx=(10, 2))
@@ -455,6 +458,57 @@ class AutoMapperUI:
             messagebox.showinfo("Success", f"Segments exported successfully to:\n{file_path}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to export segments: {str(e)}")
+
+    def import_segments(self):
+        file_path = filedialog.askopenfilename(
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Import Segments JSON"
+        )
+        if not file_path:
+            return
+            
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            map_size_x = data.get("map_size_x", 600.0)
+            map_size_y = data.get("map_size_y", 600.0)
+            
+            self.entry_map_x.delete(0, tk.END)
+            try:
+                val_x = int(map_size_x) if float(map_size_x).is_integer() else float(map_size_x)
+            except:
+                val_x = map_size_x
+            self.entry_map_x.insert(0, str(val_x))
+            
+            self.entry_map_y.delete(0, tk.END)
+            try:
+                val_y = int(map_size_y) if float(map_size_y).is_integer() else float(map_size_y)
+            except:
+                val_y = map_size_y
+            self.entry_map_y.insert(0, str(val_y))
+            
+            segments = []
+            json_segs = data.get("segments", [])
+            for seg in json_segs:
+                start = seg.get("start", {})
+                end = seg.get("end", {})
+                wt = seg.get("wall_type", WALL_TYPE_STANDARD)
+                
+                x1 = start.get("x", 0)
+                y1 = start.get("y", 0)
+                x2 = end.get("x", 0)
+                y2 = end.get("y", 0)
+                
+                segments.append(((x1, y1), (x2, y2), wt))
+                
+            self.segments = segments
+            self.auto_zoom()
+            self.draw_all()
+            
+            messagebox.showinfo("Success", f"Imported {len(segments)} segments successfully.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to import segments: {str(e)}")
 
     def generate_map(self):
         if not self.segments:

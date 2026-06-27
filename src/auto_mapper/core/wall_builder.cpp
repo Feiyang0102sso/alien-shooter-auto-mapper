@@ -39,10 +39,8 @@ const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
 
 const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {
     static const std::unordered_map<int, FloorProfile> profiles = {
-        // vid, step_x, step_y, pos_z
-        // shift_offset fields removed: shift is computed dynamically from map_size
-        {FLOOR_TYPE_STANDARD, {500, 40.0f, 28.0f, 0.0f}},
-        {FLOOR_TYPE_LAB,      {503, 80.0f, 56.0f, 0.0f}}
+        {FLOOR_TYPE_STANDARD, FLOOR_STANDARD},
+        {FLOOR_TYPE_LAB,      FLOOR_LAB}
     };
     if (profiles.find(floor_type) != profiles.end()) {
         return profiles.at(floor_type);
@@ -52,8 +50,7 @@ const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {
 
 const CeilingProfile& WallBuilder::get_ceiling_profile(int ceiling_type) {
     static const std::unordered_map<int, CeilingProfile> profiles = {
-        // vid, step_x, step_y, pos_z, shift_offset_x, shift_offset_y
-        {CEILING_TYPE_STANDARD, {504, 80.0f, 56.0f, 90.0f, 40.0f, 14.0f}}
+        {CEILING_TYPE_STANDARD, CEILING_STANDARD}
     };
     if (profiles.find(ceiling_type) != profiles.end()) {
         return profiles.at(ceiling_type);
@@ -76,6 +73,23 @@ static MapPoint get_wall_shift(float map_size_x, const WallProfile& profile) {
     float raw_shift_y = remainder_y;
     float grid_y_shift = std::round((raw_shift_y - remainder_y) / grid_step_y);
     float shift_y = grid_y_shift * grid_step_y + remainder_y + profile.step_y;
+
+    return {shift_x, shift_y};
+}
+
+static MapPoint get_floor_ceiling_shift(float map_size_x, float step_x, float step_y, int grid_divisor) {
+    float divisor = static_cast<float>(grid_divisor);
+    float grid_step_x = step_x / divisor;
+    float grid_step_y = step_y / divisor;
+
+    float half_step_x = grid_step_x / 2.0f;
+    float half_step_y = grid_step_y / 2.0f;
+
+    int n = static_cast<int>(std::round((map_size_x / 2.0f - half_step_x) / grid_step_x));
+    float shift_x = n * grid_step_x;
+
+    bool n_is_even = (n % 2 == 0);
+    float shift_y = n_is_even ? (grid_step_y + half_step_y) : half_step_y;
 
     return {shift_x, shift_y};
 }
@@ -285,21 +299,15 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
     b_min_px -= 200.0f; b_max_px += 200.0f;
     b_min_py -= 200.0f; b_max_py += 200.0f;
 
+    MapPoint base_shift = get_floor_ceiling_shift(map_size_x_, 40.0f, 28.0f, 1);
+
     std::vector<int> floor_types = {FLOOR_TYPE_STANDARD, FLOOR_TYPE_LAB};
     for (int ft : floor_types) {
         const FloorProfile& f_prof = get_floor_profile(ft);
-        float half_step_x = f_prof.step_x / 2.0f;
-        float half_step_y = f_prof.step_y / 2.0f;
-
-        int n = (int)std::round((map_size_x_ / 2.0f - half_step_x) / f_prof.step_x);
-        float f_shift_x = n * f_prof.step_x;
-
-        bool n_is_even = (n % 2 == 0);
-        float f_shift_y = n_is_even ? (f_prof.step_y + half_step_y) : half_step_y;
 
         for (int gx = -150; gx <= 150; ++gx) {
             for (int gy = -150; gy <= 150; ++gy) {
-                MapPoint pt = to_iso(GridPoint{gx, gy}, f_prof.step_x, f_prof.step_y, {f_shift_x, f_shift_y});
+                MapPoint pt = to_iso(GridPoint{gx, gy}, f_prof.step_x, f_prof.step_y, base_shift);
                 float px = pt.x;
                 float py = pt.y;
 
@@ -337,19 +345,18 @@ std::vector<io::Sprite> WallBuilder::place_ceilings(const std::vector<Segment>& 
     int cell_size = 5;
 
     const CeilingProfile& c_prof = get_ceiling_profile(CEILING_TYPE_STANDARD);
-    float c_shift_x = std::round(map_size_x_ / 2.0f / c_prof.step_x) * c_prof.step_x + c_prof.shift_offset_x;
-    float c_shift_y = std::round(map_size_y_ / 2.0f / c_prof.step_y) * c_prof.step_y + c_prof.shift_offset_y;
+    MapPoint c_shift = get_floor_ceiling_shift(map_size_x_, 40.0f, 28.0f, 1);
 
     int min_gx = 1e9, max_gx = -1e9, min_gy = 1e9, max_gy = -1e9;
     for (const auto& seg : segments) {
         MapPoint p1 = get_phys(seg.start.x, seg.start.y, seg.wall_type);
         MapPoint p2 = get_phys(seg.end.x, seg.end.y, seg.wall_type);
         
-        int gx1 = std::round(((p1.x - c_shift_x) / c_prof.step_x + (p1.y - c_shift_y) / c_prof.step_y) / 2.0f);
-        int gy1 = std::round(((p1.y - c_shift_y) / c_prof.step_y - (p1.x - c_shift_x) / c_prof.step_x) / 2.0f);
+        int gx1 = std::round(((p1.x - c_shift.x) / c_prof.step_x + (p1.y - c_shift.y) / c_prof.step_y) / 2.0f);
+        int gy1 = std::round(((p1.y - c_shift.y) / c_prof.step_y - (p1.x - c_shift.x) / c_prof.step_x) / 2.0f);
         
-        int gx2 = std::round(((p2.x - c_shift_x) / c_prof.step_x + (p2.y - c_shift_y) / c_prof.step_y) / 2.0f);
-        int gy2 = std::round(((p2.y - c_shift_y) / c_prof.step_y - (p2.x - c_shift_x) / c_prof.step_x) / 2.0f);
+        int gx2 = std::round(((p2.x - c_shift.x) / c_prof.step_x + (p2.y - c_shift.y) / c_prof.step_y) / 2.0f);
+        int gy2 = std::round(((p2.y - c_shift.y) / c_prof.step_y - (p2.x - c_shift.x) / c_prof.step_x) / 2.0f);
         
         min_gx = std::min({min_gx, gx1, gx2});
         max_gx = std::max({max_gx, gx1, gx2});
@@ -363,7 +370,7 @@ std::vector<io::Sprite> WallBuilder::place_ceilings(const std::vector<Segment>& 
 
     for (int gx = min_gx; gx <= max_gx; ++gx) {
         for (int gy = min_gy; gy <= max_gy; ++gy) {
-            MapPoint pt = to_iso(GridPoint{gx, gy}, c_prof.step_x, c_prof.step_y, {c_shift_x, c_shift_y});
+            MapPoint pt = to_iso(GridPoint{gx, gy}, c_prof.step_x, c_prof.step_y, c_shift);
             float px = pt.x;
             float py = pt.y;
 

@@ -33,7 +33,7 @@ struct FloorProfile {
     float step_x;
     float step_y;
     float pos_z;
-    // shift is computed dynamically from map_size in WallBuilder::build()
+    int grid_divisor = 1;
 };
 
 struct CeilingProfile {
@@ -41,8 +41,7 @@ struct CeilingProfile {
     float step_x;
     float step_y;
     float pos_z;
-    float shift_offset_x = 0.0f;
-    float shift_offset_y = 0.0f;
+    int grid_divisor = 1;
 };
 
 // ── Pre-defined wall profiles ──
@@ -69,11 +68,11 @@ constexpr WallProfile WALL_LAB = {
 constexpr int FLOOR_TYPE_STANDARD = 0;
 constexpr int FLOOR_TYPE_LAB      = 1;
 
-constexpr FloorProfile FLOOR_STANDARD = {500, 40.0f, 28.0f, 0.0f};
-constexpr FloorProfile FLOOR_LAB      = {503, 80.0f, 56.0f, 0.0f};
+constexpr FloorProfile FLOOR_STANDARD = {500, 40.0f, 28.0f, 0.0f, 1};
+constexpr FloorProfile FLOOR_LAB      = {503, 80.0f, 56.0f, 0.0f, 1};
 
 constexpr int CEILING_TYPE_STANDARD = 0;
-constexpr CeilingProfile CEILING_STANDARD = {504, 80.0f, 56.0f, 90.0f};
+constexpr CeilingProfile CEILING_STANDARD = {504, 80.0f, 56.0f, 90.0f, 2};
 
 // A straight line segment drawn by the user, each segment carries its own wall type.
 struct Segment {

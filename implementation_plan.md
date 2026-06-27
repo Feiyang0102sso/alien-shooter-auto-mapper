@@ -1,68 +1,90 @@
-# 重构墙体生成测试并引入 Golden 回归测试
+# 引入 Floor 与 Ceiling 的 Divisor 支持及独立错位对齐方案
 
-为了提供更高质量的防退化保障，本计划重构 `tests/test_wall_builder.cpp`。我们将使用用户已在 `tests/golden/` 目录下准备好的黄金测试数据（`wall_builder.gold.json` 和 `wall_builder.gold.map`）进行完全的二进制回归测试，并删除旧有的、无意义的零散测试。
-
-为了保持测试架构的优雅与轻量，所有通用的辅助逻辑（如文件逐字节比对、极简 JSON 解析等）将以 **Header-only** 的形式实现在新文件 `tests/utils/test_utils.h` 中，免去修改 CMake 配置的繁琐。
+本计划旨在解决 Floor（地板）和 Ceiling（天花板）尚未支持 `grid_divisor` 细分网格的问题。我们将根据官方对齐机制与最新的逆向资源字符串线索，为其实现专用的对齐计算函数，并重构相关生成逻辑。
 
 ---
 
-## Goal Description
+## 背景与理论支撑（官方资源字符串逆向）
 
-1. **废弃旧测试**：删除 `tests/test_wall_builder.cpp` 中现有的 `BuildCrossShapeStandard` 等琐碎且意义不大的单元测试。
-2. **引入 Header-only 工具库**：新建 [test_utils.h](file:///d:/c%20coding/auto_mapper/tests/utils/test_utils.h)，包含：
-   - 极其稳健且轻量的专用 JSON 扫描解析器，将 `wall_builder.gold.json` 解析为地图大小与线段数组。
-   - `compare_binary_files` 函数，对生成的 `.map` 二进制文件进行严格的逐字节比对。
-3. **Golden 回归测试**：在 `tests/test_wall_builder.cpp` 中编写全新的测试用例，从 JSON 加载线段，调用 `WallBuilder::build`，将结果写入临时文件 `current_wall_builder.map`，与 `wall_builder.gold.map` 逐字节比对。
-4. **自动清理临时文件**：比对完成后（无论成功与否，最好在测试析构/RAII 中，或者在验证后），主动删除测试生成的临时文件，确保工作区干净。
+根据 `MapEdit.exe` 资源字符串表（STRINGTABLE）证实，编辑器内部存在两种完全不同的对齐机制：
+
+1. **墙体对齐（快捷键 `s`，资源 ID `40025`）**：
+   *   俄语原文字符串：`"'s' - Переключение в/из режима поклеточного смещения курсора"`（进/出逐格移动光标模式）
+   *   适用对象：**墙壁**、**立柱**、**独立物件**。
+   *   实现方式：在 `s` 模式下采用正交网格几何中心对齐。
+
+2. **地板/天花板对齐（资源 ID `40034`）**：
+   *   俄语原文字符串：`"Переключение режима смещения всех нечетных строк на пол клетки"`（所有奇数行半格错位对齐模式）
+   *   适用对象：**地板（Floor）** 与 **天花板（Ceiling）**，两者均需开启。
+   *   实现方式：交错等轴测菱形网格，奇数行自动平移半个身位以实现无缝嵌套。
+
+---
+
+## 方案设计
+
+### 1. 数据结构更新
+在 `FloorProfile` 和 `CeilingProfile` 结构体中添加 `grid_divisor` 字段。
+*   `FLOOR_STANDARD`: `grid_divisor = 1`
+*   `FLOOR_LAB`: `grid_divisor = 1` (无法进一步细分)
+*   `CEILING_STANDARD`: `grid_divisor = 2` (物理尺寸 80x56，细分后为 40x28，移去原有硬编码的 `shift_offset`)
+
+### 2. 独立对齐算法 `get_floor_ceiling_shift`与全局原点
+在 `wall_builder.cpp` 中实现专用于地砖类（Floor/Ceiling）的交错网格对齐函数。
+为了防止不同地砖类型（例如 FLOOR_LAB 的 divisor=1 与 CEILING_STANDARD 的 divisor=2）因为计算公式中 `divisor` 差异而算出不同的原点偏移，导致天花板与地板出现半个格子的错位（超出或缺失），所有地板和天花板的铺设逻辑在计算 Shift 偏置时，应**统一并仅使用标准的 40x28 网格规格**（即 `step_x = 40.0f, step_y = 28.0f, divisor = 1`）算出一个全局一致的 `base_shift`。
+该函数支持细分网格，并在 Y 轴上根据 X 轴网格索引的奇偶性进行动态半步长交错：
+```cpp
+static MapPoint get_floor_ceiling_shift(float map_size_x, float step_x, float step_y, int grid_divisor) {
+    float divisor = static_cast<float>(grid_divisor);
+    float grid_step_x = step_x / divisor;
+    float grid_step_y = step_y / divisor;
+
+    float half_step_x = grid_step_x / 2.0f;
+    float half_step_y = grid_step_y / 2.0f;
+
+    int n = static_cast<int>(std::round((map_size_x / 2.0f - half_step_x) / grid_step_x));
+    float shift_x = n * grid_step_x;
+
+    bool n_is_even = (n % 2 == 0);
+    float shift_y = n_is_even ? (grid_step_y + half_step_y) : half_step_y;
+
+    return {shift_x, shift_y};
+}
+```
+
+### 3. 铺设逻辑重构
+*   **`place_floors`**: 使用 `get_floor_ceiling_shift` 计算对齐偏置，并在等轴测投影 `to_iso` 时保持采用原始物理网格步长 `step_x`/`step_y`（仅在 `shift` 偏置应用细分结果），以防止重叠铺设。
+*   **`place_ceilings`**: 同样使用 `get_floor_ceiling_shift` 计算对齐偏置，在反向投影计算坐标边界范围以及在正向投影 `to_iso` 生成物理坐标时，均保持采用原始物理步长 `step_x`/`step_y`（仅在 `shift` 中应用细分），使天花板按原本物理尺寸正确拼接。
 
 ---
 
 ## Proposed Changes
 
-    std::vector<Segment> segments;
-};
+### [auto_mapper]
 
-TestScene load_test_scene(const std::string& json_path);
-```
+#### [MODIFY] [wall_builder.h](file:///d:/c%20coding/auto_mapper/src/auto_mapper/core/wall_builder.h)
+*   在 `FloorProfile` 中添加 `int grid_divisor = 1;` 字段。
+*   在 `CeilingProfile` 中添加 `int grid_divisor = 1;` 字段。
+*   更新 `FLOOR_STANDARD`、`FLOOR_LAB` 和 `CEILING_STANDARD` 的 constexpr 静态定义。
 
-通过此方式，在测试复杂场景（如 `BuildComplexMaze`）时，只需在 UI 中画好并导出为 `maze.json`，测试代码将极为精简：
-```cpp
-TEST(WallBuilderTest, GoldRegression_ComplexMaze) {
-    // 1. 从 UI 导出的 JSON 中加载输入数据和地图大小
-    TestScene scene = load_test_scene("tests/goldens/complex_maze.json");
-    WallBuilder builder(scene.map_size_x, scene.map_size_y);
-
-    // 2. 运行生成
-    std::vector<io::Sprite> sprites = builder.build(scene.segments);
-    
-    // 3. 写入临时输出
-    std::string current_output = "current_complex_maze.map";
-    ASSERT_TRUE(io::write_map(sprites, current_output));
-
-    // 4. 与对应的黄金二进制进行比对，锁死物理表现
-    std::string gold_file = "tests/goldens/complex_maze.gold.map";
-    EXPECT_TRUE(compare_binary_files(current_output, gold_file));
-}
-```
+#### [MODIFY] [wall_builder.cpp](file:///d:/c%20coding/auto_mapper/src/auto_mapper/core/wall_builder.cpp)
+*   更新 `get_floor_profile` 和 `get_ceiling_profile` 里的静态查找表，匹配新的 `grid_divisor` 参数并移去硬编码的 `shift_offset`。
+*   实现 `get_floor_ceiling_shift` 静态辅助函数。
+*   重构 `place_floors`：使用 `get_floor_ceiling_shift` 和细分步长进行投影。
+*   重构 `place_ceilings`：使用 `get_floor_ceiling_shift` 和细分步长进行范围反推与投影。
 
 ---
 
-## Verification & Workflow Plan
+## Verification Plan
 
-### 1. 建立初代基准 (Bootstrap)
-1. 编译并运行当前测试，程序会在根目录下生成最新的测试地图文件（如 `test_wall_builder_output.map` 等）。
-2. 在项目根目录下创建 `tests/goldens/` 目录。
-3. 将生成的 `.map` 文件复制到 `tests/goldens/` 目录中，作为各场景的初代黄金基准。
-4. 提交这些黄金 `.map` 二进制文件到 Git。
+### Automated Tests
+运行现有的单元测试，确保原有标准墙体与地板的对齐逻辑未被破坏：
+```powershell
+# 在构建目录中运行测试
+ctest --output-on-failure
+```
 
-### 2. 测试严格性验证 (Fault Injection)
-为了证明测试能灵敏地捕捉到对齐偏差，我们将进行故障注入测试：
-1. 故意修改 `wall_builder.cpp` 中微小的对齐逻辑（例如将某个 offset 加上 `0.1f`）。
-2. 编译并运行测试，**验证测试立刻报错失败**，并精确指出是哪个黄金测试用例的二进制不匹配。
-3. 还原对齐逻辑，**验证测试重新 100% 通过**。
-
-### 3. 日常基准更新工作流 (Update Workflow)
-当未来主动进行了对齐优化、并确信新生成的效果更佳时：
-* 运行测试会触发失败。
-* 开发者只需将最新生成的 `current_xxx.map` 覆盖 `tests/goldens/xxx.gold.map`。
-* 使用 `git diff` 观察二进制文件的变化大小，然后直接 commit 提交，即完成了基准的安全升级。
+### Manual Verification
+生成 `test_output.map` 并使用 `MapEdit.exe` 打开，观察：
+*   标准地板是否闭合且对齐。
+*   实验室地板（FLOOR_LAB）是否完美吸附并与墙体对齐，无缝隙或重叠。
+*   天花板（CEILING_STANDARD）是否精确覆盖在对应地板的垂直上方。
