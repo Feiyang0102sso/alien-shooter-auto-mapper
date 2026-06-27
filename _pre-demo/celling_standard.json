@@ -1,0 +1,172 @@
+{
+  "sourceFile": "celling_standard.map",
+  "totalBytes": 404,
+  "fileHeader": {
+    "RES_Magic": "RES ",
+    "mapSize": 396,
+    "MAP_Magic": "MAP "
+  },
+  "GRPH": {
+    "GRPH_Magic": "GRPH",
+    "graphSize": 36,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "envSize": 20,
+    "isShadow": 0,
+    "gammaDarker": "0x000000",
+    "gammaLighter": "0x000000",
+    "windDirection": 200,
+    "windSpeed": 0.02500000037252903
+  },
+  "HEAD": {
+    "HEAD_Magic": "HEAD",
+    "headSize": 40,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "mapInfoSize": 24,
+    "mapSizeX": 1500.0,
+    "mapSizeY": 1500.0,
+    "mapCameraX": 600.0,
+    "mapCameraY": -197.0,
+    "currentTime": 27475,
+    "version": "0x0C"
+  },
+  "SPR": {
+    "SPR_Magic": "SPR ",
+    "sprSize": 132,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "sprInfoSize": 116,
+    "spriteCount": 4,
+    "sprites": [
+      {
+        "objectId": 20626016,
+        "vid": 504,
+        "posX": 1000.0,
+        "posY": 406.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 297514224,
+        "vid": 504,
+        "posX": 920.0,
+        "posY": 350.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 20626696,
+        "vid": 504,
+        "posX": 840.0,
+        "posY": 294.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      },
+      {
+        "objectId": 20626360,
+        "vid": 504,
+        "posX": 760.0,
+        "posY": 238.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 0
+      }
+    ],
+    "terminator": "0xFFFFFFFF"
+  },
+  "SPRD": {
+    "SPRD_Magic": "SPRD",
+    "sprdSize": 84,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 5,
+    "subs": [
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20626016,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297514224,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20626696,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20626360,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 4,
+        "isTerminator": true,
+        "terminator": "0xFFFFFFFF"
+      }
+    ]
+  },
+  "PLAY": {
+    "PLAY_Magic": "PLAY",
+    "playSize": 32,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "playInfoSize": 16,
+    "player1_ObjectId": 0,
+    "player2_ObjectId": 0,
+    "player3_ObjectId": 0,
+    "player4_ObjectId": 0
+  },
+  "GROU": {
+    "GROU_Magic": "GROU",
+    "groupSize": 20,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "groupInfoSize": 4,
+    "groups": [],
+    "globalTerminator": "0xFFFFFFFF"
+  }
+}

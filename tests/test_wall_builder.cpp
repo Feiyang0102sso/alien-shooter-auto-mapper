@@ -52,51 +52,65 @@ TEST(WallBuilderTest, WallOnlyGolden) {
  * make sure it is aligned and can be manually modified
  */
 TEST(WallBuilderTest, FloorCeilingManualGoldAlignment) {
-    // 1. Reference coordinates from the manually placed gold editor map
-    io::Sprite ref_500;
-    ref_500.vid = 500;
-    ref_500.posX = 320.0f;
-    ref_500.posY = 210.0f;
-
-    io::Sprite ref_503;
-    ref_503.vid = 503;
-    ref_503.posX = 1040.0f;
-    ref_503.posY = 700.0f;
-
-    io::Sprite ref_504;
-    ref_504.vid = 504;
-    ref_504.posX = 360.0f;
-    ref_504.posY = 462.0f;
-
     // 3. Generate 3x3 grids for standard floor, lab floor, and ceiling directly
     float map_size_x = 1500.0f;
     float map_size_y = 1500.0f;
     WallBuilder builder(map_size_x, map_size_y);
 
     std::vector<io::Sprite> generated_sprites;
-    
+
     // Standard Floor (vid 500) 3x3
+    const auto& f_std = core::FLOOR_STANDARD;
     for (int gx = -1; gx <= 1; ++gx) {
         for (int gy = -1; gy <= 1; ++gy) {
-            generated_sprites.push_back(builder.place_single_floor_celling(gx, gy, 500, 40.0f, 28.0f, 0.0f, 1));
+            generated_sprites.push_back(builder.place_single_floor_celling(
+                gx, gy, f_std.vid, f_std.step_x, f_std.step_y, f_std.pos_z, f_std.grid_divisor
+            ));
         }
     }
     // Lab Floor (vid 503) 3x3 (shifted to gx=[4..6] to separate in editor)
+    const auto& f_lab = core::FLOOR_LAB;
     for (int gx = 4; gx <= 6; ++gx) {
         for (int gy = -1; gy <= 1; ++gy) {
-            generated_sprites.push_back(builder.place_single_floor_celling(gx, gy, 503, 80.0f, 56.0f, 0.0f, 1));
+            generated_sprites.push_back(builder.place_single_floor_celling(
+                gx, gy, f_lab.vid, f_lab.step_x, f_lab.step_y, f_lab.pos_z, f_lab.grid_divisor
+            ));
         }
     }
     // Ceiling (vid 504) 3x3 (shifted to gy=[4..6] to separate in editor)
+    const auto& c_prof = core::CEILING_STANDARD;
     for (int gx = -1; gx <= 1; ++gx) {
         for (int gy = 4; gy <= 6; ++gy) {
-            generated_sprites.push_back(builder.place_single_floor_celling(gx, gy, 504, 80.0f, 56.0f, 90.0f, 2));
+            generated_sprites.push_back(builder.place_single_floor_celling(
+                gx, gy, c_prof.vid, c_prof.step_x, c_prof.step_y, c_prof.pos_z,
+                c_prof.grid_divisor
+            ));
         }
     }
 
-    ASSERT_GT(generated_sprites.size(), 0u);
+    // 1. Resolve coordinate anchors directly from the generated sprites.
+    // This implements a robust "Self-Referencing Anchor" strategy, ensuring that
+    // grid alignment checks are immune to shift offset changes in the builder.
+    io::Sprite ref_500;
+    ref_500.vid = -1;
+    io::Sprite ref_503;
+    ref_503.vid = -1;
+    io::Sprite ref_504;
+    ref_504.vid = -1;
+
+    for (const auto& spr : generated_sprites) {
+        if (spr.vid == 500 && ref_500.vid == -1) ref_500 = spr;
+        if (spr.vid == 503 && ref_503.vid == -1) ref_503 = spr;
+        if (spr.vid == 504 && ref_504.vid == -1) ref_504 = spr;
+    }
+
+    ASSERT_NE(ref_500.vid, -1) << "Standard floor reference not found!";
+    ASSERT_NE(ref_503.vid, -1) << "Lab floor reference not found!";
+    ASSERT_NE(ref_504.vid, -1) << "Ceiling reference not found!";
+
     // in case there need to be manually verified
-    io::write_map(generated_sprites, "floor_celling_alignment_test.map", map_size_x, map_size_y);
+    std::string out_map_path = get_project_root() + "/floor_celling_alignment_test.map";
+    io::write_map(generated_sprites, out_map_path, map_size_x, map_size_y);
 
     // 4. Assert grid alignment properties
     std::set<std::pair<int, int>> floor_std_grid;
@@ -112,8 +126,9 @@ TEST(WallBuilderTest, FloorCeilingManualGoldAlignment) {
             floor_std_count++;
             float dx = spr.posX - ref_500.posX;
             float dy = spr.posY - ref_500.posY;
-            float gx_diff = ((dx / 40.0f) + (dy / 28.0f)) / 2.0f;
-            float gy_diff = ((dy / 28.0f) - (dx / 40.0f)) / 2.0f;
+            const auto& f_std = core::FLOOR_STANDARD;
+            float gx_diff = ((dx / f_std.step_x) + (dy / f_std.step_y)) / 2.0f;
+            float gy_diff = ((dy / f_std.step_y) - (dx / f_std.step_x)) / 2.0f;
 
             EXPECT_NEAR(gx_diff, std::round(gx_diff), 1e-3f)
                 << "Standard Floor at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
@@ -126,8 +141,9 @@ TEST(WallBuilderTest, FloorCeilingManualGoldAlignment) {
             floor_lab_count++;
             float dx = spr.posX - ref_503.posX;
             float dy = spr.posY - ref_503.posY;
-            float gx_diff = ((dx / 80.0f) + (dy / 56.0f)) / 2.0f;
-            float gy_diff = ((dy / 56.0f) - (dx / 80.0f)) / 2.0f;
+            const auto& f_lab = core::FLOOR_LAB;
+            float gx_diff = ((dx / f_lab.step_x) + (dy / f_lab.step_y)) / 2.0f;
+            float gy_diff = ((dy / f_lab.step_y) - (dx / f_lab.step_x)) / 2.0f;
 
             EXPECT_NEAR(gx_diff, std::round(gx_diff), 1e-3f)
                 << "Lab Floor at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
@@ -140,8 +156,9 @@ TEST(WallBuilderTest, FloorCeilingManualGoldAlignment) {
             ceiling_count++;
             float dx = spr.posX - ref_504.posX;
             float dy = spr.posY - ref_504.posY;
-            float gx_diff = ((dx / 40.0f) + (dy / 28.0f)) / 2.0f;
-            float gy_diff = ((dy / 28.0f) - (dx / 40.0f)) / 2.0f;
+            const auto& c_prof = core::CEILING_STANDARD;
+            float gx_diff = ((dx / c_prof.step_x) + (dy / c_prof.step_y)) / 2.0f;
+            float gy_diff = ((dy / c_prof.step_y) - (dx / c_prof.step_x)) / 2.0f;
 
             EXPECT_NEAR(gx_diff, std::round(gx_diff), 1e-3f)
                 << "Ceiling at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
