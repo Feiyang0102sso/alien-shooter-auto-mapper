@@ -1,0 +1,68 @@
+{
+  "map_size_x": 600.0,
+  "map_size_y": 600.0,
+  "segments": [
+    {
+      "start": {
+        "x": 2,
+        "y": 2
+      },
+      "end": {
+        "x": 2,
+        "y": 8
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 2,
+        "y": 8
+      },
+      "end": {
+        "x": 8,
+        "y": 8
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 8,
+        "y": 8
+      },
+      "end": {
+        "x": 8,
+        "y": 2
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 8,
+        "y": 2
+      },
+      "end": {
+        "x": 2,
+        "y": 2
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    }
+  ],
+  "doors": [
+    {
+      "pos": {
+        "x": 2,
+        "y": 5
+      },
+      "wall_type": 0,
+      "direction_type": 0,
+      "size": 2,
+      "door_state": 1,
+      "light_state": 2,
+      "z_offset": 0.0
+    }
+  ]
+}

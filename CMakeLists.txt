@@ -46,6 +46,7 @@ target_link_libraries(auto_mapper_io PUBLIC auto_mapper_common)
 set(CORE_SOURCES
     src/auto_mapper/core/geometry.cpp
     src/auto_mapper/core/wall_builder.cpp
+    src/auto_mapper/core/door_builder.cpp
 )
 add_library(auto_mapper_core STATIC ${CORE_SOURCES})
 target_link_libraries(auto_mapper_core PUBLIC auto_mapper_common auto_mapper_io)

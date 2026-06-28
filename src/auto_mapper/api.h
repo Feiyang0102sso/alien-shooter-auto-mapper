@@ -23,14 +23,26 @@ struct CSegment {
     int wall_type;  // 0=standard, 1=lab (per-segment)
 };
 
+struct CDoor {
+    int x;
+    int y;
+    int wall_type;
+    int direction_type;
+    int size;
+    int door_state;
+    int light_state;
+    float z_offset;
+};
+
 /**
- * @brief Build map from segments and write to file.
- *        Each segment carries its own wall_type for mixed wall support.
+ * @brief Build map from segments and doors, write to file.
  */
 AUTO_MAPPER_API bool generate_map_from_segments(
     const char* output_path,
     const CSegment* segments,
     int num_segments,
+    const CDoor* doors,
+    int num_doors,
     float map_size_x,
     float map_size_y,
     bool gen_floor,

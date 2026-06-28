@@ -2,6 +2,7 @@
 #include "auto_mapper/common/logger.h"
 #include "auto_mapper/common/config.h"
 #include "auto_mapper/core/wall_builder.h"
+#include "auto_mapper/core/door_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include <vector>
 #include <string>
@@ -12,6 +13,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     const char* output_path,
     const CSegment* segments,
     int num_segments,
+    const CDoor* doors,
+    int num_doors,
     float map_size_x,
     float map_size_y,
     bool gen_floor,
@@ -36,13 +39,47 @@ AUTO_MAPPER_API bool generate_map_from_segments(
         });
     }
 
-    auto_mapper::Logger::info("Received {} segments from API", cpp_segments.size());
+    std::vector<auto_mapper::core::DoorInstance> cpp_doors;
+    cpp_doors.reserve(num_doors);
+    std::vector<auto_mapper::core::DoorExcavation> excavations;
+    excavations.reserve(num_doors);
 
-    auto_mapper::core::WallBuilder builder(map_size_x, map_size_y);
-    std::vector<auto_mapper::io::Sprite> sprites = builder.build(cpp_segments, gen_floor, gen_ceiling);
+    for (int i = 0; i < num_doors; ++i) {
+        auto_mapper::core::DoorInstance di = {
+            {doors[i].x, doors[i].y},
+            doors[i].wall_type,
+            doors[i].direction_type,
+            doors[i].size,
+            doors[i].door_state,
+            doors[i].light_state,
+            doors[i].z_offset
+        };
+        cpp_doors.push_back(di);
+
+        // Generate excavation area for this door
+        excavations.push_back({
+            di.pos,
+            di.direction_type,
+            di.size,
+            di.wall_type
+        });
+    }
+
+    auto_mapper::Logger::info("Received {} segments and {} doors from API", cpp_segments.size(), cpp_doors.size());
+
+    // 1. Build walls with excavations
+    auto_mapper::core::WallBuilder wall_builder(map_size_x, map_size_y);
+    std::vector<auto_mapper::io::Sprite> sprites = wall_builder.build(cpp_segments, gen_floor, gen_ceiling, excavations);
+
+    // 2. Build doors
+    auto_mapper::core::DoorBuilder door_builder(map_size_x, map_size_y);
+    std::vector<auto_mapper::io::Sprite> door_sprites = door_builder.build(cpp_doors);
+
+    // 3. Merge sprites
+    sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
     if (auto_mapper::io::write_map(sprites, out_path, map_size_x, map_size_y)) {
-        auto_mapper::Logger::info("Successfully generated map: {}", out_path);
+        auto_mapper::Logger::info("Successfully generated map with doors: {}", out_path);
         return true;
     } else {
         auto_mapper::Logger::error("Failed to write map to {}", out_path);

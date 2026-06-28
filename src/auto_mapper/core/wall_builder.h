@@ -82,13 +82,28 @@ struct Segment {
     int floor_type = FLOOR_TYPE_STANDARD;
 };
 
+struct DoorExcavation {
+    GridPoint pos;
+    int direction_type; // 0=A方向 (纵向), 1=B方向 (横向)
+    int size;           // 1=小门, 2=大门
+    int wall_type;      // 对应墙体风格
+};
+
 class WallBuilder {
 public:
     WallBuilder(float map_size_x = 600.0f, float map_size_y = 600.0f);
 
+    // Look up profiles (Moved to public for door_builder.cpp access)
+    static const WallProfile& get_wall_profile(int wall_type);
+
     // Core pipeline: Group by wall_type -> Rasterize per group ->
     // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.
-    std::vector<io::Sprite> build(const std::vector<Segment>& segments, bool gen_floor = true, bool gen_ceiling = true) const;
+    std::vector<io::Sprite> build(
+        const std::vector<Segment>& segments, 
+        bool gen_floor = true, 
+        bool gen_ceiling = true,
+        const std::vector<DoorExcavation>& excavations = {}
+    ) const;
 
     // Place a single tile/wall sprite at logical grid coordinates
     io::Sprite place_single_floor_celling(int gx, int gy, int vid, float step_x, float step_y, float pos_z, int grid_divisor) const;
@@ -117,14 +132,13 @@ private:
 
     // Helper methods for each stage
     MapPoint get_phys(int lx, int ly, int w_type) const;
-    std::vector<RawSprite> process_wall_sprites(const std::vector<Segment>& segments) const;
+    std::vector<RawSprite> process_wall_sprites(const std::vector<Segment>& segments, const std::vector<DoorExcavation>& excavations) const;
     PhysicalGridContext build_physical_grid(const std::vector<Segment>& segments) const;
     std::vector<io::Sprite> place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
     std::vector<io::Sprite> place_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
     std::vector<io::Sprite> convert_to_wall_sprites(const std::vector<RawSprite>& raw_sprites) const;
 
     // Look up profiles
-    static const WallProfile& get_wall_profile(int wall_type);
     static const FloorProfile& get_floor_profile(int floor_type);
     static const CeilingProfile& get_ceiling_profile(int ceiling_type);
 

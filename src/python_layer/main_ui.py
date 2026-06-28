@@ -13,13 +13,31 @@ class CSegment(ctypes.Structure):
         ("wall_type", ctypes.c_int),
     ]
 
+class CDoor(ctypes.Structure):
+    _fields_ = [
+        ("x", ctypes.c_int),
+        ("y", ctypes.c_int),
+        ("wall_type", ctypes.c_int),
+        ("direction_type", ctypes.c_int),
+        ("size", ctypes.c_int),
+        ("door_state", ctypes.c_int),
+        ("light_state", ctypes.c_int),
+        ("z_offset", ctypes.c_float),
+    ]
+
 GRID_SIZE = 20
 CELL_SIZE = 30
 CANVAS_SIZE = GRID_SIZE * CELL_SIZE
 
-# ── Wall type constants (mirror C++ api.h) ──
 WALL_TYPE_STANDARD = 0
 WALL_TYPE_LAB = 1
+
+# ── Tool Brush Constants ──
+TOOL_WALL = 0
+TOOL_ACTIVE_DOOR = 1
+TOOL_DEAD_DOOR_CLOSED = 2
+TOOL_DEAD_DOOR_JAMMED = 3
+TOOL_DEAD_DOOR_OPEN = 4
 
 # ── Wall profiles: (step_x, step_y, grid_divisor, display_label, line_color) ──
 WALL_PROFILES = {
@@ -78,6 +96,27 @@ class AutoMapperUI:
 
         tk.Label(toolbar, text="Zoom: MouseWheel or Z/X. C to reset.", fg="gray").pack(side=tk.LEFT, padx=10)
 
+        # Brush Toolbar (Drawing Tool Selection)
+        brush_bar = tk.LabelFrame(root, text="Drawing Tools / Brushes", padx=5, pady=5)
+        brush_bar.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0, 5))
+        
+        self.tool_var = tk.IntVar(value=TOOL_WALL)
+        
+        rb_wall = tk.Radiobutton(brush_bar, text="🧱 Wall", variable=self.tool_var, value=TOOL_WALL)
+        rb_wall.pack(side=tk.LEFT, padx=10)
+        
+        rb_act_door = tk.Radiobutton(brush_bar, text="🟢 Active Door", variable=self.tool_var, value=TOOL_ACTIVE_DOOR)
+        rb_act_door.pack(side=tk.LEFT, padx=10)
+        
+        rb_dead_close = tk.Radiobutton(brush_bar, text="🔴 Dead Door (Closed)", variable=self.tool_var, value=TOOL_DEAD_DOOR_CLOSED)
+        rb_dead_close.pack(side=tk.LEFT, padx=10)
+        
+        rb_dead_jam = tk.Radiobutton(brush_bar, text="🟡 Dead Door (Jammed)", variable=self.tool_var, value=TOOL_DEAD_DOOR_JAMMED)
+        rb_dead_jam.pack(side=tk.LEFT, padx=10)
+        
+        rb_dead_open = tk.Radiobutton(brush_bar, text="🔵 Dead Door (Open)", variable=self.tool_var, value=TOOL_DEAD_DOOR_OPEN)
+        rb_dead_open.pack(side=tk.LEFT, padx=10)
+
         # Canvas Frame
         self.canvas = tk.Canvas(root, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -89,6 +128,7 @@ class AutoMapperUI:
         self._initial_zoom_done = False
         
         self.segments = []  # list of ((x1,y1), (x2,y2), wall_type)
+        self.doors = []     # list of (x, y, wall_type, direction_type, size, door_state, light_state, z_offset)
         self.start_point = None
         self.temp_line = None
         self._pan_start_x = None
@@ -328,6 +368,52 @@ class AutoMapperUI:
             s_x2, s_y2 = self.to_screen(px2, py2)
             self.canvas.create_line(s_x1, s_y1, s_x2, s_y2, fill=seg_color, width=3)
             
+        # Draw doors
+        for x, y, wt, dt, sz, ds, ls, zo in self.doors:
+            seg_sx, seg_sy, _, _, _ = WALL_PROFILES[wt]
+            px1, py1 = self.to_physical(x, y, seg_sx, seg_sy)
+            if dt == 0:  # A direction (vertical)
+                px2, py2 = self.to_physical(x, y + sz, seg_sx, seg_sy)
+            else:  # B direction (horizontal)
+                px2, py2 = self.to_physical(x + sz, y, seg_sx, seg_sy)
+                
+            s_x1, s_y1 = self.to_screen(px1, py1)
+            s_x2, s_y2 = self.to_screen(px2, py2)
+            
+            if ls == 1:  # Active door (Closed) - Green
+                color = "#2E8B57"      # SeaGreen
+                dot_color = "#32CD32"  # LimeGreen
+                hollow = False
+            elif ls == 0:  # Active door (Open) - Green
+                color = "#32CD32"
+                dot_color = "#00FF00"
+                hollow = False
+            else:  # Broken light / Dead door (ls == 2)
+                if zo == 0.0:  # Closed - dark red
+                    color = "#8B0000"
+                    dot_color = "#FF0000"
+                    hollow = False
+                elif abs(zo + 45.0) < 1.0:  # Jammed - Orange
+                    color = "#D2691E"
+                    dot_color = "#FFD700"  # Gold
+                    hollow = False
+                else:  # Open - Gray (zo == -90.0)
+                    color = "#808080"
+                    dot_color = "#D3D3D3"
+                    hollow = True
+            
+            # Draw door line
+            self.canvas.create_line(s_x1, s_y1, s_x2, s_y2, fill=color, width=5)
+            
+            # Draw status indicator dot in the middle
+            mid_x = (s_x1 + s_x2) / 2.0
+            mid_y = (s_y1 + s_y2) / 2.0
+            r = 4
+            if hollow:
+                self.canvas.create_oval(mid_x - r, mid_y - r, mid_x + r, mid_y + r, fill="white", outline=color, width=2)
+            else:
+                self.canvas.create_oval(mid_x - r, mid_y - r, mid_x + r, mid_y + r, fill=dot_color, outline="")
+            
         # 标注原点 (gx=0, gy=0)
         opx, opy = self.to_physical(0, 0)
         osx, osy = self.to_screen(opx, opy)
@@ -394,7 +480,41 @@ class AutoMapperUI:
             gx, gy = self.get_clamped_orthogonal(self.start_point[0], self.start_point[1], gx, gy)
             
         if (gx, gy) != self.start_point:
-            self.segments.append((self.start_point, (gx, gy), self.wall_type))
+            tool = self.tool_var.get()
+            if tool == TOOL_WALL:
+                self.segments.append((self.start_point, (gx, gy), self.wall_type))
+            else:
+                x1, y1 = self.start_point
+                x2, y2 = gx, gy
+                
+                dx = abs(x2 - x1)
+                dy = abs(y2 - y1)
+                
+                if x1 == x2:  # A direction (vertical)
+                    direction_type = 0
+                    size = min(2, max(1, dy))
+                    pos_x = x1
+                    pos_y = min(y1, y2)
+                else:  # B direction (horizontal)
+                    direction_type = 1
+                    size = min(2, max(1, dx))
+                    pos_x = min(x1, x2)
+                    pos_y = y1
+                
+                wt = self.wall_type
+                if tool == TOOL_ACTIVE_DOOR:
+                    # Active Door: closed (0), red light (1), z_offset = 0.0
+                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 1, 0.0))
+                elif tool == TOOL_DEAD_DOOR_CLOSED:
+                    # Dead Door Closed: closed (0), broken light (2), z_offset = 0.0
+                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 2, 0.0))
+                elif tool == TOOL_DEAD_DOOR_JAMMED:
+                    # Dead Door Jammed: open state (1), broken light (2), z_offset = -45.0
+                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 2, -45.0))
+                elif tool == TOOL_DEAD_DOOR_OPEN:
+                    # Dead Door Open: open state (1), broken light (2), z_offset = -90.0
+                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 2, -90.0))
+                    
             self.draw_all()
             
         if self.temp_line:
@@ -422,17 +542,18 @@ class AutoMapperUI:
 
     def clear_canvas(self):
         self.segments.clear()
+        self.doors.clear()
         self.draw_all()
 
     def export_segments(self):
-        if not self.segments:
-            messagebox.showwarning("Warning", "Draw something to export first!")
+        if not self.segments and not self.doors:
+            messagebox.showwarning("Warning", "Draw segments or doors to export first!")
             return
             
         file_path = filedialog.asksaveasfilename(
             defaultextension=".json",
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            title="Export Drawn Segments"
+            title="Export Drawn Segments and Doors"
         )
         if not file_path:
             return
@@ -449,20 +570,32 @@ class AutoMapperUI:
                         "floor_type": 0
                     }
                     for (x1, y1), (x2, y2), wt in self.segments
+                ],
+                "doors": [
+                    {
+                        "pos": {"x": x, "y": y},
+                        "wall_type": wt,
+                        "direction_type": dt,
+                        "size": sz,
+                        "door_state": ds,
+                        "light_state": ls,
+                        "z_offset": zo
+                    }
+                    for x, y, wt, dt, sz, ds, ls, zo in self.doors
                 ]
             }
             
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
                 
-            messagebox.showinfo("Success", f"Segments exported successfully to:\n{file_path}")
+            messagebox.showinfo("Success", f"Data exported successfully to:\n{file_path}")
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to export segments: {str(e)}")
+            messagebox.showerror("Error", f"Failed to export data: {str(e)}")
 
     def import_segments(self):
         file_path = filedialog.askopenfilename(
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            title="Import Segments JSON"
+            title="Import JSON"
         )
         if not file_path:
             return
@@ -502,7 +635,22 @@ class AutoMapperUI:
                 
                 segments.append(((x1, y1), (x2, y2), wt))
                 
+            doors = []
+            json_doors = data.get("doors", [])
+            for d in json_doors:
+                pos = d.get("pos", {})
+                x = pos.get("x", 0)
+                y = pos.get("y", 0)
+                wt = d.get("wall_type", 0)
+                dt = d.get("direction_type", 0)
+                sz = d.get("size", 1)
+                ds = d.get("door_state", 0)
+                ls = d.get("light_state", 0)
+                zo = d.get("z_offset", 0.0)
+                doors.append((x, y, wt, dt, sz, ds, ls, zo))
+                
             self.segments = segments
+            self.doors = doors
             self.auto_zoom()
             self.draw_all()
             
@@ -534,11 +682,13 @@ class AutoMapperUI:
             # 加载 DLL
             lib = ctypes.CDLL(dll_path)
             
-            # 配置 C 函数签名 (no global wall_type, it's per-segment now)
+            # 配置 C 函数签名 (including doors pointer and count)
             lib.generate_map_from_segments.argtypes = [
                 ctypes.c_char_p,                 # output_path
                 ctypes.POINTER(CSegment),        # segments
                 ctypes.c_int,                    # num_segments
+                ctypes.POINTER(CDoor),           # doors
+                ctypes.c_int,                    # num_doors
                 ctypes.c_float,                  # map_size_x
                 ctypes.c_float,                  # map_size_y
                 ctypes.c_bool,                   # gen_floor
@@ -559,11 +709,27 @@ class AutoMapperUI:
                 segments_arr[i].y2 = int(y2)
                 segments_arr[i].wall_type = wt
                 
+            num_doors = len(self.doors)
+            DoorArray = CDoor * num_doors
+            doors_arr = DoorArray()
+            
+            for i, (x, y, wt, dt, sz, ds, ls, zo) in enumerate(self.doors):
+                doors_arr[i].x = int(x)
+                doors_arr[i].y = int(y)
+                doors_arr[i].wall_type = int(wt)
+                doors_arr[i].direction_type = int(dt)
+                doors_arr[i].size = int(sz)
+                doors_arr[i].door_state = int(ds)
+                doors_arr[i].light_state = int(ls)
+                doors_arr[i].z_offset = float(zo)
+                
             # 执行 C++ 引擎
             success = lib.generate_map_from_segments(
                 output_path_bytes,
                 segments_arr,
                 num_segments,
+                doors_arr,
+                num_doors,
                 float(map_x),
                 float(map_y),
                 self.gen_floor_var.get(),

@@ -100,7 +100,10 @@ MapPoint WallBuilder::get_phys(int lx, int ly, int w_type) const {
     return to_iso(GridPoint{lx, ly}, profile.step_x, profile.step_y, shift);
 }
 
-std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(const std::vector<Segment>& segments) const {
+std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
+    const std::vector<Segment>& segments,
+    const std::vector<DoorExcavation>& excavations
+) const {
     std::vector<RawSprite> raw_sprites;
     using Point = std::pair<int, int>;
     std::map<int, std::vector<const Segment*>> groups;
@@ -391,11 +394,68 @@ std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<R
     return wall_sprites;
 }
 
-std::vector<io::Sprite> WallBuilder::build(const std::vector<Segment>& segments, bool gen_floor, bool gen_ceiling) const {
+std::vector<io::Sprite> WallBuilder::build(
+    const std::vector<Segment>& segments, 
+    bool gen_floor, 
+    bool gen_ceiling,
+    const std::vector<DoorExcavation>& excavations
+) const {
     if (segments.empty()) return {};
 
-    // 1. wall and  pillar
-    std::vector<RawSprite> raw_sprites = process_wall_sprites(segments);
+    // 1. wall and  pillar (generate fully first)
+    std::vector<RawSprite> raw_sprites = process_wall_sprites(segments, {});
+
+    // 1b. Perform physical excavations on raw_sprites
+    if (!excavations.empty()) {
+        std::vector<RawSprite> filtered_raw;
+        filtered_raw.reserve(raw_sprites.size());
+
+        for (const auto& rs : raw_sprites) {
+            bool to_erase = false;
+            const WallProfile& profile = get_wall_profile(rs.wall_type);
+
+            for (const auto& ex : excavations) {
+                if (ex.wall_type == rs.wall_type) {
+                    if (ex.direction_type == 0) {  // A direction (vertical, along y axis)
+                        // Erase wall segment in range [ex.pos.y, ex.pos.y + ex.size - 1]
+                        if (rs.vid == profile.id_dir_a) {
+                            if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size - 1) {
+                                to_erase = true;
+                                break;
+                            }
+                        }
+                        // Erase pillar in range [ex.pos.y, ex.pos.y + ex.size]
+                        if (rs.vid == profile.id_pillar) {
+                            if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size) {
+                                to_erase = true;
+                                break;
+                            }
+                        }
+                    } else if (ex.direction_type == 1) {  // B direction (horizontal, along x axis)
+                        // Erase wall segment in range [ex.pos.x, ex.pos.x + ex.size - 1]
+                        if (rs.vid == profile.id_dir_b) {
+                            if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size - 1) {
+                                to_erase = true;
+                                break;
+                            }
+                        }
+                        // Erase pillar in range [ex.pos.x, ex.pos.x + ex.size]
+                        if (rs.vid == profile.id_pillar) {
+                            if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size) {
+                                to_erase = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!to_erase) {
+                filtered_raw.push_back(rs);
+            }
+        }
+        raw_sprites = std::move(filtered_raw);
+    }
 
     std::vector<io::Sprite> floor_sprites;
     std::vector<io::Sprite> ceiling_sprites;
