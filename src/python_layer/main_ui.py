@@ -102,20 +102,21 @@ class AutoMapperUI:
         
         self.tool_var = tk.IntVar(value=TOOL_WALL)
         
-        rb_wall = tk.Radiobutton(brush_bar, text="🧱 Wall", variable=self.tool_var, value=TOOL_WALL)
-        rb_wall.pack(side=tk.LEFT, padx=10)
+        self.rb_wall = tk.Radiobutton(brush_bar, text="🧱 Wall", variable=self.tool_var, value=TOOL_WALL)
+        self.rb_wall.pack(side=tk.LEFT, padx=10)
         
-        rb_act_door = tk.Radiobutton(brush_bar, text="🟢 Active Door", variable=self.tool_var, value=TOOL_ACTIVE_DOOR)
-        rb_act_door.pack(side=tk.LEFT, padx=10)
+        self.rb_act_door = tk.Radiobutton(brush_bar, text="🟢 Active Door", variable=self.tool_var, value=TOOL_ACTIVE_DOOR)
+        self.rb_act_door.pack(side=tk.LEFT, padx=10)
         
-        rb_dead_close = tk.Radiobutton(brush_bar, text="🔴 Dead Door (Closed)", variable=self.tool_var, value=TOOL_DEAD_DOOR_CLOSED)
-        rb_dead_close.pack(side=tk.LEFT, padx=10)
+        self.rb_dead_close = tk.Radiobutton(brush_bar, text="🔴 Dead Door (Closed)", variable=self.tool_var, value=TOOL_DEAD_DOOR_CLOSED)
+        self.rb_dead_close.pack(side=tk.LEFT, padx=10)
         
-        rb_dead_jam = tk.Radiobutton(brush_bar, text="🟡 Dead Door (Jammed)", variable=self.tool_var, value=TOOL_DEAD_DOOR_JAMMED)
-        rb_dead_jam.pack(side=tk.LEFT, padx=10)
+        self.rb_dead_jam = tk.Radiobutton(brush_bar, text="🟡 Dead Door (Jammed)", variable=self.tool_var, value=TOOL_DEAD_DOOR_JAMMED)
+        self.rb_dead_jam.pack(side=tk.LEFT, padx=10)
         
-        rb_dead_open = tk.Radiobutton(brush_bar, text="🔵 Dead Door (Open)", variable=self.tool_var, value=TOOL_DEAD_DOOR_OPEN)
-        rb_dead_open.pack(side=tk.LEFT, padx=10)
+        self.rb_dead_open = tk.Radiobutton(brush_bar, text="🔵 Dead Door (Open)", variable=self.tool_var, value=TOOL_DEAD_DOOR_OPEN)
+        self.rb_dead_open.pack(side=tk.LEFT, padx=10)
+        self._update_brush_ui()
 
         # Canvas Frame
         self.canvas = tk.Canvas(root, bg="white")
@@ -175,7 +176,27 @@ class AutoMapperUI:
 
     def _on_wall_type_changed(self):
         """切换墙壁类型时重绘画布（网格密度会变化）"""
+        self._update_brush_ui()
         self.draw_all()
+
+    def _update_brush_ui(self):
+        if self.wall_type == WALL_TYPE_LAB:
+            self.rb_act_door.config(text="🔒 Laser Door (Closed)")
+            self.rb_dead_close.config(text="🟢 Laser Door (Open)")
+            self.rb_dead_jam.config(text="🚪 Decoration Door")
+            self.rb_dead_open.pack_forget()
+
+            if self.tool_var.get() == TOOL_DEAD_DOOR_OPEN:
+                self.tool_var.set(TOOL_ACTIVE_DOOR)
+            return
+
+        self.rb_act_door.config(text="🟢 Active Door")
+        self.rb_dead_close.config(text="🔴 Dead Door (Closed)")
+        self.rb_dead_jam.config(text="🟡 Dead Door (Jammed)")
+        self.rb_dead_open.config(text="🔵 Dead Door (Open)")
+
+        if not self.rb_dead_open.winfo_ismapped():
+            self.rb_dead_open.pack(side=tk.LEFT, padx=10)
 
     def _get_grid_shift(self, sx, sy):
         # Determine step and remainder dynamically using grid_divisor from WALL_PROFILES
@@ -371,16 +392,32 @@ class AutoMapperUI:
         # Draw doors
         for x, y, wt, dt, sz, ds, ls, zo in self.doors:
             seg_sx, seg_sy, _, _, _ = WALL_PROFILES[wt]
+            draw_size = sz
+            if wt == WALL_TYPE_LAB:
+                draw_size = 1
+
             px1, py1 = self.to_physical(x, y, seg_sx, seg_sy)
             if dt == 0:  # A direction (vertical)
-                px2, py2 = self.to_physical(x, y + sz, seg_sx, seg_sy)
+                px2, py2 = self.to_physical(x, y + draw_size, seg_sx, seg_sy)
             else:  # B direction (horizontal)
-                px2, py2 = self.to_physical(x + sz, y, seg_sx, seg_sy)
+                px2, py2 = self.to_physical(x + draw_size, y, seg_sx, seg_sy)
                 
             s_x1, s_y1 = self.to_screen(px1, py1)
             s_x2, s_y2 = self.to_screen(px2, py2)
             
-            if ls == 1:  # Active door (Closed) - Green
+            if wt == WALL_TYPE_LAB and ls == 2:
+                color = "#8B0000"
+                dot_color = "#FF0000"
+                hollow = False
+            elif wt == WALL_TYPE_LAB and ds == 1:
+                color = "#32CD32"
+                dot_color = "#D3D3D3"
+                hollow = True
+            elif wt == WALL_TYPE_LAB:
+                color = "#00A6D6"
+                dot_color = "#7DF9FF"
+                hollow = False
+            elif ls == 1:  # Active door (Closed) - Green
                 color = "#2E8B57"      # SeaGreen
                 dot_color = "#32CD32"  # LimeGreen
                 hollow = False
@@ -502,9 +539,22 @@ class AutoMapperUI:
                     pos_y = y1
                 
                 wt = self.wall_type
-                if tool == TOOL_ACTIVE_DOOR:
-                    # Active Door: closed (0), red light (1), z_offset = 0.0
-                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 1, 0.0))
+                if wt == WALL_TYPE_LAB:
+                    size = 1
+
+                if wt == WALL_TYPE_LAB:
+                    if tool == TOOL_ACTIVE_DOOR:
+                        # Lab laser door closed: frame + laser pillar.
+                        self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 1, 0.0))
+                    elif tool == TOOL_DEAD_DOOR_CLOSED:
+                        # Lab laser door open: frame only.
+                        self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 1, 0.0))
+                    elif tool == TOOL_DEAD_DOOR_JAMMED:
+                        # Lab decoration door: single decorative sprite.
+                        self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 2, 0.0))
+                elif tool == TOOL_ACTIVE_DOOR:
+                    # Active Door: open state (1), red light (1), z_offset = 0.0
+                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 1, 0.0))
                 elif tool == TOOL_DEAD_DOOR_CLOSED:
                     # Dead Door Closed: closed (0), broken light (2), z_offset = 0.0
                     self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 2, 0.0))
@@ -513,7 +563,7 @@ class AutoMapperUI:
                     self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 2, -45.0))
                 elif tool == TOOL_DEAD_DOOR_OPEN:
                     # Dead Door Open: open state (1), broken light (2), z_offset = -90.0
-                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 2, -90.0))
+                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 2, -68.0))
                     
             self.draw_all()
             

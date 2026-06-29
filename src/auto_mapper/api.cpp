@@ -56,11 +56,16 @@ AUTO_MAPPER_API bool generate_map_from_segments(
         };
         cpp_doors.push_back(di);
 
+        int excavation_size = di.size;
+        if (di.wall_type == auto_mapper::core::WALL_TYPE_LAB) {
+            excavation_size = 1;
+        }
+
         // Generate excavation area for this door
         excavations.push_back({
             di.pos,
             di.direction_type,
-            di.size,
+            excavation_size,
             di.wall_type
         });
     }

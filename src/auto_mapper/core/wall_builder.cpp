@@ -134,10 +134,10 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
         }
 
         for (const auto& p : edges_a) {
-            raw_sprites.push_back({p.first, p.second, wt, profile.id_dir_a});
+            raw_sprites.push_back({p.first, p.second, wt, profile.dir_a_vid});
         }
         for (const auto& p : edges_b) {
-            raw_sprites.push_back({p.first, p.second, wt, profile.id_dir_b});
+            raw_sprites.push_back({p.first, p.second, wt, profile.dir_b_vid});
         }
 
         std::set<Point> vertices;
@@ -164,7 +164,7 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
             int total_conns = (up ? 1 : 0) + (down ? 1 : 0) + (left ? 1 : 0) + (right ? 1 : 0);
 
             if (total_conns == 1 || (conn_a && conn_b)) {
-                raw_sprites.push_back({x, y, wt, profile.id_pillar});
+                raw_sprites.push_back({x, y, wt, profile.pillar_vid});
             }
         }
     }
@@ -418,14 +418,14 @@ std::vector<io::Sprite> WallBuilder::build(
                 if (ex.wall_type == rs.wall_type) {
                     if (ex.direction_type == 0) {  // A direction (vertical, along y axis)
                         // Erase wall segment in range [ex.pos.y, ex.pos.y + ex.size - 1]
-                        if (rs.vid == profile.id_dir_a) {
+                        if (rs.vid == profile.dir_a_vid) {
                             if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size - 1) {
                                 to_erase = true;
                                 break;
                             }
                         }
                         // Erase pillar in range [ex.pos.y, ex.pos.y + ex.size]
-                        if (rs.vid == profile.id_pillar) {
+                        if (rs.vid == profile.pillar_vid) {
                             if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size) {
                                 to_erase = true;
                                 break;
@@ -433,14 +433,14 @@ std::vector<io::Sprite> WallBuilder::build(
                         }
                     } else if (ex.direction_type == 1) {  // B direction (horizontal, along x axis)
                         // Erase wall segment in range [ex.pos.x, ex.pos.x + ex.size - 1]
-                        if (rs.vid == profile.id_dir_b) {
+                        if (rs.vid == profile.dir_b_vid) {
                             if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size - 1) {
                                 to_erase = true;
                                 break;
                             }
                         }
                         // Erase pillar in range [ex.pos.x, ex.pos.x + ex.size]
-                        if (rs.vid == profile.id_pillar) {
+                        if (rs.vid == profile.pillar_vid) {
                             if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size) {
                                 to_erase = true;
                                 break;
@@ -500,13 +500,13 @@ io::Sprite WallBuilder::place_single_wall(int gx, int gy, int wall_type, int vid
     MapPoint shift = get_wall_shift(map_size_x_, profile);
     MapPoint pos = to_iso(GridPoint{gx, gy}, profile.step_x, profile.step_y, shift);
 
-    if (vid == profile.id_dir_a) {
+    if (vid == profile.dir_a_vid) {
         pos.x += profile.offset_a_x;
         pos.y += profile.offset_a_y;
-    } else if (vid == profile.id_dir_b) {
+    } else if (vid == profile.dir_b_vid) {
         pos.x += profile.offset_b_x;
         pos.y += profile.offset_b_y;
-    } else if (vid == profile.id_pillar) {
+    } else if (vid == profile.pillar_vid) {
         pos.x += profile.offset_p_x;
         pos.y += profile.offset_p_y;
     }

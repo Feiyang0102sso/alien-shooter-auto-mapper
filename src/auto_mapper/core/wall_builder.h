@@ -17,9 +17,9 @@ namespace auto_mapper::core {
 
 /// Wall asset configuration — each wall type carries its own IDs and step sizes.
 struct WallProfile {
-    int id_dir_a;   // '/' direction wall ID  (e.g. 601 for standard)
-    int id_dir_b;   // '\' direction wall ID  (e.g. 602 for standard)
-    int id_pillar;  // pillar ID              (e.g. 604 for standard)
+    int dir_a_vid;   // '/' direction wall ID  (e.g. 601 for standard)
+    int dir_b_vid;   // '\' direction wall ID  (e.g. 602 for standard)
+    int pillar_vid;  // pillar ID              (e.g. 604 for standard)
     float step_x;   // X-axis physical step   (e.g. 40.0 for standard, 90.0 for lab)
     float step_y;   // Y-axis physical step   (e.g. 28.0 for standard, 64.0 for lab)
     float offset_a_x, offset_a_y;

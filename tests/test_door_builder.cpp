@@ -1,0 +1,204 @@
+#include <gtest/gtest.h>
+#include "auto_mapper/core/door_builder.h"
+#include "auto_mapper/core/wall_builder.h"
+#include "auto_mapper/io/map_writer.h"
+#include "utils/test_utils.h"
+
+using namespace auto_mapper;
+using namespace auto_mapper::core;
+using namespace auto_mapper::test;
+
+
+/**
+ * Tests for AS1 door builder
+ * normal door + lab door mixed scene
+ * make sure all doors are aligned and some door can be open
+ * no celling or floor in the map
+ */
+TEST(DoorBuilderTest, DoorSceneGolden) {
+    const std::string json_path = resolve_test_path("tests/golden/door_builder.gold.json");
+    TestScene scene = load_test_scene(json_path);
+
+    ASSERT_GT(scene.segments.size(), 0u);
+    ASSERT_GT(scene.doors.size(), 0u);
+
+    std::vector<DoorExcavation> excavations;
+    excavations.reserve(scene.doors.size());
+    for (const auto& door : scene.doors) {
+        int excavation_size = door.size;
+        if (door.wall_type == WALL_TYPE_LAB) {
+            excavation_size = 1;
+        }
+
+        excavations.push_back({
+            door.pos,
+            door.direction_type,
+            excavation_size,
+            door.wall_type
+        });
+    }
+
+    WallBuilder wall_builder(scene.map_size_x, scene.map_size_y);
+    std::vector<io::Sprite> sprites = wall_builder.build(scene.segments, false, false, excavations);
+
+    DoorBuilder door_builder(scene.map_size_x, scene.map_size_y);
+    std::vector<io::Sprite> door_sprites = door_builder.build(scene.doors);
+    sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
+
+    const std::string temp_output_path = "current_door_builder.map";
+    TempFileCleaner cleaner(temp_output_path);
+
+    bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);
+    ASSERT_TRUE(write_success);
+
+    const std::string golden_map_path = resolve_test_path("tests/golden/door_builder.gold.map");
+    bool files_match = compare_binary_files(temp_output_path, golden_map_path);
+
+    EXPECT_TRUE(files_match);
+}
+
+TEST(DoorBuilderTest, StandardActiveDoorUsesOpenPanelVid) {
+    DoorBuilder builder(600.0f, 600.0f);
+
+    DoorInstance small_open_door = {
+        {0, 0},
+        WALL_TYPE_STANDARD,
+        0,
+        1,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    DoorInstance large_open_door = small_open_door;
+    large_open_door.size = 2;
+
+    auto small_sprites = builder.build({small_open_door});
+    auto large_sprites = builder.build({large_open_door});
+
+    ASSERT_GE(small_sprites.size(), 2);
+    ASSERT_GE(large_sprites.size(), 2);
+    EXPECT_EQ(small_sprites[1].vid, 605);
+    EXPECT_FLOAT_EQ(small_sprites[1].posZ, 0.0f);
+    EXPECT_EQ(large_sprites[1].vid, 607);
+    EXPECT_FLOAT_EQ(large_sprites[1].posZ, 0.0f);
+}
+
+TEST(DoorBuilderTest, StandardDeadDoorKeepsClosedPanelVid) {
+    DoorBuilder builder(600.0f, 600.0f);
+
+    DoorInstance small_jammed_door = {
+        {0, 0},
+        WALL_TYPE_STANDARD,
+        1,
+        1,
+        DOOR_STATE_OPEN,
+        LIGHT_STATE_BROKEN,
+        -45.0f
+    };
+
+    DoorInstance large_open_door = small_jammed_door;
+    large_open_door.size = 2;
+    large_open_door.z_offset = -90.0f;
+
+    auto small_sprites = builder.build({small_jammed_door});
+    auto large_sprites = builder.build({large_open_door});
+
+    ASSERT_GE(small_sprites.size(), 2);
+    ASSERT_GE(large_sprites.size(), 2);
+    EXPECT_EQ(small_sprites[1].vid, 617);
+    EXPECT_EQ(small_sprites[1].direction, 64);
+    EXPECT_FLOAT_EQ(small_sprites[1].posZ, -45.0f);
+    EXPECT_EQ(large_sprites[1].vid, 611);
+    EXPECT_EQ(large_sprites[1].direction, 64);
+    EXPECT_FLOAT_EQ(large_sprites[1].posZ, -90.0f);
+}
+
+TEST(DoorBuilderTest, LabLaserDoorUsesFrameAndPillar) {
+    DoorBuilder builder(1200.0f, 1200.0f);
+
+    DoorInstance door = {
+        {0, 0},
+        WALL_TYPE_LAB,
+        1,
+        1,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    auto sprites = builder.build({door});
+
+    ASSERT_EQ(sprites.size(), 2);
+    EXPECT_EQ(sprites[0].vid, 653);
+    EXPECT_EQ(sprites[0].direction, 0);
+    EXPECT_EQ(sprites[1].vid, 164);
+    EXPECT_EQ(sprites[1].direction, 0);
+    EXPECT_FLOAT_EQ(sprites[1].posX - sprites[0].posX, 0.0f);
+    EXPECT_FLOAT_EQ(sprites[1].posY - sprites[0].posY, -18.0f);
+}
+
+TEST(DoorBuilderTest, LabDeadDoorUsesSingleDecoration) {
+    DoorBuilder builder(1200.0f, 1200.0f);
+
+    DoorInstance door = {
+        {0, 0},
+        WALL_TYPE_LAB,
+        0,
+        1,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_BROKEN,
+        0.0f
+    };
+
+    auto sprites = builder.build({door});
+
+    ASSERT_EQ(sprites.size(), 1);
+    EXPECT_EQ(sprites[0].vid, 654);
+    EXPECT_EQ(sprites[0].direction, 64);
+}
+
+TEST(DoorBuilderTest, LabOpenLaserDoorUsesFrameOnly) {
+    DoorBuilder builder(1200.0f, 1200.0f);
+
+    DoorInstance door = {
+        {0, 0},
+        WALL_TYPE_LAB,
+        0,
+        1,
+        DOOR_STATE_OPEN,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    auto sprites = builder.build({door});
+
+    ASSERT_EQ(sprites.size(), 1);
+    EXPECT_EQ(sprites[0].vid, 653);
+    EXPECT_EQ(sprites[0].direction, 64);
+}
+
+TEST(DoorBuilderTest, LabDoorIgnoresTwoTileSize) {
+    DoorBuilder builder(1200.0f, 1200.0f);
+
+    DoorInstance one_tile_door = {
+        {0, 0},
+        WALL_TYPE_LAB,
+        1,
+        1,
+        DOOR_STATE_OPEN,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    DoorInstance two_tile_door = one_tile_door;
+    two_tile_door.size = 2;
+
+    auto one_tile_sprites = builder.build({one_tile_door});
+    auto two_tile_sprites = builder.build({two_tile_door});
+
+    ASSERT_EQ(one_tile_sprites.size(), 1);
+    ASSERT_EQ(two_tile_sprites.size(), 1);
+    EXPECT_FLOAT_EQ(two_tile_sprites[0].posX, one_tile_sprites[0].posX);
+    EXPECT_FLOAT_EQ(two_tile_sprites[0].posY, one_tile_sprites[0].posY);
+}

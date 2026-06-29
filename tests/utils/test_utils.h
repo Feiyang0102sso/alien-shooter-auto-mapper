@@ -7,6 +7,7 @@
 #pragma once
 
 #include "auto_mapper/core/wall_builder.h"
+#include "auto_mapper/core/door_builder.h"
 #include <string>
 #include <vector>
 #include <fstream>
@@ -121,6 +122,7 @@ struct TestScene {
     float map_size_x = 600.0f;
     float map_size_y = 600.0f;
     std::vector<core::Segment> segments;
+    std::vector<core::DoorInstance> doors;
 };
 
 enum class TokenType {
@@ -279,6 +281,116 @@ inline TestScene parse_test_scene(const std::vector<Token>& tokens) {
                                 i++;
                             }
                             scene.segments.push_back(seg);
+                        } else {
+                            i++;
+                        }
+                    }
+                    if (i < tokens.size() && tokens[i].type == TokenType::RBracket) {
+                        i++;
+                    }
+                } else {
+                    i++;
+                }
+            } else if (key == "doors") {
+                if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::LBracket) {
+                    i += 3;
+                    while (i < tokens.size() && tokens[i].type != TokenType::RBracket && tokens[i].type != TokenType::EndOfFile) {
+                        if (tokens[i].type == TokenType::LBrace) {
+                            i++;
+                            core::DoorInstance door;
+                            door.pos = {0, 0};
+                            door.wall_type = 0;
+                            door.direction_type = 0;
+                            door.size = 1;
+                            door.door_state = 0;
+                            door.light_state = 0;
+                            door.z_offset = 0.0f;
+
+                            while (i < tokens.size() && tokens[i].type != TokenType::RBrace && tokens[i].type != TokenType::EndOfFile) {
+                                if (tokens[i].type == TokenType::String) {
+                                    std::string d_key = tokens[i].value;
+                                    if (d_key == "pos") {
+                                        core::GridPoint pt{0, 0};
+                                        if (i + 3 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::LBrace) {
+                                            i += 3;
+                                            while (i < tokens.size() && tokens[i].type != TokenType::RBrace) {
+                                                if (tokens[i].type == TokenType::String) {
+                                                    std::string coord_key = tokens[i].value;
+                                                    if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                                        int val = std::stoi(tokens[i+2].value);
+                                                        if (coord_key == "x") {
+                                                            pt.x = val;
+                                                        } else if (coord_key == "y") {
+                                                            pt.y = val;
+                                                        }
+                                                        i += 3;
+                                                    } else {
+                                                        i++;
+                                                    }
+                                                } else {
+                                                    i++;
+                                                }
+                                            }
+                                            if (i < tokens.size() && tokens[i].type == TokenType::RBrace) {
+                                                i++;
+                                            }
+                                        } else {
+                                            i++;
+                                        }
+                                        door.pos = pt;
+                                    } else if (d_key == "wall_type") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            door.wall_type = std::stoi(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "direction_type") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            door.direction_type = std::stoi(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "size") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            door.size = std::stoi(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "door_state") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            door.door_state = std::stoi(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "light_state") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            door.light_state = std::stoi(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "z_offset") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            door.z_offset = std::stof(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else {
+                                        i++;
+                                    }
+                                } else {
+                                    i++;
+                                }
+                            }
+                            if (i < tokens.size() && tokens[i].type == TokenType::RBrace) {
+                                i++;
+                            }
+                            scene.doors.push_back(door);
                         } else {
                             i++;
                         }

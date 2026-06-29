@@ -11,6 +11,12 @@
 
 namespace auto_mapper::core {
 
+constexpr int LAB_LASER_FRAME_VID = 653;
+constexpr int LAB_DEAD_DOOR_VID = 654;
+constexpr int LAB_LASER_PILLAR_VID = 164;
+constexpr float LAB_LASER_PILLAR_OFFSET_X = 0.0f;
+constexpr float LAB_LASER_PILLAR_OFFSET_Y = -18.0f;
+
 // Copy-paste static helper for isometric alignment, matching wall_builder.cpp exactly
 static MapPoint get_door_wall_shift(float map_size_x, const WallProfile& profile) {
     float divisor = static_cast<float>(profile.grid_divisor);
@@ -48,6 +54,10 @@ static void apply_door_direction_offset(MapPoint& pos, int direction_type, int s
     }
 }
 
+static bool is_lab_dead_door(const DoorInstance& door) {
+    return door.light_state == LIGHT_STATE_BROKEN;
+}
+
 DoorBuilder::DoorBuilder(float map_size_x, float map_size_y)
     : map_size_x_(map_size_x), map_size_y_(map_size_y) {}
 
@@ -59,11 +69,6 @@ const DoorProfile& DoorBuilder::get_door_profile(int wall_type) {
         // Panel Large: 607 (open), 611 (closed)
         // Light: 423 (green), 424 (red), 425 (broken)
         { WALL_TYPE_STANDARD, { 606, 608, 605, 617, 607, 611, 423, 424, 425 } },
-        
-        // Lab wall doors:
-        // Lab door has frame only (laser beam disappears when open). Frame: 652 (pillar? No, frame is 650/651/652? Let's check lab profiles)
-        // We will default to a placeholder frame and 0 for panels (which means no sprite generated when open).
-        { WALL_TYPE_LAB,      { 652, 652, 0, 0, 0, 0, 0, 0, 0 } }
     };
 
     if (profiles.find(wall_type) != profiles.end()) {
@@ -83,8 +88,36 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
         MapPoint shift = get_door_wall_shift(map_size_x_, w_prof);
 
         // Grid coordinate to isometric physical coordinate (Frame Center)
+        int effective_size = door.size;
+        if (door.wall_type == WALL_TYPE_LAB) {
+            effective_size = 1;
+        }
+
         MapPoint pt = to_iso(door.pos, w_prof.step_x, w_prof.step_y, shift);
-        apply_door_direction_offset(pt, door.direction_type, door.size, w_prof);
+        apply_door_direction_offset(pt, door.direction_type, effective_size, w_prof);
+
+        if (door.wall_type == WALL_TYPE_LAB) {
+            if (is_lab_dead_door(door)) {
+                uint32_t dead_door_dir = (door.direction_type == 0) ? 64 : 0;
+                door_sprites.push_back(io::Sprite(LAB_DEAD_DOOR_VID, pt.x, pt.y, door.z_offset, dead_door_dir));
+                continue;
+            }
+
+            uint32_t frame_dir = (door.direction_type == 0) ? 64 : 0;
+            door_sprites.push_back(io::Sprite(LAB_LASER_FRAME_VID, pt.x, pt.y, 0.0f, frame_dir));
+
+            if (door.door_state == DOOR_STATE_CLOSED) {
+                uint32_t pillar_dir = (door.direction_type == 0) ? 128 : 0;
+                door_sprites.push_back(io::Sprite(
+                    LAB_LASER_PILLAR_VID,
+                    pt.x + LAB_LASER_PILLAR_OFFSET_X,
+                    pt.y + LAB_LASER_PILLAR_OFFSET_Y,
+                    0.0f,
+                    pillar_dir
+                ));
+            }
+            continue;
+        }
 
         const DoorProfile& d_prof = get_door_profile(door.wall_type);
 
@@ -97,10 +130,15 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
 
         // 2. Panel Sprite
         int panel_vid = 0;
-        if (door.size == 1) {
-            panel_vid = (door.door_state == DOOR_STATE_OPEN) ? d_prof.id_panel_small_open : d_prof.id_panel_small_closed;
+        bool is_active_door = door.light_state != LIGHT_STATE_BROKEN;
+        if (door.size == 1 && is_active_door) {
+            panel_vid = d_prof.id_panel_small_open;
+        } else if (door.size == 1) {
+            panel_vid = d_prof.id_panel_small_closed;
+        } else if (is_active_door) {
+            panel_vid = d_prof.id_panel_large_open;
         } else {
-            panel_vid = (door.door_state == DOOR_STATE_OPEN) ? d_prof.id_panel_large_open : d_prof.id_panel_large_closed;
+            panel_vid = d_prof.id_panel_large_closed;
         }
 
         uint32_t panel_dir = (door.direction_type == 0) ? 0 : 64; // Prevent penetration bug on B-dir (64)
