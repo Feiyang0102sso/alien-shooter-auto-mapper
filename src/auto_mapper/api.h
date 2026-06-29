@@ -34,6 +34,13 @@ struct CDoor {
     float z_offset;
 };
 
+struct CStandardDoorZConfig {
+    float jam_min_z;
+    float jam_max_z;
+    float dead_open_min_z;
+    float dead_open_max_z;
+};
+
 /**
  * @brief Build map from segments and doors, write to file.
  */
@@ -47,6 +54,22 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     float map_size_y,
     bool gen_floor,
     bool gen_ceiling
+);
+
+/**
+ * @brief Read z-offset config for a standard door size.
+ */
+AUTO_MAPPER_API bool get_standard_door_z_config(
+    int size,
+    CStandardDoorZConfig* config
+);
+
+/**
+ * @brief Generate one random jammed z-offset for a standard door size.
+ */
+AUTO_MAPPER_API bool get_standard_door_jam_z_offset(
+    int size,
+    float* z_offset
 );
 
 } // extern "C"

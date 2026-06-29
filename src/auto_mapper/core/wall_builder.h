@@ -45,34 +45,66 @@ struct CeilingProfile {
 };
 
 // ── Pre-defined wall profiles ──
-constexpr int WALL_TYPE_STANDARD = 0;
-constexpr int WALL_TYPE_LAB      = 1;
+inline constexpr int WALL_TYPE_STANDARD = 0;
+inline constexpr int WALL_TYPE_LAB      = 1;
 
-constexpr WallProfile WALL_STANDARD = {
-    601, 602, 604, 40.0f, 28.0f,
-    0.0f, 0.0f,       // dir_a offset
-    -40.0f, 0.0f,     // dir_b offset
-    0.0f, 0.0f,       // pillar offset
-    1                          // grid_divisor
+inline constexpr WallProfile WALL_STANDARD = {
+    .dir_a_vid = 601,
+    .dir_b_vid = 602,
+    .pillar_vid = 604,
+    .step_x = 40.0f,
+    .step_y = 28.0f,
+    .offset_a_x = 0.0f,
+    .offset_a_y = 0.0f,
+    .offset_b_x = -40.0f,
+    .offset_b_y = 0.0f,
+    .offset_p_x = 0.0f,
+    .offset_p_y = 0.0f,
+    .grid_divisor = 1
 };
 
-constexpr WallProfile WALL_LAB = {
-    651, 650, 652, 90.0f, 64.0f,
-    90.0f, 0.0f,      // dir_a offset
-    0.0f, 0.0f,       // dir_b offset
-    0.0f, 0.0f,       // pillar offset
-    2                          // grid_divisor
+inline constexpr WallProfile WALL_LAB = {
+    .dir_a_vid = 651,
+    .dir_b_vid = 650,
+    .pillar_vid = 652,
+    .step_x = 90.0f,
+    .step_y = 64.0f,
+    .offset_a_x = 90.0f,
+    .offset_a_y = 0.0f,
+    .offset_b_x = 0.0f,
+    .offset_b_y = 0.0f,
+    .offset_p_x = 0.0f,
+    .offset_p_y = 0.0f,
+    .grid_divisor = 2
 };
 
 // ── Pre-defined floor and ceiling profiles ──
-constexpr int FLOOR_TYPE_STANDARD = 0;
-constexpr int FLOOR_TYPE_LAB      = 1;
+inline constexpr int FLOOR_TYPE_STANDARD = 0;
+inline constexpr int FLOOR_TYPE_LAB      = 1;
 
-constexpr FloorProfile FLOOR_STANDARD = {500, 40.0f, 28.0f, 0.0f, 1};
-constexpr FloorProfile FLOOR_LAB      = {503, 80.0f, 56.0f, 0.0f, 1};
+inline constexpr FloorProfile FLOOR_STANDARD = {
+    .vid = 500,
+    .step_x = 40.0f,
+    .step_y = 28.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+inline constexpr FloorProfile FLOOR_LAB = {
+    .vid = 503,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
 
-constexpr int CEILING_TYPE_STANDARD = 0;
-constexpr CeilingProfile CEILING_STANDARD = {504, 80.0f, 56.0f, 90.0f, 2};
+inline constexpr int CEILING_TYPE_STANDARD = 0;
+inline constexpr CeilingProfile CEILING_STANDARD = {
+    .vid = 504,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 90.0f,
+    .grid_divisor = 2
+};
 
 // A straight line segment drawn by the user, each segment carries its own wall type.
 struct Segment {
@@ -84,9 +116,9 @@ struct Segment {
 
 struct DoorExcavation {
     GridPoint pos;
-    int direction_type; // 0=A方向 (纵向), 1=B方向 (横向)
-    int size;           // 1=小门, 2=大门
-    int wall_type;      // 对应墙体风格
+    int direction_type;
+    int size;
+    int wall_type;
 };
 
 class WallBuilder {

@@ -5,19 +5,11 @@
 
 #include "auto_mapper/core/door_builder.h"
 #include "auto_mapper/core/wall_builder.h"
-#include "auto_mapper/common/logger.h"
 #include <cmath>
-#include <unordered_map>
+#include <random>
 
 namespace auto_mapper::core {
 
-constexpr int LAB_LASER_FRAME_VID = 653;
-constexpr int LAB_DEAD_DOOR_VID = 654;
-constexpr int LAB_LASER_PILLAR_VID = 164;
-constexpr float LAB_LASER_PILLAR_OFFSET_X = 0.0f;
-constexpr float LAB_LASER_PILLAR_OFFSET_Y = -18.0f;
-
-// Copy-paste static helper for isometric alignment, matching wall_builder.cpp exactly
 static MapPoint get_door_wall_shift(float map_size_x, const WallProfile& profile) {
     float divisor = static_cast<float>(profile.grid_divisor);
     float grid_step_x = profile.step_x / divisor;
@@ -58,39 +50,78 @@ static bool is_lab_dead_door(const DoorInstance& door) {
     return door.light_state == LIGHT_STATE_BROKEN;
 }
 
+const StandardDoorSizeVariant& get_standard_door_variant(int size) {
+    if (size == DOOR_STANDARD.small.span_steps) {
+        return DOOR_STANDARD.small;
+    }
+
+    return DOOR_STANDARD.large;
+}
+
+float get_random_standard_jam_z_offset(int size) {
+    const StandardDoorSizeVariant& variant = get_standard_door_variant(size);
+    static thread_local std::mt19937 random_engine(std::random_device{}());
+    std::uniform_real_distribution<float> distribution(
+        variant.jam_z_range.min_z,
+        variant.jam_z_range.max_z
+    );
+
+    return distribution(random_engine);
+}
+
+static int get_standard_panel_id(const StandardDoorSizeVariant& variant, const DoorInstance& door) {
+    bool is_active_door = door.light_state != LIGHT_STATE_BROKEN;
+    if (is_active_door) {
+        return variant.panel.vid_active_panel;
+    }
+
+    return variant.panel.vid_dead_panel;
+}
+
+static float get_fixed_z_offset(const DoorZRange& range) {
+    return range.min_z;
+}
+
+static float get_standard_panel_z_offset(const StandardDoorSizeVariant& variant, const DoorInstance& door) {
+    bool is_dead_open = door.light_state == LIGHT_STATE_BROKEN && door.door_state == DOOR_STATE_OPEN;
+    if (is_dead_open) {
+        return get_fixed_z_offset(variant.dead_open_z_offset);
+    }
+
+    return door.z_offset;
+}
+
+static int get_standard_light_id(const DoorInstance& door) {
+    if (door.light_state == LIGHT_STATE_GREEN) {
+        return DOOR_STANDARD.vid_light_green;
+    }
+
+    if (door.light_state == LIGHT_STATE_RED) {
+        return DOOR_STANDARD.vid_light_red;
+    }
+
+    if (door.light_state == LIGHT_STATE_BROKEN) {
+        return DOOR_STANDARD.vid_light_broken;
+    }
+
+    return 0;
+}
+
 DoorBuilder::DoorBuilder(float map_size_x, float map_size_y)
     : map_size_x_(map_size_x), map_size_y_(map_size_y) {}
-
-const DoorProfile& DoorBuilder::get_door_profile(int wall_type) {
-    static const std::unordered_map<int, DoorProfile> profiles = {
-        // Standard wall doors:
-        // Frame: 606 (small), 608 (large)
-        // Panel Small: 605 (open), 617 (closed)
-        // Panel Large: 607 (open), 611 (closed)
-        // Light: 423 (green), 424 (red), 425 (broken)
-        { WALL_TYPE_STANDARD, { 606, 608, 605, 617, 607, 611, 423, 424, 425 } },
-    };
-
-    if (profiles.find(wall_type) != profiles.end()) {
-        return profiles.at(wall_type);
-    }
-    return profiles.at(WALL_TYPE_STANDARD);
-}
 
 std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& doors) const {
     std::vector<io::Sprite> door_sprites;
     door_sprites.reserve(doors.size() * 3); // frame + panel + light
 
     for (const auto& door : doors) {
-        // Look up wall profile to get physical steps and coordinate shift
-        // WallBuilder::get_wall_profile is declared public now
+        // Use the wall profile for placement alignment.
         const WallProfile& w_prof = WallBuilder::get_wall_profile(door.wall_type);
         MapPoint shift = get_door_wall_shift(map_size_x_, w_prof);
 
-        // Grid coordinate to isometric physical coordinate (Frame Center)
         int effective_size = door.size;
         if (door.wall_type == WALL_TYPE_LAB) {
-            effective_size = 1;
+            effective_size = DOOR_LAB_LASER.span_steps;
         }
 
         MapPoint pt = to_iso(door.pos, w_prof.step_x, w_prof.step_y, shift);
@@ -99,19 +130,25 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
         if (door.wall_type == WALL_TYPE_LAB) {
             if (is_lab_dead_door(door)) {
                 uint32_t dead_door_dir = (door.direction_type == 0) ? 64 : 0;
-                door_sprites.push_back(io::Sprite(LAB_DEAD_DOOR_VID, pt.x, pt.y, door.z_offset, dead_door_dir));
+                door_sprites.push_back(io::Sprite(
+                    DOOR_LAB_DECORATION.vid_frame,
+                    pt.x,
+                    pt.y,
+                    door.z_offset,
+                    dead_door_dir
+                ));
                 continue;
             }
 
             uint32_t frame_dir = (door.direction_type == 0) ? 64 : 0;
-            door_sprites.push_back(io::Sprite(LAB_LASER_FRAME_VID, pt.x, pt.y, 0.0f, frame_dir));
+            door_sprites.push_back(io::Sprite(DOOR_LAB_LASER.vid_frame, pt.x, pt.y, 0.0f, frame_dir));
 
             if (door.door_state == DOOR_STATE_CLOSED) {
                 uint32_t pillar_dir = (door.direction_type == 0) ? 128 : 0;
                 door_sprites.push_back(io::Sprite(
-                    LAB_LASER_PILLAR_VID,
-                    pt.x + LAB_LASER_PILLAR_OFFSET_X,
-                    pt.y + LAB_LASER_PILLAR_OFFSET_Y,
+                    DOOR_LAB_LASER.vid_laser_closed,
+                    pt.x + DOOR_LAB_LASER.laser_offset_x,
+                    pt.y + DOOR_LAB_LASER.laser_offset_y,
                     0.0f,
                     pillar_dir
                 ));
@@ -119,43 +156,22 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
             continue;
         }
 
-        const DoorProfile& d_prof = get_door_profile(door.wall_type);
+        const StandardDoorSizeVariant& variant = get_standard_door_variant(door.size);
 
-        // 1. Frame Sprite
-        int frame_vid = (door.size == 1) ? d_prof.id_frame_small : d_prof.id_frame_large;
+        int frame_vid = variant.vid_frame;
         uint32_t frame_dir = (door.direction_type == 0) ? 0 : 128;
         if (frame_vid > 0) {
             door_sprites.push_back(io::Sprite(frame_vid, pt.x, pt.y, 0.0f, frame_dir));
         }
 
-        // 2. Panel Sprite
-        int panel_vid = 0;
-        bool is_active_door = door.light_state != LIGHT_STATE_BROKEN;
-        if (door.size == 1 && is_active_door) {
-            panel_vid = d_prof.id_panel_small_open;
-        } else if (door.size == 1) {
-            panel_vid = d_prof.id_panel_small_closed;
-        } else if (is_active_door) {
-            panel_vid = d_prof.id_panel_large_open;
-        } else {
-            panel_vid = d_prof.id_panel_large_closed;
-        }
-
-        uint32_t panel_dir = (door.direction_type == 0) ? 0 : 64; // Prevent penetration bug on B-dir (64)
+        int panel_vid = get_standard_panel_id(variant, door);
+        uint32_t panel_dir = (door.direction_type == 0) ? 0 : 64;
+        float panel_z_offset = get_standard_panel_z_offset(variant, door);
         if (panel_vid > 0) {
-            door_sprites.push_back(io::Sprite(panel_vid, pt.x, pt.y, door.z_offset, panel_dir));
+            door_sprites.push_back(io::Sprite(panel_vid, pt.x, pt.y, panel_z_offset, panel_dir));
         }
 
-        // 3. Indicator Light Sprite
-        int light_vid = 0;
-        if (door.light_state == LIGHT_STATE_GREEN) {
-            light_vid = d_prof.id_light_green;
-        } else if (door.light_state == LIGHT_STATE_RED) {
-            light_vid = d_prof.id_light_red;
-        } else if (door.light_state == LIGHT_STATE_BROKEN) {
-            light_vid = d_prof.id_light_broken;
-        }
-
+        int light_vid = get_standard_light_id(door);
         if (light_vid > 0) {
             door_sprites.push_back(io::Sprite(light_vid, pt.x, pt.y, 10.0f, frame_dir));
         }

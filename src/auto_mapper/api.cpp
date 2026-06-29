@@ -9,6 +9,35 @@
 
 extern "C" {
 
+AUTO_MAPPER_API bool get_standard_door_z_config(
+    int size,
+    CStandardDoorZConfig* config
+) {
+    if (config == nullptr) {
+        return false;
+    }
+
+    const auto_mapper::core::StandardDoorSizeVariant& variant = auto_mapper::core::get_standard_door_variant(size);
+
+    config->jam_min_z = variant.jam_z_range.min_z;
+    config->jam_max_z = variant.jam_z_range.max_z;
+    config->dead_open_min_z = variant.dead_open_z_offset.min_z;
+    config->dead_open_max_z = variant.dead_open_z_offset.max_z;
+    return true;
+}
+
+AUTO_MAPPER_API bool get_standard_door_jam_z_offset(
+    int size,
+    float* z_offset
+) {
+    if (z_offset == nullptr) {
+        return false;
+    }
+
+    *z_offset = auto_mapper::core::get_random_standard_jam_z_offset(size);
+    return true;
+}
+
 AUTO_MAPPER_API bool generate_map_from_segments(
     const char* output_path,
     const CSegment* segments,

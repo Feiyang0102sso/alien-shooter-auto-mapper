@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox, ttk, filedialog
-import os
 import ctypes
 import json
+from pathlib import Path
 
 class CSegment(ctypes.Structure):
     _fields_ = [
@@ -25,12 +25,34 @@ class CDoor(ctypes.Structure):
         ("z_offset", ctypes.c_float),
     ]
 
+class CStandardDoorZConfig(ctypes.Structure):
+    _fields_ = [
+        ("jam_min_z", ctypes.c_float),
+        ("jam_max_z", ctypes.c_float),
+        ("dead_open_min_z", ctypes.c_float),
+        ("dead_open_max_z", ctypes.c_float),
+    ]
+
 GRID_SIZE = 20
 CELL_SIZE = 30
 CANVAS_SIZE = GRID_SIZE * CELL_SIZE
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DLL_PATH = PROJECT_ROOT / "build" / "mingw-release" / "libauto_mapper.dll"
+OUTPUT_MAP_PATH = PROJECT_ROOT / "ui_output.map"
 
 WALL_TYPE_STANDARD = 0
 WALL_TYPE_LAB = 1
+
+DOOR_STATE_CLOSED = 0
+DOOR_STATE_OPEN = 1
+
+LIGHT_STATE_GREEN = 0
+LIGHT_STATE_RED = 1
+LIGHT_STATE_BROKEN = 2
+
+ACTIVE_SIGNAL_OPEN = 0
+ACTIVE_SIGNAL_CLOSED = 1
+
 
 # ── Tool Brush Constants ──
 TOOL_WALL = 0
@@ -116,6 +138,13 @@ class AutoMapperUI:
         
         self.rb_dead_open = tk.Radiobutton(brush_bar, text="🔵 Dead Door (Open)", variable=self.tool_var, value=TOOL_DEAD_DOOR_OPEN)
         self.rb_dead_open.pack(side=tk.LEFT, padx=10)
+
+        tk.Label(brush_bar, text="Active signal:").pack(side=tk.LEFT, padx=(15, 2))
+        self.active_signal_var = tk.IntVar(value=ACTIVE_SIGNAL_CLOSED)
+        self.rb_active_signal_open = tk.Radiobutton(brush_bar, text="Open", variable=self.active_signal_var, value=ACTIVE_SIGNAL_OPEN)
+        self.rb_active_signal_open.pack(side=tk.LEFT, padx=2)
+        self.rb_active_signal_closed = tk.Radiobutton(brush_bar, text="Closed", variable=self.active_signal_var, value=ACTIVE_SIGNAL_CLOSED)
+        self.rb_active_signal_closed.pack(side=tk.LEFT, padx=2)
         self._update_brush_ui()
 
         # Canvas Frame
@@ -130,6 +159,8 @@ class AutoMapperUI:
         
         self.segments = []  # list of ((x1,y1), (x2,y2), wall_type)
         self.doors = []     # list of (x, y, wall_type, direction_type, size, door_state, light_state, z_offset)
+        self.auto_mapper_lib = self._load_auto_mapper_lib()
+        self.standard_door_z_config = self._load_standard_door_z_config()
         self.start_point = None
         self.temp_line = None
         self._pan_start_x = None
@@ -197,6 +228,79 @@ class AutoMapperUI:
 
         if not self.rb_dead_open.winfo_ismapped():
             self.rb_dead_open.pack(side=tk.LEFT, padx=10)
+
+    def _get_active_light_state(self):
+        if self.active_signal_var.get() == ACTIVE_SIGNAL_OPEN:
+            return LIGHT_STATE_GREEN
+
+        return LIGHT_STATE_RED
+
+    def _load_auto_mapper_lib(self):
+        if not DLL_PATH.exists():
+            print(f"DLL not found: {DLL_PATH}")
+            return None
+
+        return ctypes.CDLL(str(DLL_PATH))
+
+    def _load_standard_door_z_config(self):
+        lib = self.auto_mapper_lib
+        if lib is None:
+            return {}
+
+        lib.get_standard_door_z_config.argtypes = [
+            ctypes.c_int,
+            ctypes.POINTER(CStandardDoorZConfig)
+        ]
+        lib.get_standard_door_z_config.restype = ctypes.c_bool
+
+        configs = {}
+        for size in (1, 2):
+            config = CStandardDoorZConfig()
+            success = lib.get_standard_door_z_config(size, ctypes.byref(config))
+            if success:
+                configs[size] = config
+
+        print(f"Loaded standard door z config from C++: {sorted(configs.keys())}")
+        return configs
+
+    def _get_standard_door_z_config(self, size):
+        config = self.standard_door_z_config.get(size)
+        if config is not None:
+            return config
+
+        config = self.standard_door_z_config.get(1)
+        if config is not None:
+            return config
+
+        messagebox.showerror("Error", f"Door z config not loaded from C++ DLL:\n{DLL_PATH}\nPlease build the C++ project first.")
+        return None
+
+    def _get_jam_z_offset(self, size):
+        lib = self.auto_mapper_lib
+        if lib is None:
+            messagebox.showerror("Error", f"Door z config not loaded from C++ DLL:\n{DLL_PATH}\nPlease build the C++ project first.")
+            return None
+
+        lib.get_standard_door_jam_z_offset.argtypes = [
+            ctypes.c_int,
+            ctypes.POINTER(ctypes.c_float)
+        ]
+        lib.get_standard_door_jam_z_offset.restype = ctypes.c_bool
+
+        z_offset = ctypes.c_float()
+        success = lib.get_standard_door_jam_z_offset(size, ctypes.byref(z_offset))
+        if not success:
+            messagebox.showerror("Error", f"Failed to load jammed door z offset from C++ DLL:\n{DLL_PATH}")
+            return None
+
+        return z_offset.value
+
+    def _get_dead_open_z_offset(self, size):
+        config = self._get_standard_door_z_config(size)
+        if config is None:
+            return None
+
+        return (config.dead_open_min_z + config.dead_open_max_z) / 2.0
 
     def _get_grid_shift(self, sx, sy):
         # Determine step and remainder dynamically using grid_divisor from WALL_PROFILES
@@ -409,7 +513,7 @@ class AutoMapperUI:
                 color = "#8B0000"
                 dot_color = "#FF0000"
                 hollow = False
-            elif wt == WALL_TYPE_LAB and ds == 1:
+            elif wt == WALL_TYPE_LAB and ds == DOOR_STATE_OPEN:
                 color = "#32CD32"
                 dot_color = "#D3D3D3"
                 hollow = True
@@ -417,24 +521,24 @@ class AutoMapperUI:
                 color = "#00A6D6"
                 dot_color = "#7DF9FF"
                 hollow = False
-            elif ls == 1:  # Active door (Closed) - Green
+            elif ls == LIGHT_STATE_RED:
                 color = "#2E8B57"      # SeaGreen
                 dot_color = "#32CD32"  # LimeGreen
                 hollow = False
-            elif ls == 0:  # Active door (Open) - Green
+            elif ls == LIGHT_STATE_GREEN:
                 color = "#32CD32"
                 dot_color = "#00FF00"
                 hollow = False
-            else:  # Broken light / Dead door (ls == 2)
+            else:
                 if zo == 0.0:  # Closed - dark red
                     color = "#8B0000"
                     dot_color = "#FF0000"
                     hollow = False
-                elif abs(zo + 45.0) < 1.0:  # Jammed - Orange
+                elif ds == DOOR_STATE_CLOSED:
                     color = "#D2691E"
                     dot_color = "#FFD700"  # Gold
                     hollow = False
-                else:  # Open - Gray (zo == -90.0)
+                else:
                     color = "#808080"
                     dot_color = "#D3D3D3"
                     hollow = True
@@ -544,26 +648,30 @@ class AutoMapperUI:
 
                 if wt == WALL_TYPE_LAB:
                     if tool == TOOL_ACTIVE_DOOR:
-                        # Lab laser door closed: frame + laser pillar.
-                        self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 1, 0.0))
+                        # Laser closed uses frame and pillar.
+                        self.doors.append((pos_x, pos_y, wt, direction_type, size, DOOR_STATE_CLOSED, LIGHT_STATE_RED, 0.0))
                     elif tool == TOOL_DEAD_DOOR_CLOSED:
-                        # Lab laser door open: frame only.
-                        self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 1, 0.0))
+                        # Laser open uses frame only.
+                        self.doors.append((pos_x, pos_y, wt, direction_type, size, DOOR_STATE_OPEN, LIGHT_STATE_RED, 0.0))
                     elif tool == TOOL_DEAD_DOOR_JAMMED:
-                        # Lab decoration door: single decorative sprite.
-                        self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 2, 0.0))
+                        # Decoration door uses a single frame.
+                        self.doors.append((pos_x, pos_y, wt, direction_type, size, DOOR_STATE_CLOSED, LIGHT_STATE_BROKEN, 0.0))
                 elif tool == TOOL_ACTIVE_DOOR:
-                    # Active Door: open state (1), red light (1), z_offset = 0.0
-                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 1, 0.0))
+                    # Active panel uses fixed open assets.
+                    self.doors.append((pos_x, pos_y, wt, direction_type, size, DOOR_STATE_OPEN, self._get_active_light_state(), 0.0))
                 elif tool == TOOL_DEAD_DOOR_CLOSED:
-                    # Dead Door Closed: closed (0), broken light (2), z_offset = 0.0
-                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 0, 2, 0.0))
+                    # Dead closed uses dead panel assets.
+                    self.doors.append((pos_x, pos_y, wt, direction_type, size, DOOR_STATE_CLOSED, LIGHT_STATE_BROKEN, 0.0))
                 elif tool == TOOL_DEAD_DOOR_JAMMED:
-                    # Dead Door Jammed: open state (1), broken light (2), z_offset = -45.0
-                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 2, -45.0))
+                    # Dead jammed uses the configured z range.
+                    z_offset = self._get_jam_z_offset(size)
+                    if z_offset is not None:
+                        self.doors.append((pos_x, pos_y, wt, direction_type, size, DOOR_STATE_CLOSED, LIGHT_STATE_BROKEN, z_offset))
                 elif tool == TOOL_DEAD_DOOR_OPEN:
-                    # Dead Door Open: open state (1), broken light (2), z_offset = -90.0
-                    self.doors.append((pos_x, pos_y, wt, direction_type, size, 1, 2, -68.0))
+                    # Dead open uses a fixed z offset.
+                    z_offset = self._get_dead_open_z_offset(size)
+                    if z_offset is not None:
+                        self.doors.append((pos_x, pos_y, wt, direction_type, size, DOOR_STATE_OPEN, LIGHT_STATE_BROKEN, z_offset))
                     
             self.draw_all()
             
@@ -720,17 +828,13 @@ class AutoMapperUI:
             return
             
         # 查找 DLL
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        dll_path = os.path.join(project_root, "build", "mingw-release", "libauto_mapper.dll")
-        output_map = os.path.join(project_root, "ui_output.map")
-        
-        if not os.path.exists(dll_path):
-            messagebox.showerror("Error", f"DLL not found: {dll_path}\nPlease build C++ project first.")
+        if not DLL_PATH.exists():
+            messagebox.showerror("Error", f"DLL not found: {DLL_PATH}\nPlease build C++ project first.")
             return
             
         try:
             # 加载 DLL
-            lib = ctypes.CDLL(dll_path)
+            lib = ctypes.CDLL(str(DLL_PATH))
             
             # 配置 C 函数签名 (including doors pointer and count)
             lib.generate_map_from_segments.argtypes = [
@@ -747,7 +851,7 @@ class AutoMapperUI:
             lib.generate_map_from_segments.restype = ctypes.c_bool
             
             # 准备数据
-            output_path_bytes = output_map.encode('utf-8')
+            output_path_bytes = str(OUTPUT_MAP_PATH).encode('utf-8')
             num_segments = len(self.segments)
             SegmentArray = CSegment * num_segments
             segments_arr = SegmentArray()
@@ -787,7 +891,7 @@ class AutoMapperUI:
             )
             
             if success:
-                messagebox.showinfo("Success", f"Map generated at:\n{output_map}")
+                messagebox.showinfo("Success", f"Map generated at:\n{OUTPUT_MAP_PATH}")
             else:
                 messagebox.showerror("Error", "C++ Engine Failed! Please check console logs.")
                 
