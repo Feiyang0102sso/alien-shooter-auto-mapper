@@ -127,6 +127,7 @@ public:
 
     // Look up profiles (Moved to public for door_builder.cpp access)
     static const WallProfile& get_wall_profile(int wall_type);
+    static MapPoint get_wall_shift(float map_size_x, const WallProfile& profile);
 
     // Core pipeline: Group by wall_type -> Rasterize per group ->
     // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.

@@ -10,23 +10,9 @@
 
 namespace auto_mapper::core {
 
-static MapPoint get_door_wall_shift(float map_size_x, const WallProfile& profile) {
-    float divisor = static_cast<float>(profile.grid_divisor);
-    float grid_step_x = profile.step_x / divisor;
-    float grid_step_y = profile.step_y / divisor;
 
-    float remainder_x = grid_step_x / 2.0f;
-    float remainder_y = grid_step_y / 2.0f;
-
-    float raw_shift_x = map_size_x / 2.0f;
-    float grid_x_shift = std::round((raw_shift_x - remainder_x) / grid_step_x);
-    float shift_x = grid_x_shift * grid_step_x + remainder_x;
-
-    float raw_shift_y = remainder_y;
-    float grid_y_shift = std::round((raw_shift_y - remainder_y) / grid_step_y);
-    float shift_y = grid_y_shift * grid_step_y + remainder_y + profile.step_y;
-
-    return {shift_x, shift_y};
+static uint32_t get_sprite_dir(const SpriteDirectionMapping& mapping, int direction_type) {
+    return (direction_type == 0) ? mapping.dir_a : mapping.dir_b;
 }
 
 static void apply_door_direction_offset(MapPoint& pos, int direction_type, int size, const WallProfile& profile) {
@@ -117,7 +103,7 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
     for (const auto& door : doors) {
         // Use the wall profile for placement alignment.
         const WallProfile& w_prof = WallBuilder::get_wall_profile(door.wall_type);
-        MapPoint shift = get_door_wall_shift(map_size_x_, w_prof);
+        MapPoint shift = WallBuilder::get_wall_shift(map_size_x_, w_prof);
 
         int effective_size = door.size;
         if (door.wall_type == WALL_TYPE_LAB) {
@@ -129,7 +115,7 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
 
         if (door.wall_type == WALL_TYPE_LAB) {
             if (is_lab_dead_door(door)) {
-                uint32_t dead_door_dir = (door.direction_type == 0) ? 64 : 0;
+                uint32_t dead_door_dir = get_sprite_dir(DOOR_LAB_DECORATION.frame_dir_map, door.direction_type);
                 door_sprites.push_back(io::Sprite(
                     DOOR_LAB_DECORATION.vid_frame,
                     pt.x,
@@ -140,11 +126,11 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
                 continue;
             }
 
-            uint32_t frame_dir = (door.direction_type == 0) ? 64 : 0;
+            uint32_t frame_dir = get_sprite_dir(DOOR_LAB_LASER.frame_dir_map, door.direction_type);
             door_sprites.push_back(io::Sprite(DOOR_LAB_LASER.vid_frame, pt.x, pt.y, 0.0f, frame_dir));
 
             if (door.door_state == DOOR_STATE_CLOSED) {
-                uint32_t pillar_dir = (door.direction_type == 0) ? 128 : 0;
+                uint32_t pillar_dir = get_sprite_dir(DOOR_LAB_LASER.laser_dir_map, door.direction_type);
                 door_sprites.push_back(io::Sprite(
                     DOOR_LAB_LASER.vid_laser_closed,
                     pt.x + DOOR_LAB_LASER.laser_offset_x,
@@ -159,13 +145,13 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
         const StandardDoorSizeVariant& variant = get_standard_door_variant(door.size);
 
         int frame_vid = variant.vid_frame;
-        uint32_t frame_dir = (door.direction_type == 0) ? 0 : 128;
+        uint32_t frame_dir = get_sprite_dir(DOOR_STANDARD.frame_dir_map, door.direction_type);
         if (frame_vid > 0) {
             door_sprites.push_back(io::Sprite(frame_vid, pt.x, pt.y, 0.0f, frame_dir));
         }
 
         int panel_vid = get_standard_panel_id(variant, door);
-        uint32_t panel_dir = (door.direction_type == 0) ? 0 : 64;
+        uint32_t panel_dir = get_sprite_dir(DOOR_STANDARD.panel_dir_map, door.direction_type);
         float panel_z_offset = get_standard_panel_z_offset(variant, door);
         if (panel_vid > 0) {
             door_sprites.push_back(io::Sprite(panel_vid, pt.x, pt.y, panel_z_offset, panel_dir));

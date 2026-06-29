@@ -58,7 +58,7 @@ const CeilingProfile& WallBuilder::get_ceiling_profile(int ceiling_type) {
     return profiles.at(CEILING_TYPE_STANDARD);
 }
 
-static MapPoint get_wall_shift(float map_size_x, const WallProfile& profile) {
+MapPoint WallBuilder::get_wall_shift(float map_size_x, const WallProfile& profile) {
     float divisor = static_cast<float>(profile.grid_divisor);
     float grid_step_x = profile.step_x / divisor;
     float grid_step_y = profile.step_y / divisor;

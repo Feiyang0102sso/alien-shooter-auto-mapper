@@ -27,6 +27,11 @@ struct DoorZRange {
     float max_z; // Upper z offset. Same as min_z means fixed offset.
 };
 
+struct SpriteDirectionMapping {
+    uint32_t dir_a; // Direction A / (direction_type == 0)
+    uint32_t dir_b; // Direction B \ (direction_type == 1)
+};
+
 struct DoorInstance {
     GridPoint pos;
     int wall_type;      // 0=standard, 1=lab
@@ -56,6 +61,8 @@ struct StandardDoorProfile {
     int vid_light_green;           // Active-open signal.
     int vid_light_red;             // Active-closed signal.
     int vid_light_broken;          // Dead signal.
+    SpriteDirectionMapping frame_dir_map; // Direction mapping for frame and light
+    SpriteDirectionMapping panel_dir_map; // Direction mapping for door panel
 };
 
 struct LabLaserDoorProfile {
@@ -64,11 +71,14 @@ struct LabLaserDoorProfile {
     int vid_laser_closed; // Closed laser pillar VID.
     float laser_offset_x; // Laser pillar x offset.
     float laser_offset_y; // Laser pillar y offset.
+    SpriteDirectionMapping frame_dir_map; // Direction mapping for laser door frame
+    SpriteDirectionMapping laser_dir_map; // Direction mapping for closed laser pillar
 };
 
 struct LabDecorationDoorProfile {
     int span_steps; // Wall step multiplier.
     int vid_frame;  // Decoration frame VID.
+    SpriteDirectionMapping frame_dir_map; // Direction mapping for decoration frame
 };
 
 inline constexpr StandardDoorProfile DOOR_STANDARD = {
@@ -94,7 +104,15 @@ inline constexpr StandardDoorProfile DOOR_STANDARD = {
     },
     .vid_light_green = 423,
     .vid_light_red = 424,
-    .vid_light_broken = 425
+    .vid_light_broken = 425,
+    .frame_dir_map = {
+        .dir_a = 0,   // Dir A / ()
+        .dir_b = 128  // Dir B \ ()
+    },
+    .panel_dir_map = {
+        .dir_a = 0,   // Dir A / ()
+        .dir_b = 64   // Dir B \ ()
+    }
 };
 
 inline constexpr LabLaserDoorProfile DOOR_LAB_LASER = {
@@ -102,12 +120,24 @@ inline constexpr LabLaserDoorProfile DOOR_LAB_LASER = {
     .vid_frame = 653,
     .vid_laser_closed = 164,
     .laser_offset_x = 0.0f,
-    .laser_offset_y = -18.0f
+    .laser_offset_y = -18.0f,
+    .frame_dir_map = {
+        .dir_a = 64,  // Dir A / ()
+        .dir_b = 0    // Dir B \ ()
+    },
+    .laser_dir_map = {
+        .dir_a = 128, // Dir A / ()
+        .dir_b = 0    // Dir B \ ()
+    }
 };
 
 inline constexpr LabDecorationDoorProfile DOOR_LAB_DECORATION = {
     .span_steps = 1,
-    .vid_frame = 654
+    .vid_frame = 654,
+    .frame_dir_map = {
+        .dir_a = 64,  // Dir A / ()
+        .dir_b = 0    // Dir B \ ()
+    }
 };
 
 const StandardDoorSizeVariant& get_standard_door_variant(int size);
