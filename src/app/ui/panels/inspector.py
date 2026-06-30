@@ -4,9 +4,9 @@ Inspector panel for the selected theme and component placeholder data.
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QFormLayout, QGroupBox, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from app.drawable_parts import get_drawable_parts
-from app.project_data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
-from app.wall_profiles import WALL_TYPE_STANDARD
+from app.editor.drawable_parts import get_drawable_parts
+from app.editor.wall_profiles import WALL_TYPE_STANDARD
+from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 
 
 class InspectorPanel(QWidget):

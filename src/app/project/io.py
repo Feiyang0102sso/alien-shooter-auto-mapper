@@ -4,7 +4,7 @@ JSON import and export helpers for the editor project data.
 import json
 from pathlib import Path
 
-from app.project_data import ProjectData
+from app.project.data import ProjectData
 
 
 def build_project_json_data(project_data: ProjectData) -> dict:

@@ -41,6 +41,22 @@ struct CStandardDoorZConfig {
     float dead_open_max_z;
 };
 
+struct CWallProfile {
+    int wall_type;
+    int dir_a_vid;
+    int dir_b_vid;
+    int pillar_vid;
+    float step_x;
+    float step_y;
+    float offset_a_x;
+    float offset_a_y;
+    float offset_b_x;
+    float offset_b_y;
+    float offset_p_x;
+    float offset_p_y;
+    int grid_divisor;
+};
+
 /**
  * @brief Build map from segments and doors, write to file.
  */
@@ -70,6 +86,27 @@ AUTO_MAPPER_API bool get_standard_door_z_config(
 AUTO_MAPPER_API bool get_standard_door_jam_z_offset(
     int size,
     float* z_offset
+);
+
+/**
+ * @brief Return number of C++ supported wall profiles.
+ */
+AUTO_MAPPER_API int get_wall_profile_count();
+
+/**
+ * @brief Read wall type by profile index.
+ */
+AUTO_MAPPER_API bool get_wall_profile_type_at(
+    int index,
+    int* wall_type
+);
+
+/**
+ * @brief Read full wall profile by wall type.
+ */
+AUTO_MAPPER_API bool get_wall_profile(
+    int wall_type,
+    CWallProfile* profile
 );
 
 } // extern "C"

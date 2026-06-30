@@ -7,9 +7,9 @@ from PySide6.QtCore import QPointF, Qt, Signal
 from PySide6.QtGui import QColor, QCursor, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
-from app.drawable_parts import PART_WALL_BODY
-from app.project_data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
-from app.wall_profiles import WALL_TYPE_STANDARD, get_wall_profile
+from app.editor.drawable_parts import PART_WALL_BODY
+from app.editor.wall_profiles import WALL_TYPE_STANDARD, get_wall_profile
+from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 
 
 MIN_GRID_COLUMNS = 1

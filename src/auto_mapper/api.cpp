@@ -7,6 +7,11 @@
 
 extern "C" {
 
+static constexpr int SUPPORTED_WALL_TYPES[] = {
+    auto_mapper::core::WALL_TYPE_STANDARD,
+    auto_mapper::core::WALL_TYPE_LAB
+};
+
 AUTO_MAPPER_API bool get_standard_door_z_config(
     int size,
     CStandardDoorZConfig* config
@@ -33,6 +38,65 @@ AUTO_MAPPER_API bool get_standard_door_jam_z_offset(
     }
 
     *z_offset = auto_mapper::core::get_random_standard_jam_z_offset(size);
+    return true;
+}
+
+AUTO_MAPPER_API int get_wall_profile_count() {
+    return static_cast<int>(sizeof(SUPPORTED_WALL_TYPES) / sizeof(SUPPORTED_WALL_TYPES[0]));
+}
+
+AUTO_MAPPER_API bool get_wall_profile_type_at(
+    int index,
+    int* wall_type
+) {
+    if (wall_type == nullptr) {
+        return false;
+    }
+
+    int count = get_wall_profile_count();
+    if (index < 0 || index >= count) {
+        return false;
+    }
+
+    *wall_type = SUPPORTED_WALL_TYPES[index];
+    return true;
+}
+
+AUTO_MAPPER_API bool get_wall_profile(
+    int wall_type,
+    CWallProfile* profile
+) {
+    if (profile == nullptr) {
+        return false;
+    }
+
+    bool known_wall_type = false;
+    int count = get_wall_profile_count();
+    for (int i = 0; i < count; ++i) {
+        if (SUPPORTED_WALL_TYPES[i] == wall_type) {
+            known_wall_type = true;
+        }
+    }
+
+    if (!known_wall_type) {
+        return false;
+    }
+
+    const auto_mapper::core::WallProfile& cpp_profile = auto_mapper::core::WallBuilder::get_wall_profile(wall_type);
+
+    profile->wall_type = wall_type;
+    profile->dir_a_vid = cpp_profile.dir_a_vid;
+    profile->dir_b_vid = cpp_profile.dir_b_vid;
+    profile->pillar_vid = cpp_profile.pillar_vid;
+    profile->step_x = cpp_profile.step_x;
+    profile->step_y = cpp_profile.step_y;
+    profile->offset_a_x = cpp_profile.offset_a_x;
+    profile->offset_a_y = cpp_profile.offset_a_y;
+    profile->offset_b_x = cpp_profile.offset_b_x;
+    profile->offset_b_y = cpp_profile.offset_b_y;
+    profile->offset_p_x = cpp_profile.offset_p_x;
+    profile->offset_p_y = cpp_profile.offset_p_y;
+    profile->grid_divisor = cpp_profile.grid_divisor;
     return true;
 }
 

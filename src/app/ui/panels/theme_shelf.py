@@ -7,7 +7,7 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from app.wall_profiles import WALL_TYPE_LAB, WALL_TYPE_STANDARD, get_wall_profile
+from app.editor.wall_profiles import WALL_TYPE_LAB, WALL_TYPE_STANDARD, get_wall_profile
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]

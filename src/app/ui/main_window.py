@@ -11,12 +11,12 @@ from PySide6.QtWidgets import QCheckBox, QFileDialog, QDockWidget, QMainWindow, 
 from app.binding.client import AutoMapperLibClient
 from app.config import ROOT_DIR
 from app.logger import logger
-from app.project_data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, ProjectData
-from app.project_io import load_project_json, save_project_json
+from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, ProjectData
+from app.project.io import load_project_json, save_project_json
 from app.ui.canvas.viewport import MapViewport
 from app.ui.panels.inspector import InspectorPanel
 from app.ui.panels.theme_shelf import ThemeShelfPanel
-from app.wall_profiles import get_wall_profile
+from app.editor.wall_profiles import apply_wall_profiles_from_dll, get_wall_profile
 
 
 class MainWindow(QMainWindow):
@@ -29,10 +29,12 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Auto Mapper - Map Editor")
         self.resize(1440, 900)
 
+        self.auto_mapper_client = AutoMapperLibClient()
+        self._load_wall_profiles_from_dll()
+
         self.viewport = MapViewport()
         self.theme_shelf = ThemeShelfPanel()
         self.inspector = InspectorPanel()
-        self.auto_mapper_client = AutoMapperLibClient()
 
         self.setCentralWidget(self.viewport)
         self._build_toolbar()
@@ -41,6 +43,20 @@ class MainWindow(QMainWindow):
 
         self.statusBar().showMessage("Ready")
         logger.debug("Main window initialized")
+
+    def _load_wall_profiles_from_dll(self) -> None:
+        """
+        Load wall profile numeric values from the DLL before UI widgets are built.
+        """
+        wall_profiles = self.auto_mapper_client.load_wall_profiles()
+        if wall_profiles:
+            apply_wall_profiles_from_dll(wall_profiles)
+            return
+
+        message = "Failed to load wall profiles from DLL. Build the C++ DLL before starting the UI."
+        logger.error(message)
+        QMessageBox.critical(self, "DLL Error", message)
+        raise RuntimeError(message)
 
     def _build_toolbar(self) -> None:
         """

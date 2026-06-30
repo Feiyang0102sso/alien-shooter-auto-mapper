@@ -4,10 +4,10 @@ Thin client for the Auto Mapper C++ DLL.
 import ctypes
 from pathlib import Path
 
-from app.binding.structures import CDoor, CSegment, CStandardDoorZConfig
+from app.binding.structures import CDoor, CSegment, CStandardDoorZConfig, CWallProfile
 from app.config import DLL_PATH
 from app.logger import logger
-from app.project_data import ProjectData
+from app.project.data import ProjectData
 
 
 class AutoMapperLibClient:
@@ -67,6 +67,21 @@ class AutoMapperLibClient:
         ]
         self.lib.get_standard_door_jam_z_offset.restype = ctypes.c_bool
 
+        self.lib.get_wall_profile_count.argtypes = []
+        self.lib.get_wall_profile_count.restype = ctypes.c_int
+
+        self.lib.get_wall_profile_type_at.argtypes = [
+            ctypes.c_int,
+            ctypes.POINTER(ctypes.c_int),
+        ]
+        self.lib.get_wall_profile_type_at.restype = ctypes.c_bool
+
+        self.lib.get_wall_profile.argtypes = [
+            ctypes.c_int,
+            ctypes.POINTER(CWallProfile),
+        ]
+        self.lib.get_wall_profile.restype = ctypes.c_bool
+
     def load_standard_door_z_config(self) -> dict:
         """
         Load standard door z-offset configs from the DLL.
@@ -84,6 +99,31 @@ class AutoMapperLibClient:
 
         logger.info(f"Loaded standard door z config: {sorted(configs.keys())}")
         return configs
+
+    def load_wall_profiles(self) -> dict:
+        """
+        Load all wall profiles exposed by the DLL.
+        """
+        if not self.load():
+            return {}
+
+        profiles = {}
+        count = self.lib.get_wall_profile_count()
+
+        index = 0
+        while index < count:
+            wall_type_value = ctypes.c_int()
+            type_success = self.lib.get_wall_profile_type_at(index, ctypes.byref(wall_type_value))
+            if type_success:
+                c_profile = CWallProfile()
+                profile_success = self.lib.get_wall_profile(wall_type_value.value, ctypes.byref(c_profile))
+                if profile_success:
+                    profiles[wall_type_value.value] = self._convert_wall_profile(c_profile)
+
+            index += 1
+
+        logger.info(f"Loaded wall profiles from DLL: {sorted(profiles.keys())}")
+        return profiles
 
     def get_standard_door_jam_z_offset(self, size: int) -> float:
         """
@@ -171,3 +211,24 @@ class AutoMapperLibClient:
             index += 1
 
         return door_array
+
+    def _convert_wall_profile(self, c_profile: CWallProfile) -> dict:
+        """
+        Convert a C wall profile into Python data.
+        """
+        profile = {
+            "wall_type": int(c_profile.wall_type),
+            "dir_a_vid": int(c_profile.dir_a_vid),
+            "dir_b_vid": int(c_profile.dir_b_vid),
+            "pillar_vid": int(c_profile.pillar_vid),
+            "step_x": float(c_profile.step_x),
+            "step_y": float(c_profile.step_y),
+            "offset_a_x": float(c_profile.offset_a_x),
+            "offset_a_y": float(c_profile.offset_a_y),
+            "offset_b_x": float(c_profile.offset_b_x),
+            "offset_b_y": float(c_profile.offset_b_y),
+            "offset_p_x": float(c_profile.offset_p_x),
+            "offset_p_y": float(c_profile.offset_p_y),
+            "grid_divisor": int(c_profile.grid_divisor),
+        }
+        return profile

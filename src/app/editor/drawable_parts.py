@@ -2,7 +2,7 @@
 Drawable part options for each wall set.
 """
 
-from app.wall_profiles import WALL_TYPE_LAB, WALL_TYPE_STANDARD
+from app.editor.wall_profiles import WALL_TYPE_LAB, WALL_TYPE_STANDARD
 
 
 PART_WALL_BODY = "wall_body"

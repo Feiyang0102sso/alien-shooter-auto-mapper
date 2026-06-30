@@ -46,3 +46,25 @@ class CStandardDoorZConfig(ctypes.Structure):
         ("dead_open_min_z", ctypes.c_float),
         ("dead_open_max_z", ctypes.c_float),
     ]
+
+
+class CWallProfile(ctypes.Structure):
+    """
+    C-compatible wall profile from the C++ engine.
+    """
+
+    _fields_ = [
+        ("wall_type", ctypes.c_int),
+        ("dir_a_vid", ctypes.c_int),
+        ("dir_b_vid", ctypes.c_int),
+        ("pillar_vid", ctypes.c_int),
+        ("step_x", ctypes.c_float),
+        ("step_y", ctypes.c_float),
+        ("offset_a_x", ctypes.c_float),
+        ("offset_a_y", ctypes.c_float),
+        ("offset_b_x", ctypes.c_float),
+        ("offset_b_y", ctypes.c_float),
+        ("offset_p_x", ctypes.c_float),
+        ("offset_p_y", ctypes.c_float),
+        ("grid_divisor", ctypes.c_int),
+    ]
