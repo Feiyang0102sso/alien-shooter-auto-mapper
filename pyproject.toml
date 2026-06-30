@@ -10,7 +10,7 @@ dynamic = ["version"]
 # configure command line entry point
 # just type auto-mapper in console
 [project.scripts]
-auto-mapper = "app.main_ui:main"
+auto-mapper = "app.main:main"
 
 
 [tool.setuptools]

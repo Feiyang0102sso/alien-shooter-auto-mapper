@@ -5,7 +5,10 @@ universal config for the exe and relevant paths
 import sys
 from pathlib import Path
 
-from .logger import logger, add_file_handler
+try:
+    from app.logger import logger, add_file_handler
+except ModuleNotFoundError:
+    from logger import logger, add_file_handler
 
 
 def get_app_root() -> Path:
@@ -63,8 +66,31 @@ RESOURCE_ROOT = get_resource_root(ROOT_DIR)
 LOG_FILE_NAME = "auto_mapper.log"
 LOG_FILE_PATH = ROOT_DIR / LOG_FILE_NAME
 
-input_dir = ROOT_DIR / 'DATAS' # not used in this project
-output_dir = ROOT_DIR / 'OUTPUT' # not used in this project
+# --- DLL Path ---
+DLL_NAME_EXE = "AutoMapper.dll"
+DLL_NAME_DEV = "libauto_mapper.dll"
+DLL_DEV_BUILD_DIR = Path(__file__).resolve().parent.parent.parent / "build" / "mingw-release"
+
+def get_dll_path() -> Path:
+    """
+    Get DLL path based on runtime environment.
+
+    - Frozen EXE: ROOT_DIR / AutoMapper.dll
+    - Dev mode: build/mingw-release / libauto_mapper.dll
+    """
+    if getattr(sys, 'frozen', False):
+        dll_path = ROOT_DIR / DLL_NAME_EXE
+        logger.debug(f"EXE mode, DLL path: {dll_path}")
+    else:
+        dll_path = DLL_DEV_BUILD_DIR / DLL_NAME_DEV
+        logger.debug(f"Dev mode, DLL path: {dll_path}")
+
+    return dll_path
+
+
+DLL_PATH = get_dll_path()
+input_dir = ROOT_DIR / "DATAS"  # not used in this project
+output_dir = ROOT_DIR / "OUTPUT"  # not used in this project
 
 # --- Directory Helper Methods ---
 # not used in this project
@@ -109,6 +135,7 @@ def init_app_env():
     add_file_handler(LOG_FILE_PATH)
     logger.debug(f"Root Path: {ROOT_DIR}")
     logger.debug(f"Log File Path: {LOG_FILE_PATH}")
+    logger.debug(f"DLL Path: {DLL_PATH}")
 
 # --- Initialize on Import ---
 # to avoid import problem, no longer used

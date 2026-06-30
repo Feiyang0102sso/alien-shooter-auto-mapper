@@ -1,0 +1,686 @@
+"""
+Interactive isometric viewport.
+"""
+import math
+
+from PySide6.QtCore import QPointF, Qt, Signal
+from PySide6.QtGui import QColor, QCursor, QPainter, QPen
+from PySide6.QtWidgets import QWidget
+
+from app.drawable_parts import PART_WALL_BODY
+from app.project_data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.wall_profiles import WALL_TYPE_STANDARD, get_wall_profile
+
+
+MIN_GRID_COLUMNS = 1
+MIN_GRID_ROWS = 1
+
+
+THEME_COLORS = {
+    "lab": QColor("#2aa879"),
+    "base": QColor("#4f7fbf"),
+    "city": QColor("#c0a05a"),
+}
+
+
+class MapViewport(QWidget):
+    """
+    Isometric canvas with pan, zoom, and grid-point selection.
+    """
+
+    grid_point_selected = Signal(int, int)
+    cursor_grid_changed = Signal(int, int)
+    view_changed = Signal(float)
+    segment_started = Signal(int, int)
+    segment_created = Signal(int, int, int, int, int)
+    drawing_cancelled = Signal()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setObjectName("mapViewport")
+        self.setMinimumSize(720, 540)
+        self.setMouseTracking(True)
+        self.setCursor(QCursor(Qt.CrossCursor))
+
+        self.theme_color = QColor("#2aa879")
+        self.active_wall_type = WALL_TYPE_STANDARD
+        self.active_drawable_part = PART_WALL_BODY
+        self.map_size_x = DEFAULT_MAP_SIZE_X
+        self.map_size_y = DEFAULT_MAP_SIZE_Y
+        self.grid_columns = 1
+        self.grid_rows = 1
+        self.zoom_factor = 1.0
+        self.pan_offset = QPointF(0.0, 0.0)
+        self.selected_grid_point = None
+        self.pending_start_point = None
+        self.preview_end_point = None
+        self.segments = []
+        self.last_cursor_grid_point = None
+        self.is_panning = False
+        self.pan_start_position = QPointF(0.0, 0.0)
+        self.pan_start_offset = QPointF(0.0, 0.0)
+        self.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, fit_to_view=False)
+
+    def set_theme(self, theme_id: str) -> None:
+        """
+        Update the grid accent color from the selected theme.
+        """
+        if theme_id in THEME_COLORS:
+            self.theme_color = THEME_COLORS[theme_id]
+        self.update()
+
+    def set_wall_type(self, wall_type: int) -> None:
+        """
+        Update the active wall profile and redraw the current grid.
+        """
+        self.active_wall_type = wall_type
+        profile = get_wall_profile(wall_type)
+        self.theme_color = QColor(profile["color"])
+        self._recalculate_grid_limits()
+        self.fit_map_to_view()
+        self.update()
+
+    def set_drawable_part(self, part_id: str) -> None:
+        """
+        Update the current drawable tool.
+        """
+        self.active_drawable_part = part_id
+
+    def set_map_size(self, map_size_x: float, map_size_y: float, fit_to_view: bool = True) -> None:
+        """
+        Update physical map size and derived logical grid limits.
+        """
+        self.map_size_x = map_size_x
+        self.map_size_y = map_size_y
+        self._recalculate_grid_limits()
+
+        if fit_to_view:
+            self.fit_map_to_view()
+
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        """
+        Draw the current isometric grid state.
+        """
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        self._fill_background(painter)
+        self._draw_grid(painter)
+        self._draw_segments(painter)
+        self._draw_preview_segment(painter)
+        self._draw_selected_point(painter)
+        self._draw_origin_marker(painter)
+
+    def mousePressEvent(self, event) -> None:
+        """
+        Select grid points or begin viewport panning.
+        """
+        if event.button() == Qt.MiddleButton:
+            self.is_panning = True
+            self.pan_start_position = event.position()
+            self.pan_start_offset = QPointF(self.pan_offset)
+            self.setCursor(QCursor(Qt.ClosedHandCursor))
+            event.accept()
+            return
+
+        if event.button() == Qt.LeftButton:
+            grid_point = self.screen_to_grid(event.position())
+            self._handle_left_click(grid_point)
+            self.update()
+            event.accept()
+            return
+
+        if event.button() == Qt.RightButton:
+            self.cancel_pending_segment()
+            self.update()
+            event.accept()
+            return
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        """
+        Update pan offset or report hover grid coordinates.
+        """
+        if self.is_panning:
+            current_position = event.position()
+            delta = current_position - self.pan_start_position
+            self.pan_offset = self.pan_start_offset + delta
+            self.update()
+            event.accept()
+            return
+
+        grid_point = self.screen_to_grid(event.position())
+        if grid_point is not None:
+            if grid_point != self.last_cursor_grid_point:
+                self.last_cursor_grid_point = grid_point
+                self.cursor_grid_changed.emit(grid_point[0], grid_point[1])
+
+            if self.pending_start_point is not None:
+                self.preview_end_point = self.get_orthogonal_point(self.pending_start_point, grid_point)
+                self.update()
+
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:
+        """
+        End viewport panning.
+        """
+        if event.button() == Qt.MiddleButton and self.is_panning:
+            self.is_panning = False
+            self.setCursor(QCursor(Qt.CrossCursor))
+            event.accept()
+            return
+
+        super().mouseReleaseEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        """
+        Clear hover coordinate state when the cursor leaves the canvas.
+        """
+        self.last_cursor_grid_point = None
+        super().leaveEvent(event)
+
+    def wheelEvent(self, event) -> None:
+        """
+        Zoom around the cursor position.
+        """
+        wheel_delta = event.angleDelta().y()
+        if wheel_delta == 0:
+            event.accept()
+            return
+
+        old_zoom = self.zoom_factor
+        if wheel_delta > 0:
+            new_zoom = old_zoom * 1.15
+        else:
+            new_zoom = old_zoom / 1.15
+
+        if new_zoom < 0.35:
+            new_zoom = 0.35
+        if new_zoom > 3.5:
+            new_zoom = 3.5
+
+        cursor_position = event.position()
+        physical_before_zoom = self.screen_to_physical(cursor_position)
+        self.zoom_factor = new_zoom
+        physical_after_zoom = self.screen_to_physical(cursor_position)
+
+        physical_delta = physical_after_zoom - physical_before_zoom
+        self.pan_offset = self.pan_offset + physical_delta * self.zoom_factor
+
+        self.view_changed.emit(self.zoom_factor)
+        self.update()
+        event.accept()
+
+    def _fill_background(self, painter: QPainter) -> None:
+        painter.fillRect(self.rect(), QColor("#10161a"))
+
+    def _draw_grid(self, painter: QPainter) -> None:
+        profile = get_wall_profile(self.active_wall_type)
+        step_x = profile["step_x"]
+        step_y = profile["step_y"]
+
+        grid_pen = QPen(QColor(profile["color"]))
+        grid_pen.setWidth(1)
+        grid_pen.setCosmetic(True)
+        painter.setPen(grid_pen)
+
+        min_grid, max_grid = self._get_grid_draw_range(step_x, step_y)
+
+        row = min_grid
+        while row <= max_grid:
+            start = self.grid_to_screen(min_grid, row, self.active_wall_type)
+            end = self.grid_to_screen(max_grid, row, self.active_wall_type)
+            painter.drawLine(start, end)
+            row += 1
+
+        column = min_grid
+        while column <= max_grid:
+            start = self.grid_to_screen(column, min_grid, self.active_wall_type)
+            end = self.grid_to_screen(column, max_grid, self.active_wall_type)
+            painter.drawLine(start, end)
+            column += 1
+
+    def _draw_selected_point(self, painter: QPainter) -> None:
+        if self.selected_grid_point is None:
+            return
+
+        grid_x = self.selected_grid_point[0]
+        grid_y = self.selected_grid_point[1]
+        center = self.grid_to_screen(grid_x, grid_y, self.active_wall_type)
+
+        marker_pen = QPen(QColor("#f1f6f3"))
+        marker_pen.setWidth(2)
+        marker_pen.setCosmetic(True)
+        painter.setPen(marker_pen)
+        painter.setBrush(self.theme_color)
+        painter.drawEllipse(center, 6, 6)
+
+    def _draw_segments(self, painter: QPainter) -> None:
+        segment_pen = QPen(QColor("#f1f6f3"))
+        segment_pen.setWidth(4)
+        segment_pen.setCosmetic(True)
+        painter.setPen(segment_pen)
+
+        for segment in self.segments:
+            start_point = segment[0]
+            end_point = segment[1]
+            wall_type = segment[2]
+            profile = get_wall_profile(wall_type)
+
+            segment_pen = QPen(QColor(profile["color"]))
+            segment_pen.setWidth(4)
+            segment_pen.setCosmetic(True)
+            painter.setPen(segment_pen)
+
+            screen_start = self.grid_to_screen(start_point[0], start_point[1], wall_type)
+            screen_end = self.grid_to_screen(end_point[0], end_point[1], wall_type)
+            painter.drawLine(screen_start, screen_end)
+
+    def _draw_preview_segment(self, painter: QPainter) -> None:
+        if self.pending_start_point is None:
+            return
+        if self.preview_end_point is None:
+            return
+
+        preview_pen = QPen(QColor("#e0b95c"))
+        preview_pen.setWidth(3)
+        preview_pen.setCosmetic(True)
+        preview_pen.setStyle(Qt.DashLine)
+        painter.setPen(preview_pen)
+
+        screen_start = self.grid_to_screen(self.pending_start_point[0], self.pending_start_point[1], self.active_wall_type)
+        screen_end = self.grid_to_screen(self.preview_end_point[0], self.preview_end_point[1], self.active_wall_type)
+        painter.drawLine(screen_start, screen_end)
+
+    def _draw_origin_marker(self, painter: QPainter) -> None:
+        label_pen = QPen(QColor("#d9e8e2"))
+        painter.setPen(label_pen)
+        painter.drawText(24, 32, "2.5D Isometric Canvas")
+        profile = get_wall_profile(self.active_wall_type)
+        size_text = (
+            f"Map: {self.map_size_x:.1f} x {self.map_size_y:.1f} | "
+            f"Wall: {profile['label']} | Grid: {self.grid_columns} x {self.grid_rows}"
+        )
+        painter.drawText(24, 54, size_text)
+        painter.drawText(24, 76, "Left click twice: draw wall. Right click: cancel. Middle drag: pan. Wheel: zoom.")
+
+    def _handle_left_click(self, grid_point) -> None:
+        """
+        Start or finish a wall segment from a grid click.
+        """
+        if grid_point is None:
+            self.selected_grid_point = None
+            return
+
+        self.selected_grid_point = grid_point
+        self.grid_point_selected.emit(grid_point[0], grid_point[1])
+
+        if self.active_drawable_part != PART_WALL_BODY:
+            return
+
+        if self.pending_start_point is None:
+            self.pending_start_point = grid_point
+            self.preview_end_point = None
+            self.segment_started.emit(grid_point[0], grid_point[1])
+            return
+
+        end_point = self.get_orthogonal_point(self.pending_start_point, grid_point)
+        if end_point == self.pending_start_point:
+            self.preview_end_point = None
+            return
+
+        segment = (self.pending_start_point, end_point, self.active_wall_type)
+        self.segments.append(segment)
+
+        start_point = self.pending_start_point
+        self.pending_start_point = None
+        self.preview_end_point = None
+        self.segment_created.emit(start_point[0], start_point[1], end_point[0], end_point[1], len(self.segments))
+
+    def get_orthogonal_point(self, start_point, raw_end_point):
+        """
+        Clamp a raw end point to the dominant horizontal or vertical grid axis.
+        """
+        start_x = start_point[0]
+        start_y = start_point[1]
+        end_x = raw_end_point[0]
+        end_y = raw_end_point[1]
+
+        delta_x = abs(end_x - start_x)
+        delta_y = abs(end_y - start_y)
+
+        if delta_x > delta_y:
+            end_y = start_y
+        else:
+            end_x = start_x
+
+        return end_x, end_y
+
+    def clear_segments(self) -> None:
+        """
+        Clear all in-memory wall segments and pending drawing state.
+        """
+        self.segments.clear()
+        self.pending_start_point = None
+        self.preview_end_point = None
+        self.selected_grid_point = None
+        self.update()
+
+    def set_segments(self, segments: list) -> None:
+        """
+        Replace the current wall segments.
+        """
+        self.segments = []
+
+        for segment in segments:
+            start_point = segment[0]
+            end_point = segment[1]
+            wall_type = segment[2]
+            normalized_segment = (start_point, end_point, wall_type)
+            self.segments.append(normalized_segment)
+
+        self.pending_start_point = None
+        self.preview_end_point = None
+        self.selected_grid_point = None
+        self._recalculate_grid_limits()
+        self.update()
+
+    def get_segments(self) -> list:
+        """
+        Return a copy of current wall segments.
+        """
+        segments = []
+
+        for segment in self.segments:
+            copied_segment = (segment[0], segment[1], segment[2])
+            segments.append(copied_segment)
+
+        return segments
+
+    def fit_map_to_view(self) -> None:
+        """
+        Fit current map bounds into the visible widget area.
+        """
+        world_width = self.map_size_x
+        world_height = self.map_size_y
+        available_width = self.width() - 96
+        available_height = self.height() - 140
+
+        if world_width <= 0:
+            world_width = self.active_step_x
+        if world_height <= 0:
+            world_height = self.active_step_y
+
+        zoom_x = available_width / world_width
+        zoom_y = available_height / world_height
+        new_zoom = min(zoom_x, zoom_y)
+
+        if new_zoom < 0.35:
+            new_zoom = 0.35
+        if new_zoom > 3.5:
+            new_zoom = 3.5
+
+        self.zoom_factor = new_zoom
+
+        self.pan_offset = QPointF(
+            (self.width() - world_width * self.zoom_factor) / 2,
+            (self.height() - world_height * self.zoom_factor) / 2,
+        )
+        self.view_changed.emit(self.zoom_factor)
+
+    def _recalculate_grid_limits(self) -> None:
+        """
+        Derive logical grid limits from map size and imported segment bounds.
+        """
+        map_columns = math.ceil(self.map_size_x / self.active_step_x)
+        map_rows = math.ceil(self.map_size_y / self.active_step_y)
+
+        max_segment_x = 0
+        max_segment_y = 0
+
+        for segment in self.segments:
+            start_point = segment[0]
+            end_point = segment[1]
+
+            max_segment_x = max(max_segment_x, int(start_point[0]), int(end_point[0]))
+            max_segment_y = max(max_segment_y, int(start_point[1]), int(end_point[1]))
+
+        self.grid_columns = max(MIN_GRID_COLUMNS, map_columns, max_segment_x)
+        self.grid_rows = max(MIN_GRID_ROWS, map_rows, max_segment_y)
+
+    def cancel_pending_segment(self) -> None:
+        """
+        Cancel the active first-click segment start.
+        """
+        if self.pending_start_point is None:
+            return
+
+        self.pending_start_point = None
+        self.preview_end_point = None
+        self.drawing_cancelled.emit()
+        self.update()
+
+    @property
+    def active_step_x(self) -> float:
+        """
+        Return current wall profile x step.
+        """
+        profile = get_wall_profile(self.active_wall_type)
+        return profile["step_x"]
+
+    @property
+    def active_step_y(self) -> float:
+        """
+        Return current wall profile y step.
+        """
+        profile = get_wall_profile(self.active_wall_type)
+        return profile["step_y"]
+
+    def grid_to_screen(self, grid_x: int, grid_y: int, wall_type: int = None) -> QPointF:
+        """
+        Convert logical grid coordinates into widget coordinates.
+        """
+        physical_point = self.grid_to_physical(grid_x, grid_y, wall_type)
+        screen_x = physical_point.x() * self.zoom_factor + self.pan_offset.x()
+        screen_y = physical_point.y() * self.zoom_factor + self.pan_offset.y()
+        return QPointF(screen_x, screen_y)
+
+    def grid_to_physical(self, grid_x: int, grid_y: int, wall_type: int = None) -> QPointF:
+        """
+        Convert logical grid coordinates into physical map coordinates.
+        """
+        if wall_type is None:
+            wall_type = self.active_wall_type
+
+        profile = get_wall_profile(wall_type)
+        step_x = profile["step_x"]
+        step_y = profile["step_y"]
+        grid_shift = self._get_grid_shift(step_x, step_y)
+
+        physical_x = (grid_x - grid_y) * step_x + grid_shift.x()
+        physical_y = (grid_x + grid_y) * step_y + grid_shift.y()
+        return QPointF(physical_x, physical_y)
+
+    def screen_to_physical(self, screen_point: QPointF) -> QPointF:
+        """
+        Convert widget coordinates into physical map coordinates.
+        """
+        physical_x = (screen_point.x() - self.pan_offset.x()) / self.zoom_factor
+        physical_y = (screen_point.y() - self.pan_offset.y()) / self.zoom_factor
+        return QPointF(physical_x, physical_y)
+
+    def physical_to_grid(self, physical_point: QPointF, wall_type: int = None) -> tuple:
+        """
+        Convert physical map coordinates into logical grid coordinates.
+        """
+        if wall_type is None:
+            wall_type = self.active_wall_type
+
+        profile = get_wall_profile(wall_type)
+        step_x = profile["step_x"]
+        step_y = profile["step_y"]
+        grid_shift = self._get_grid_shift(step_x, step_y)
+
+        value_a = (physical_point.x() - grid_shift.x()) / step_x
+        value_b = (physical_point.y() - grid_shift.y()) / step_y
+        grid_x = (value_a + value_b) / 2.0
+        grid_y = (value_b - value_a) / 2.0
+        return grid_x, grid_y
+
+    def screen_to_grid(self, screen_point: QPointF):
+        """
+        Convert widget coordinates into the nearest logical grid point.
+        """
+        physical_point = self.screen_to_physical(screen_point)
+        snapped_physical = self._clamp_physical_point(physical_point)
+        grid_float = self.physical_to_grid(snapped_physical)
+
+        base_grid_x = int(round(grid_float[0]))
+        base_grid_y = int(round(grid_float[1]))
+
+        best_point = None
+        best_distance = None
+
+        offset_x = -4
+        while offset_x <= 4:
+            offset_y = -4
+            while offset_y <= 4:
+                test_grid_x = base_grid_x + offset_x
+                test_grid_y = base_grid_y + offset_y
+                test_physical = self.grid_to_physical(test_grid_x, test_grid_y)
+
+                if self._is_physical_point_in_bounds(test_physical):
+                    delta_x = test_physical.x() - physical_point.x()
+                    delta_y = test_physical.y() - physical_point.y()
+                    distance = delta_x * delta_x + delta_y * delta_y
+
+                    if best_distance is None or distance < best_distance:
+                        best_distance = distance
+                        best_point = (test_grid_x, test_grid_y)
+
+                offset_y += 1
+            offset_x += 1
+
+        return best_point
+
+    def _get_grid_shift(self, step_x: float, step_y: float) -> QPointF:
+        """
+        Match the old UI grid shift formula for wall profile alignment.
+        """
+        divisor = 1
+
+        for wall_type in (0, 1):
+            profile = get_wall_profile(wall_type)
+            if abs(profile["step_x"] - step_x) < 0.01:
+                divisor = profile["grid_divisor"]
+
+        grid_step_x = step_x / divisor
+        grid_step_y = step_y / divisor
+        remainder_x = grid_step_x / 2.0
+        remainder_y = grid_step_y / 2.0
+
+        raw_shift_x = self.map_size_x / 2.0
+        grid_shift_x = round((raw_shift_x - remainder_x) / grid_step_x) * grid_step_x + remainder_x
+
+        raw_shift_y = remainder_y
+        grid_shift_y = round((raw_shift_y - remainder_y) / grid_step_y) * grid_step_y + remainder_y + step_y
+        return QPointF(grid_shift_x, grid_shift_y)
+
+    def _clamp_physical_point(self, physical_point: QPointF) -> QPointF:
+        """
+        Clamp a physical point into the map bounds.
+        """
+        bounds = self._get_physical_bounds(self.active_step_x, self.active_step_y)
+        min_x = bounds[0]
+        min_y = bounds[1]
+        max_x = bounds[2]
+        max_y = bounds[3]
+
+        clamped_x = physical_point.x()
+        clamped_y = physical_point.y()
+
+        if clamped_x < min_x:
+            clamped_x = min_x
+        if clamped_y < min_y:
+            clamped_y = min_y
+        if clamped_x > max_x:
+            clamped_x = max_x
+        if clamped_y > max_y:
+            clamped_y = max_y
+
+        return QPointF(clamped_x, clamped_y)
+
+    def _is_physical_point_in_bounds(self, physical_point: QPointF) -> bool:
+        """
+        Return whether a physical point is inside the map bounds.
+        """
+        bounds = self._get_physical_bounds(self.active_step_x, self.active_step_y)
+        min_x = bounds[0]
+        min_y = bounds[1]
+        max_x = bounds[2]
+        max_y = bounds[3]
+
+        if physical_point.x() < min_x:
+            return False
+        if physical_point.y() < min_y:
+            return False
+        if physical_point.x() > max_x:
+            return False
+        if physical_point.y() > max_y:
+            return False
+
+        return True
+
+    def _get_physical_bounds(self, step_x: float, step_y: float) -> tuple:
+        """
+        Match the old UI physical grid bounds for a wall profile.
+        """
+        half_step_x = step_x / 2.0
+        half_step_y = step_y / 2.0
+
+        min_x = half_step_x
+        max_x_count = int((self.map_size_x - half_step_x) / step_x)
+        max_x = max_x_count * step_x + half_step_x
+
+        min_y = half_step_y
+        max_y_count = int((self.map_size_y - half_step_y) / step_y)
+        max_y = max_y_count * step_y + half_step_y
+
+        if max_x < min_x:
+            max_x = min_x
+        if max_y < min_y:
+            max_y = min_y
+
+        return min_x, min_y, max_x, max_y
+
+    def _get_grid_draw_range(self, step_x: float, step_y: float) -> tuple:
+        """
+        Return a practical logical range that covers the map bounds.
+        """
+        corners = [
+            QPointF(0.0, 0.0),
+            QPointF(self.map_size_x, 0.0),
+            QPointF(0.0, self.map_size_y),
+            QPointF(self.map_size_x, self.map_size_y),
+        ]
+
+        logical_values = []
+        profile_wall_type = self.active_wall_type
+
+        for wall_type in (0, 1):
+            profile = get_wall_profile(wall_type)
+            if abs(profile["step_x"] - step_x) < 0.01 and abs(profile["step_y"] - step_y) < 0.01:
+                profile_wall_type = wall_type
+
+        for corner in corners:
+            grid_point = self.physical_to_grid(corner, profile_wall_type)
+            logical_values.append(grid_point[0])
+            logical_values.append(grid_point[1])
+
+        min_grid = math.floor(min(logical_values)) - 2
+        max_grid = math.ceil(max(logical_values)) + 2
+        return min_grid, max_grid

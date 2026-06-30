@@ -1,6 +1,4 @@
 #include "auto_mapper/api.h"
-#include "auto_mapper/common/logger.h"
-#include "auto_mapper/common/config.h"
 #include "auto_mapper/core/wall_builder.h"
 #include "auto_mapper/core/door_builder.h"
 #include "auto_mapper/io/map_writer.h"
@@ -49,13 +47,6 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     bool gen_floor,
     bool gen_ceiling
 ) {
-    // Initialize logger once
-    static bool logger_initialized = false;
-    if (!logger_initialized) {
-        auto_mapper::Config::init_env();
-        logger_initialized = true;
-    }
-
     std::string out_path(output_path);
     std::vector<auto_mapper::core::Segment> cpp_segments;
     cpp_segments.reserve(num_segments);
@@ -99,7 +90,7 @@ AUTO_MAPPER_API bool generate_map_from_segments(
         });
     }
 
-    auto_mapper::Logger::info("Received {} segments and {} doors from API", cpp_segments.size(), cpp_doors.size());
+    // API logging is intentionally disabled for UI-driven DLL calls.
 
     // 1. Build walls with excavations
     auto_mapper::core::WallBuilder wall_builder(map_size_x, map_size_y);
@@ -113,10 +104,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
     if (auto_mapper::io::write_map(sprites, out_path, map_size_x, map_size_y)) {
-        auto_mapper::Logger::info("Successfully generated map with doors: {}", out_path);
         return true;
     } else {
-        auto_mapper::Logger::error("Failed to write map to {}", out_path);
         return false;
     }
 }
