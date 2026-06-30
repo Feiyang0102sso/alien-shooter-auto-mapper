@@ -5,7 +5,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QFormLayout, QGroupBox, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from app.editor.drawable_parts import get_drawable_parts
-from app.editor.wall_profiles import WALL_TYPE_STANDARD
+from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 
 
@@ -29,7 +29,10 @@ class InspectorPanel(QWidget):
         title.setObjectName("panelTitle")
         layout.addWidget(title)
 
-        self.theme_label = QLabel("Standard Wall")
+        default_wall_type = get_default_wall_type()
+        default_profile = get_wall_profile(default_wall_type)
+
+        self.theme_label = QLabel(default_profile["short_label"])
         self.theme_label.setObjectName("activeThemeLabel")
         layout.addWidget(self.theme_label)
 
@@ -37,7 +40,7 @@ class InspectorPanel(QWidget):
         self._drawable_part_ids = []
         self.component_combo.currentIndexChanged.connect(self._emit_drawable_part_changed)
         layout.addWidget(self.component_combo)
-        self.set_wall_set(WALL_TYPE_STANDARD, "Standard Wall")
+        self.set_wall_set(default_wall_type, default_profile["short_label"])
 
         map_size_group = QGroupBox("Map Size")
         map_size_group.setObjectName("mapSizeGroup")

@@ -4,23 +4,29 @@ Interactive isometric viewport.
 import math
 
 from PySide6.QtCore import QPointF, Qt, Signal
-from PySide6.QtGui import QColor, QCursor, QPainter, QPen
+from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
+from app.binding import dll_registry
 from app.editor.drawable_parts import PART_WALL_BODY
-from app.editor.wall_profiles import WALL_TYPE_STANDARD, get_wall_profile
+from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 
 
 MIN_GRID_COLUMNS = 1
 MIN_GRID_ROWS = 1
-
-
-THEME_COLORS = {
-    "lab": QColor("#2aa879"),
-    "base": QColor("#4f7fbf"),
-    "city": QColor("#c0a05a"),
-}
+DOOR_STATE_CLOSED = 0
+DOOR_STATE_OPEN = 1
+LIGHT_STATE_GREEN = 0
+LIGHT_STATE_RED = 1
+LIGHT_STATE_BROKEN = 2
+PART_ACTIVE_DOOR = "active_door"
+PART_DEAD_DOOR_CLOSED = "dead_door_closed"
+PART_DEAD_DOOR_JAMMED = "dead_door_jammed"
+PART_DEAD_DOOR_OPEN = "dead_door_open"
+PART_LAB_LASER_CLOSED = "lab_laser_closed"
+PART_LAB_LASER_OPEN = "lab_laser_open"
+PART_LAB_DECORATION_DOOR = "lab_decoration_door"
 
 
 class MapViewport(QWidget):
@@ -33,6 +39,7 @@ class MapViewport(QWidget):
     view_changed = Signal(float)
     segment_started = Signal(int, int)
     segment_created = Signal(int, int, int, int, int)
+    door_created = Signal(int, int, int)
     drawing_cancelled = Signal()
 
     def __init__(self) -> None:
@@ -42,8 +49,9 @@ class MapViewport(QWidget):
         self.setMouseTracking(True)
         self.setCursor(QCursor(Qt.CrossCursor))
 
-        self.theme_color = QColor("#2aa879")
-        self.active_wall_type = WALL_TYPE_STANDARD
+        self.active_wall_type = get_default_wall_type()
+        default_profile = get_wall_profile(self.active_wall_type)
+        self.theme_color = QColor(default_profile["color"])
         self.active_drawable_part = PART_WALL_BODY
         self.map_size_x = DEFAULT_MAP_SIZE_X
         self.map_size_y = DEFAULT_MAP_SIZE_Y
@@ -55,6 +63,7 @@ class MapViewport(QWidget):
         self.pending_start_point = None
         self.preview_end_point = None
         self.segments = []
+        self.doors = []
         self.last_cursor_grid_point = None
         self.is_panning = False
         self.pan_start_position = QPointF(0.0, 0.0)
@@ -65,8 +74,6 @@ class MapViewport(QWidget):
         """
         Update the grid accent color from the selected theme.
         """
-        if theme_id in THEME_COLORS:
-            self.theme_color = THEME_COLORS[theme_id]
         self.update()
 
     def set_wall_type(self, wall_type: int) -> None:
@@ -85,6 +92,8 @@ class MapViewport(QWidget):
         Update the current drawable tool.
         """
         self.active_drawable_part = part_id
+        self.cancel_pending_segment()
+        self.update()
 
     def set_map_size(self, map_size_x: float, map_size_y: float, fit_to_view: bool = True) -> None:
         """
@@ -109,6 +118,7 @@ class MapViewport(QWidget):
         self._fill_background(painter)
         self._draw_grid(painter)
         self._draw_segments(painter)
+        self._draw_doors(painter)
         self._draw_preview_segment(painter)
         self._draw_selected_point(painter)
         self._draw_origin_marker(painter)
@@ -296,6 +306,47 @@ class MapViewport(QWidget):
         screen_end = self.grid_to_screen(self.preview_end_point[0], self.preview_end_point[1], self.active_wall_type)
         painter.drawLine(screen_start, screen_end)
 
+    def _draw_doors(self, painter: QPainter) -> None:
+        """
+        Draw door markers as a line with one status dot in the middle.
+        """
+        for door in self.doors:
+            door_points = self._get_door_grid_points(door)
+            start_point = door_points[0]
+            end_point = door_points[1]
+            wall_type = int(door[2])
+            door_state = int(door[5])
+            light_state = int(door[6])
+            z_offset = float(door[7])
+
+            screen_start = self.grid_to_screen(start_point[0], start_point[1], wall_type)
+            screen_end = self.grid_to_screen(end_point[0], end_point[1], wall_type)
+            colors = self._get_door_colors(door_state, light_state, z_offset)
+            line_color = colors[0]
+            dot_color = colors[1]
+            hollow = colors[2]
+
+            door_pen = QPen(QColor(line_color))
+            door_pen.setWidth(5)
+            door_pen.setCosmetic(True)
+            painter.setPen(door_pen)
+            painter.drawLine(screen_start, screen_end)
+
+            mid_x = (screen_start.x() + screen_end.x()) / 2.0
+            mid_y = (screen_start.y() + screen_end.y()) / 2.0
+            radius = 5
+            dot_pen = QPen(QColor(line_color))
+            dot_pen.setWidth(2)
+            dot_pen.setCosmetic(True)
+            painter.setPen(dot_pen)
+
+            if hollow:
+                painter.setBrush(QBrush(QColor("#10161a")))
+            else:
+                painter.setBrush(QBrush(QColor(dot_color)))
+
+            painter.drawEllipse(QPointF(mid_x, mid_y), radius, radius)
+
     def _draw_origin_marker(self, painter: QPainter) -> None:
         label_pen = QPen(QColor("#d9e8e2"))
         painter.setPen(label_pen)
@@ -319,9 +370,6 @@ class MapViewport(QWidget):
         self.selected_grid_point = grid_point
         self.grid_point_selected.emit(grid_point[0], grid_point[1])
 
-        if self.active_drawable_part != PART_WALL_BODY:
-            return
-
         if self.pending_start_point is None:
             self.pending_start_point = grid_point
             self.preview_end_point = None
@@ -333,13 +381,21 @@ class MapViewport(QWidget):
             self.preview_end_point = None
             return
 
-        segment = (self.pending_start_point, end_point, self.active_wall_type)
-        self.segments.append(segment)
-
         start_point = self.pending_start_point
+
+        if self.active_drawable_part == PART_WALL_BODY:
+            segment = (start_point, end_point, self.active_wall_type)
+            self.segments.append(segment)
+            count = len(self.segments)
+            self.segment_created.emit(start_point[0], start_point[1], end_point[0], end_point[1], count)
+        else:
+            door = self._build_door_from_points(start_point, end_point)
+            if door is not None:
+                self.doors.append(door)
+                self.door_created.emit(door[0], door[1], len(self.doors))
+
         self.pending_start_point = None
         self.preview_end_point = None
-        self.segment_created.emit(start_point[0], start_point[1], end_point[0], end_point[1], len(self.segments))
 
     def get_orthogonal_point(self, start_point, raw_end_point):
         """
@@ -365,10 +421,57 @@ class MapViewport(QWidget):
         Clear all in-memory wall segments and pending drawing state.
         """
         self.segments.clear()
+        self.doors.clear()
         self.pending_start_point = None
         self.preview_end_point = None
         self.selected_grid_point = None
         self.update()
+
+    def set_doors(self, doors: list) -> None:
+        """
+        Replace the current door instances.
+        """
+        self.doors = []
+
+        for door in doors:
+            normalized_door = (
+                int(door[0]),
+                int(door[1]),
+                int(door[2]),
+                int(door[3]),
+                int(door[4]),
+                int(door[5]),
+                int(door[6]),
+                float(door[7]),
+            )
+            self.doors.append(normalized_door)
+
+        self.pending_start_point = None
+        self.preview_end_point = None
+        self.selected_grid_point = None
+        self._recalculate_grid_limits()
+        self.update()
+
+    def get_doors(self) -> list:
+        """
+        Return a copy of current door instances.
+        """
+        doors = []
+
+        for door in self.doors:
+            copied_door = (
+                door[0],
+                door[1],
+                door[2],
+                door[3],
+                door[4],
+                door[5],
+                door[6],
+                door[7],
+            )
+            doors.append(copied_door)
+
+        return doors
 
     def set_segments(self, segments: list) -> None:
         """
@@ -449,6 +552,13 @@ class MapViewport(QWidget):
             max_segment_x = max(max_segment_x, int(start_point[0]), int(end_point[0]))
             max_segment_y = max(max_segment_y, int(start_point[1]), int(end_point[1]))
 
+        for door in self.doors:
+            door_points = self._get_door_grid_points(door)
+            start_point = door_points[0]
+            end_point = door_points[1]
+            max_segment_x = max(max_segment_x, int(start_point[0]), int(end_point[0]))
+            max_segment_y = max(max_segment_y, int(start_point[1]), int(end_point[1]))
+
         self.grid_columns = max(MIN_GRID_COLUMNS, map_columns, max_segment_x)
         self.grid_rows = max(MIN_GRID_ROWS, map_rows, max_segment_y)
 
@@ -463,6 +573,114 @@ class MapViewport(QWidget):
         self.preview_end_point = None
         self.drawing_cancelled.emit()
         self.update()
+
+    def _build_door_from_points(self, start_point, end_point):
+        """
+        Build a door tuple from two grid points.
+        """
+        start_x = int(start_point[0])
+        start_y = int(start_point[1])
+        end_x = int(end_point[0])
+        end_y = int(end_point[1])
+
+        if start_x == end_x and start_y == end_y:
+            return None
+
+        if start_x == end_x:
+            direction_type = 0
+            raw_size = abs(end_y - start_y)
+            pos_x = start_x
+            pos_y = min(start_y, end_y)
+        else:
+            direction_type = 1
+            raw_size = abs(end_x - start_x)
+            pos_x = min(start_x, end_x)
+            pos_y = start_y
+
+        size = self._get_door_size(raw_size)
+        door_state = DOOR_STATE_CLOSED
+        light_state = LIGHT_STATE_BROKEN
+        z_offset = 0.0
+
+        if self.active_drawable_part == PART_ACTIVE_DOOR:
+            door_state = DOOR_STATE_OPEN
+            light_state = LIGHT_STATE_GREEN
+        elif self.active_drawable_part == PART_DEAD_DOOR_CLOSED:
+            door_state = DOOR_STATE_CLOSED
+            light_state = LIGHT_STATE_BROKEN
+        elif self.active_drawable_part == PART_DEAD_DOOR_JAMMED:
+            door_state = DOOR_STATE_CLOSED
+            light_state = LIGHT_STATE_BROKEN
+            z_offset = dll_registry.get_standard_door_jam_z_offset(size)
+        elif self.active_drawable_part == PART_DEAD_DOOR_OPEN:
+            door_state = DOOR_STATE_OPEN
+            light_state = LIGHT_STATE_BROKEN
+            z_offset = dll_registry.get_standard_door_dead_open_z_offset(size)
+        elif self.active_drawable_part == PART_LAB_LASER_CLOSED:
+            door_state = DOOR_STATE_CLOSED
+            light_state = LIGHT_STATE_RED
+            size = 1
+        elif self.active_drawable_part == PART_LAB_LASER_OPEN:
+            door_state = DOOR_STATE_OPEN
+            light_state = LIGHT_STATE_RED
+            size = 1
+        elif self.active_drawable_part == PART_LAB_DECORATION_DOOR:
+            door_state = DOOR_STATE_CLOSED
+            light_state = LIGHT_STATE_BROKEN
+            size = 1
+        else:
+            return None
+
+        return pos_x, pos_y, self.active_wall_type, direction_type, size, door_state, light_state, z_offset
+
+    def _get_door_size(self, raw_size: int) -> int:
+        """
+        Clamp a drawn door length to the DLL-supported size range.
+        """
+        if raw_size < 1:
+            raw_size = 1
+
+        if self.active_drawable_part in (
+            PART_LAB_LASER_CLOSED,
+            PART_LAB_LASER_OPEN,
+            PART_LAB_DECORATION_DOOR,
+        ):
+            return 1
+
+        return dll_registry.clamp_standard_door_size(raw_size)
+
+    def _get_door_grid_points(self, door: tuple) -> tuple:
+        """
+        Return start and end grid points for a door tuple.
+        """
+        pos_x = int(door[0])
+        pos_y = int(door[1])
+        direction_type = int(door[3])
+        size = int(door[4])
+
+        start_point = (pos_x, pos_y)
+        if direction_type == 0:
+            end_point = (pos_x, pos_y + size)
+        else:
+            end_point = (pos_x + size, pos_y)
+
+        return start_point, end_point
+
+    def _get_door_colors(self, door_state: int, light_state: int, z_offset: float) -> tuple:
+        """
+        Return line color, dot color, and hollow flag for a door marker.
+        """
+        if light_state == LIGHT_STATE_RED:
+            return "#2E8B57", "#32CD32", False
+        if light_state == LIGHT_STATE_GREEN:
+            return "#32CD32", "#00FF00", False
+
+        if z_offset == 0.0:
+            return "#8B0000", "#FF0000", False
+        if door_state == DOOR_STATE_CLOSED:
+            return "#D2691E", "#FFD700", False
+
+        return "#808080", "#D3D3D3", True
 
     @property
     def active_step_x(self) -> float:
@@ -571,12 +789,9 @@ class MapViewport(QWidget):
         """
         Match the old UI grid shift formula for wall profile alignment.
         """
-        divisor = 1
-
-        for wall_type in (0, 1):
-            profile = get_wall_profile(wall_type)
-            if abs(profile["step_x"] - step_x) < 0.01:
-                divisor = profile["grid_divisor"]
+        wall_type = find_wall_type_by_steps(step_x)
+        profile = get_wall_profile(wall_type)
+        divisor = profile["grid_divisor"]
 
         grid_step_x = step_x / divisor
         grid_step_y = step_y / divisor
@@ -669,12 +884,7 @@ class MapViewport(QWidget):
         ]
 
         logical_values = []
-        profile_wall_type = self.active_wall_type
-
-        for wall_type in (0, 1):
-            profile = get_wall_profile(wall_type)
-            if abs(profile["step_x"] - step_x) < 0.01 and abs(profile["step_y"] - step_y) < 0.01:
-                profile_wall_type = wall_type
+        profile_wall_type = find_wall_type_by_steps(step_x, step_y)
 
         for corner in corners:
             grid_point = self.physical_to_grid(corner, profile_wall_type)

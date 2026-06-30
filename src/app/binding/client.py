@@ -4,7 +4,7 @@ Thin client for the Auto Mapper C++ DLL.
 import ctypes
 from pathlib import Path
 
-from app.binding.structures import CDoor, CSegment, CStandardDoorZConfig, CWallProfile
+from app.binding.structures import CDoor, CDrawablePart, CSegment, CStandardDoorZConfig, CWallProfile
 from app.config import DLL_PATH
 from app.logger import logger
 from app.project.data import ProjectData
@@ -67,6 +67,15 @@ class AutoMapperLibClient:
         ]
         self.lib.get_standard_door_jam_z_offset.restype = ctypes.c_bool
 
+        self.lib.get_standard_door_size_count.argtypes = []
+        self.lib.get_standard_door_size_count.restype = ctypes.c_int
+
+        self.lib.get_standard_door_size_at.argtypes = [
+            ctypes.c_int,
+            ctypes.POINTER(ctypes.c_int),
+        ]
+        self.lib.get_standard_door_size_at.restype = ctypes.c_bool
+
         self.lib.get_wall_profile_count.argtypes = []
         self.lib.get_wall_profile_count.restype = ctypes.c_int
 
@@ -82,7 +91,19 @@ class AutoMapperLibClient:
         ]
         self.lib.get_wall_profile.restype = ctypes.c_bool
 
-    def load_standard_door_z_config(self) -> dict:
+        self.lib.get_wall_drawable_part_count.argtypes = [
+            ctypes.c_int,
+        ]
+        self.lib.get_wall_drawable_part_count.restype = ctypes.c_int
+
+        self.lib.get_wall_drawable_part_at.argtypes = [
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.POINTER(CDrawablePart),
+        ]
+        self.lib.get_wall_drawable_part_at.restype = ctypes.c_bool
+
+    def load_standard_door_z_config(self, sizes: list = None) -> dict:
         """
         Load standard door z-offset configs from the DLL.
         """
@@ -90,8 +111,10 @@ class AutoMapperLibClient:
             return {}
 
         configs = {}
+        if sizes is None:
+            sizes = self.load_standard_door_sizes()
 
-        for size in (1, 2):
+        for size in sizes:
             config = CStandardDoorZConfig()
             success = self.lib.get_standard_door_z_config(size, ctypes.byref(config))
             if success:
@@ -99,6 +122,29 @@ class AutoMapperLibClient:
 
         logger.info(f"Loaded standard door z config: {sorted(configs.keys())}")
         return configs
+
+    def load_standard_door_sizes(self) -> list:
+        """
+        Load supported standard door sizes from the DLL.
+        """
+        if not self.load():
+            return []
+
+        sizes = []
+        count = self.lib.get_standard_door_size_count()
+
+        index = 0
+        while index < count:
+            size_value = ctypes.c_int()
+            success = self.lib.get_standard_door_size_at(index, ctypes.byref(size_value))
+            if success:
+                sizes.append(size_value.value)
+
+            index += 1
+
+        sizes.sort()
+        logger.info(f"Loaded standard door sizes: {sizes}")
+        return sizes
 
     def load_wall_profiles(self) -> dict:
         """
@@ -230,5 +276,34 @@ class AutoMapperLibClient:
             "offset_p_x": float(c_profile.offset_p_x),
             "offset_p_y": float(c_profile.offset_p_y),
             "grid_divisor": int(c_profile.grid_divisor),
+            "drawable_parts": self._load_drawable_parts(int(c_profile.wall_type)),
         }
         return profile
+
+    def _load_drawable_parts(self, wall_type: int) -> list:
+        """
+        Load drawable part metadata for a wall profile.
+        """
+        parts = []
+        count = self.lib.get_wall_drawable_part_count(wall_type)
+
+        index = 0
+        while index < count:
+            c_part = CDrawablePart()
+            success = self.lib.get_wall_drawable_part_at(wall_type, index, ctypes.byref(c_part))
+            if success:
+                part_id = self._decode_c_string(c_part.part_id)
+                parts.append(part_id)
+
+            index += 1
+
+        return parts
+
+    def _decode_c_string(self, value) -> str:
+        """
+        Decode a DLL-owned UTF-8 string.
+        """
+        if value is None:
+            return ""
+
+        return value.decode("utf-8")

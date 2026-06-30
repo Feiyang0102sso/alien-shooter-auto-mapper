@@ -23,18 +23,16 @@ WallBuilder::WallBuilder(float map_size_x, float map_size_y)
     : map_size_x_(map_size_x), map_size_y_(map_size_y) {}
 
 const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
-    // Static lookup table for wall profiles
-    static const WallProfile profiles[] = {
-        WALL_STANDARD,  // index 0
-        WALL_LAB,       // index 1
-    };
-    static constexpr int NUM_PROFILES = sizeof(profiles) / sizeof(profiles[0]);
-
-    if (wall_type >= 0 && wall_type < NUM_PROFILES) {
-        return profiles[wall_type];
+    if (wall_type == WALL_TYPE_STANDARD) {
+        return WALL_STANDARD;
     }
+
+    if (wall_type == WALL_TYPE_LAB) {
+        return WALL_LAB;
+    }
+
     Logger::warning("Unknown wall_type={}, falling back to STANDARD", wall_type);
-    return profiles[WALL_TYPE_STANDARD];
+    return WALL_STANDARD;
 }
 
 const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {

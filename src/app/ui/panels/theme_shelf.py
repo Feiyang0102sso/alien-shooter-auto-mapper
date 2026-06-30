@@ -7,11 +7,16 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from app.editor.wall_profiles import WALL_TYPE_LAB, WALL_TYPE_STANDARD, get_wall_profile
+from app.editor.wall_profiles import get_default_wall_type, get_wall_profiles
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DEMO_IMAGE_ROOT = PROJECT_ROOT / "_ui_html_demo"
+
+PREVIEW_IMAGES = {
+    "base": DEMO_IMAGE_ROOT / "base_preview.png",
+    "lab": DEMO_IMAGE_ROOT / "wall_preview.png",
+}
 
 
 class ThemeShelfPanel(QWidget):
@@ -24,7 +29,7 @@ class ThemeShelfPanel(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("themeShelfPanel")
-        self.selected_wall_type = WALL_TYPE_STANDARD
+        self.selected_wall_type = get_default_wall_type()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 14, 14, 14)
@@ -34,23 +39,16 @@ class ThemeShelfPanel(QWidget):
         title.setObjectName("panelTitle")
         layout.addWidget(title)
 
-        standard_profile = get_wall_profile(WALL_TYPE_STANDARD)
-        lab_profile = get_wall_profile(WALL_TYPE_LAB)
-
-        self._add_card(
-            layout,
-            WALL_TYPE_STANDARD,
-            standard_profile["short_label"],
-            standard_profile["description"],
-            DEMO_IMAGE_ROOT / "base_preview.png",
-        )
-        self._add_card(
-            layout,
-            WALL_TYPE_LAB,
-            lab_profile["short_label"],
-            lab_profile["description"],
-            DEMO_IMAGE_ROOT / "wall_preview.png",
-        )
+        for profile in get_wall_profiles():
+            preview_key = profile["preview_key"]
+            image_path = PREVIEW_IMAGES.get(preview_key)
+            self._add_card(
+                layout,
+                profile["wall_type"],
+                profile["short_label"],
+                profile["description"],
+                image_path,
+            )
 
         layout.addStretch(1)
 
@@ -60,7 +58,7 @@ class ThemeShelfPanel(QWidget):
         wall_type: int,
         title_text: str,
         detail_text: str,
-        image_path: Path,
+        image_path: Path | None,
     ) -> None:
         card = QFrame()
         card.setObjectName("themeCard")
@@ -89,8 +87,8 @@ class ThemeShelfPanel(QWidget):
 
         layout.addWidget(card)
 
-    def _load_preview(self, image: QLabel, image_path: Path) -> None:
-        if image_path.exists():
+    def _load_preview(self, image: QLabel, image_path: Path | None) -> None:
+        if image_path is not None and image_path.exists():
             pixmap = QPixmap(str(image_path))
             image.setPixmap(pixmap.scaled(260, 118, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
             return

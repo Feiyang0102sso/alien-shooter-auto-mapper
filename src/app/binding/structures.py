@@ -68,3 +68,13 @@ class CWallProfile(ctypes.Structure):
         ("offset_p_y", ctypes.c_float),
         ("grid_divisor", ctypes.c_int),
     ]
+
+
+class CDrawablePart(ctypes.Structure):
+    """
+    C-compatible drawable part metadata.
+    """
+
+    _fields_ = [
+        ("part_id", ctypes.c_char_p),
+    ]

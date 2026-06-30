@@ -4,6 +4,7 @@ JSON import and export helpers for the editor project data.
 import json
 from pathlib import Path
 
+from app.editor.wall_profiles import get_default_wall_type
 from app.project.data import ProjectData
 
 
@@ -126,7 +127,7 @@ def parse_segments(data: dict) -> list:
         y1 = int(start.get("y", 0))
         x2 = int(end.get("x", 0))
         y2 = int(end.get("y", 0))
-        wall_type = int(json_segment.get("wall_type", 0))
+        wall_type = int(json_segment.get("wall_type", get_default_wall_type()))
 
         segment = ((x1, y1), (x2, y2), wall_type)
         segments.append(segment)
@@ -160,7 +161,7 @@ def parse_doors(data: dict) -> list:
 
         x = int(position.get("x", 0))
         y = int(position.get("y", 0))
-        wall_type = int(json_door.get("wall_type", 0))
+        wall_type = int(json_door.get("wall_type", get_default_wall_type()))
         direction_type = int(json_door.get("direction_type", 0))
         size = int(json_door.get("size", 1))
         door_state = int(json_door.get("door_state", 0))

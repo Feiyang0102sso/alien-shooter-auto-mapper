@@ -57,6 +57,10 @@ struct CWallProfile {
     int grid_divisor;
 };
 
+struct CDrawablePart {
+    const char* part_id;
+};
+
 /**
  * @brief Build map from segments and doors, write to file.
  */
@@ -89,6 +93,19 @@ AUTO_MAPPER_API bool get_standard_door_jam_z_offset(
 );
 
 /**
+ * @brief Return number of supported standard door sizes.
+ */
+AUTO_MAPPER_API int get_standard_door_size_count();
+
+/**
+ * @brief Read supported standard door size by index.
+ */
+AUTO_MAPPER_API bool get_standard_door_size_at(
+    int index,
+    int* size
+);
+
+/**
  * @brief Return number of C++ supported wall profiles.
  */
 AUTO_MAPPER_API int get_wall_profile_count();
@@ -107,6 +124,22 @@ AUTO_MAPPER_API bool get_wall_profile_type_at(
 AUTO_MAPPER_API bool get_wall_profile(
     int wall_type,
     CWallProfile* profile
+);
+
+/**
+ * @brief Return number of drawable parts for a wall profile.
+ */
+AUTO_MAPPER_API int get_wall_drawable_part_count(
+    int wall_type
+);
+
+/**
+ * @brief Read one drawable part by wall profile and part index.
+ */
+AUTO_MAPPER_API bool get_wall_drawable_part_at(
+    int wall_type,
+    int index,
+    CDrawablePart* part
 );
 
 } // extern "C"

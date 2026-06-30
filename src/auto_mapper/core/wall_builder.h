@@ -78,6 +78,14 @@ inline constexpr WallProfile WALL_LAB = {
     .grid_divisor = 2
 };
 
+inline constexpr int SUPPORTED_WALL_TYPES[] = {
+    WALL_TYPE_STANDARD,
+    WALL_TYPE_LAB
+};
+
+inline constexpr int SUPPORTED_WALL_TYPE_COUNT =
+    static_cast<int>(sizeof(SUPPORTED_WALL_TYPES) / sizeof(SUPPORTED_WALL_TYPES[0]));
+
 // ── Pre-defined floor and ceiling profiles ──
 inline constexpr int FLOOR_TYPE_STANDARD = 0;
 inline constexpr int FLOOR_TYPE_LAB      = 1;

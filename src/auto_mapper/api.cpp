@@ -7,16 +7,68 @@
 
 extern "C" {
 
-static constexpr int SUPPORTED_WALL_TYPES[] = {
-    auto_mapper::core::WALL_TYPE_STANDARD,
-    auto_mapper::core::WALL_TYPE_LAB
+static constexpr CDrawablePart STANDARD_DRAWABLE_PARTS[] = {
+    {"wall_body"},
+    {"active_door"},
+    {"dead_door_closed"},
+    {"dead_door_jammed"},
+    {"dead_door_open"}
 };
+
+static constexpr CDrawablePart LAB_DRAWABLE_PARTS[] = {
+    {"wall_body"},
+    {"lab_laser_closed"},
+    {"lab_laser_open"},
+    {"lab_decoration_door"}
+};
+
+static constexpr int STANDARD_DOOR_SIZES[] = {
+    auto_mapper::core::DOOR_STANDARD.small.span_steps,
+    auto_mapper::core::DOOR_STANDARD.large.span_steps
+};
+
+static bool is_supported_wall_type(int wall_type) {
+    for (int i = 0; i < auto_mapper::core::SUPPORTED_WALL_TYPE_COUNT; ++i) {
+        if (auto_mapper::core::SUPPORTED_WALL_TYPES[i] == wall_type) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static const CDrawablePart* get_drawable_parts(int wall_type, int& count) {
+    if (wall_type == auto_mapper::core::WALL_TYPE_STANDARD) {
+        count = static_cast<int>(sizeof(STANDARD_DRAWABLE_PARTS) / sizeof(STANDARD_DRAWABLE_PARTS[0]));
+        return STANDARD_DRAWABLE_PARTS;
+    }
+
+    if (wall_type == auto_mapper::core::WALL_TYPE_LAB) {
+        count = static_cast<int>(sizeof(LAB_DRAWABLE_PARTS) / sizeof(LAB_DRAWABLE_PARTS[0]));
+        return LAB_DRAWABLE_PARTS;
+    }
+
+    count = 0;
+    return nullptr;
+}
 
 AUTO_MAPPER_API bool get_standard_door_z_config(
     int size,
     CStandardDoorZConfig* config
 ) {
     if (config == nullptr) {
+        return false;
+    }
+
+    bool known_size = false;
+    int count = static_cast<int>(sizeof(STANDARD_DOOR_SIZES) / sizeof(STANDARD_DOOR_SIZES[0]));
+    for (int i = 0; i < count; ++i) {
+        if (STANDARD_DOOR_SIZES[i] == size) {
+            known_size = true;
+        }
+    }
+
+    if (!known_size) {
         return false;
     }
 
@@ -37,12 +89,45 @@ AUTO_MAPPER_API bool get_standard_door_jam_z_offset(
         return false;
     }
 
+    bool known_size = false;
+    int count = static_cast<int>(sizeof(STANDARD_DOOR_SIZES) / sizeof(STANDARD_DOOR_SIZES[0]));
+    for (int i = 0; i < count; ++i) {
+        if (STANDARD_DOOR_SIZES[i] == size) {
+            known_size = true;
+        }
+    }
+
+    if (!known_size) {
+        return false;
+    }
+
     *z_offset = auto_mapper::core::get_random_standard_jam_z_offset(size);
     return true;
 }
 
+AUTO_MAPPER_API int get_standard_door_size_count() {
+    return static_cast<int>(sizeof(STANDARD_DOOR_SIZES) / sizeof(STANDARD_DOOR_SIZES[0]));
+}
+
+AUTO_MAPPER_API bool get_standard_door_size_at(
+    int index,
+    int* size
+) {
+    if (size == nullptr) {
+        return false;
+    }
+
+    int count = get_standard_door_size_count();
+    if (index < 0 || index >= count) {
+        return false;
+    }
+
+    *size = STANDARD_DOOR_SIZES[index];
+    return true;
+}
+
 AUTO_MAPPER_API int get_wall_profile_count() {
-    return static_cast<int>(sizeof(SUPPORTED_WALL_TYPES) / sizeof(SUPPORTED_WALL_TYPES[0]));
+    return auto_mapper::core::SUPPORTED_WALL_TYPE_COUNT;
 }
 
 AUTO_MAPPER_API bool get_wall_profile_type_at(
@@ -58,7 +143,7 @@ AUTO_MAPPER_API bool get_wall_profile_type_at(
         return false;
     }
 
-    *wall_type = SUPPORTED_WALL_TYPES[index];
+    *wall_type = auto_mapper::core::SUPPORTED_WALL_TYPES[index];
     return true;
 }
 
@@ -70,15 +155,7 @@ AUTO_MAPPER_API bool get_wall_profile(
         return false;
     }
 
-    bool known_wall_type = false;
-    int count = get_wall_profile_count();
-    for (int i = 0; i < count; ++i) {
-        if (SUPPORTED_WALL_TYPES[i] == wall_type) {
-            known_wall_type = true;
-        }
-    }
-
-    if (!known_wall_type) {
+    if (!is_supported_wall_type(wall_type)) {
         return false;
     }
 
@@ -97,6 +174,37 @@ AUTO_MAPPER_API bool get_wall_profile(
     profile->offset_p_x = cpp_profile.offset_p_x;
     profile->offset_p_y = cpp_profile.offset_p_y;
     profile->grid_divisor = cpp_profile.grid_divisor;
+    return true;
+}
+
+AUTO_MAPPER_API int get_wall_drawable_part_count(
+    int wall_type
+) {
+    int count = 0;
+    get_drawable_parts(wall_type, count);
+    return count;
+}
+
+AUTO_MAPPER_API bool get_wall_drawable_part_at(
+    int wall_type,
+    int index,
+    CDrawablePart* part
+) {
+    if (part == nullptr) {
+        return false;
+    }
+
+    int count = 0;
+    const CDrawablePart* parts = get_drawable_parts(wall_type, count);
+    if (parts == nullptr) {
+        return false;
+    }
+
+    if (index < 0 || index >= count) {
+        return false;
+    }
+
+    part->part_id = parts[index].part_id;
     return true;
 }
 

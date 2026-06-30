@@ -16,7 +16,8 @@ from app.project.io import load_project_json, save_project_json
 from app.ui.canvas.viewport import MapViewport
 from app.ui.panels.inspector import InspectorPanel
 from app.ui.panels.theme_shelf import ThemeShelfPanel
-from app.editor.wall_profiles import apply_wall_profiles_from_dll, get_wall_profile
+from app.binding.dll_registry import register_all_from_dll
+from app.editor.wall_profiles import get_wall_profile
 
 
 class MainWindow(QMainWindow):
@@ -30,7 +31,7 @@ class MainWindow(QMainWindow):
         self.resize(1440, 900)
 
         self.auto_mapper_client = AutoMapperLibClient()
-        self._load_wall_profiles_from_dll()
+        self._register_dll_metadata()
 
         self.viewport = MapViewport()
         self.theme_shelf = ThemeShelfPanel()
@@ -44,16 +45,15 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Ready")
         logger.debug("Main window initialized")
 
-    def _load_wall_profiles_from_dll(self) -> None:
+    def _register_dll_metadata(self) -> None:
         """
-        Load wall profile numeric values from the DLL before UI widgets are built.
+        Register DLL metadata before UI widgets are built.
         """
-        wall_profiles = self.auto_mapper_client.load_wall_profiles()
-        if wall_profiles:
-            apply_wall_profiles_from_dll(wall_profiles)
+        registered = register_all_from_dll(self.auto_mapper_client)
+        if registered:
             return
 
-        message = "Failed to load wall profiles from DLL. Build the C++ DLL before starting the UI."
+        message = "Failed to register DLL metadata. Build the C++ DLL before starting the UI."
         logger.error(message)
         QMessageBox.critical(self, "DLL Error", message)
         raise RuntimeError(message)
@@ -125,6 +125,7 @@ class MainWindow(QMainWindow):
         self.viewport.view_changed.connect(self._on_view_changed)
         self.viewport.segment_started.connect(self._on_segment_started)
         self.viewport.segment_created.connect(self._on_segment_created)
+        self.viewport.door_created.connect(self._on_door_created)
         self.viewport.drawing_cancelled.connect(self._on_drawing_cancelled)
         self.inspector.map_size_applied.connect(self._on_map_size_applied)
         self.inspector.drawable_part_changed.connect(self._on_drawable_part_changed)
@@ -169,6 +170,14 @@ class MainWindow(QMainWindow):
         Show the committed wall segment.
         """
         message = f"Wall segment #{count}: ({x1}, {y1}) -> ({x2}, {y2})"
+        self.statusBar().showMessage(message)
+        logger.info(message)
+
+    def _on_door_created(self, grid_x: int, grid_y: int, count: int) -> None:
+        """
+        Show the committed door marker.
+        """
+        message = f"Door #{count}: ({grid_x}, {grid_y})"
         self.statusBar().showMessage(message)
         logger.info(message)
 
@@ -243,7 +252,7 @@ class MainWindow(QMainWindow):
             logger.error(f"Failed to export JSON: {error}")
             return
 
-        message = f"Exported {len(project_data.segments)} wall segments: {file_path}"
+        message = f"Exported {len(project_data.segments)} wall segments and {len(project_data.doors)} doors: {file_path}"
         self.statusBar().showMessage(message)
         logger.info(message)
 
@@ -278,10 +287,11 @@ class MainWindow(QMainWindow):
             return
 
         self.viewport.set_segments(project_data.segments)
+        self.viewport.set_doors(project_data.doors)
         self.inspector.set_map_size(project_data.map_size_x, project_data.map_size_y)
         self.viewport.set_map_size(project_data.map_size_x, project_data.map_size_y)
 
-        message = f"Imported {len(project_data.segments)} wall segments: {file_path}"
+        message = f"Imported {len(project_data.segments)} wall segments and {len(project_data.doors)} doors: {file_path}"
         self.statusBar().showMessage(message)
         logger.info(message)
 
@@ -290,8 +300,8 @@ class MainWindow(QMainWindow):
         Generate a .map file through the C++ DLL.
         """
         project_data = self._collect_project_data()
-        if not project_data.segments:
-            QMessageBox.warning(self, "Generate .MAP", "Draw wall segments before generating a map.")
+        if not project_data.segments and not project_data.doors:
+            QMessageBox.warning(self, "Generate .MAP", "Draw wall segments or doors before generating a map.")
             return
 
         selected_path = QFileDialog.getSaveFileName(
@@ -347,7 +357,7 @@ class MainWindow(QMainWindow):
             map_size_x=map_size[0],
             map_size_y=map_size[1],
             segments=self.viewport.get_segments(),
-            doors=[],
+            doors=self.viewport.get_doors(),
         )
         return project_data
 
