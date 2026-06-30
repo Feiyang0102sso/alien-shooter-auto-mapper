@@ -1,0 +1,36 @@
+# python -m pip install -e .
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auto_mapper"
+dynamic = ["version"]
+# configure command line entry point
+# just type auto-mapper in console
+[project.scripts]
+auto-mapper = "app.main_ui:main"
+
+
+[tool.setuptools]
+# all source code is under src folder
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+# find all python package under src folder
+where = ["src"]
+
+[tool.setuptools.dynamic]
+# find variable __version__ in app.version.__version__
+version = {attr = "app.version.__version__"}
+
+
+[tool.pytest.ini_options]
+addopts = "-v --tb=short --show-capture=no"
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "pytest: run all tests (pytest)",
+    "unit: unit tests under tests/unit (pytest --unit)",
+]

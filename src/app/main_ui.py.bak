@@ -4,6 +4,9 @@ import ctypes
 import json
 from pathlib import Path
 
+from app.config import init_app_env
+from app.logger import logger
+
 class CSegment(ctypes.Structure):
     _fields_ = [
         ("x1", ctypes.c_int),
@@ -237,7 +240,7 @@ class AutoMapperUI:
 
     def _load_auto_mapper_lib(self):
         if not DLL_PATH.exists():
-            print(f"DLL not found: {DLL_PATH}")
+            logger.warning(f"DLL not found: {DLL_PATH}")
             return None
 
         return ctypes.CDLL(str(DLL_PATH))
@@ -260,7 +263,7 @@ class AutoMapperUI:
             if success:
                 configs[size] = config
 
-        print(f"Loaded standard door z config from C++: {sorted(configs.keys())}")
+        logger.info(f"Loaded standard door z config from C++: {sorted(configs.keys())}")
         return configs
 
     def _get_standard_door_z_config(self, size):
@@ -898,7 +901,11 @@ class AutoMapperUI:
         except Exception as e:
             messagebox.showerror("Exception", f"Failed to interact with DLL: {str(e)}")
 
-if __name__ == "__main__":
+def main():
+    init_app_env()
     root = tk.Tk()
     app = AutoMapperUI(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()

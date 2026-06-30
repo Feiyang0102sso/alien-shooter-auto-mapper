@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Mapper - 资产大图鉴与布局原型 (合并墙/门版)</title>
+    <meta name="description" content="一个直观的地图编辑器概念布局，具有超显眼的大型主题材质卡片预览，将墙体与各种门体深度整合，完美解决傻瓜式选型需求。">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── 核心设计系统 ── */
+        :root {
+            --bg-base: #0c0f16;
+            --bg-canvas: #06080b;
+            --color-text: #e1e7f0;
+            --color-text-muted: #798396;
+            
+            /* 区域色块定义 - 醒目的半透明区分 */
+            --color-menu: rgba(255, 193, 7, 0.08);       /* 顶部黄色 */
+            --color-menu-border: rgba(255, 193, 7, 0.25);
+            
+            --color-tools: rgba(156, 39, 176, 0.08);     /* 工具箱紫色 */
+            --color-tools-border: rgba(156, 39, 176, 0.25);
+            
+            --color-shelf: rgba(0, 242, 254, 0.05);       /* 材质展厅蓝色 */
+            --color-shelf-border: rgba(0, 242, 254, 0.25);
+            
+            --color-inspector: rgba(76, 175, 80, 0.08);   /* 属性检查器绿色 */
+            --color-inspector-border: rgba(76, 175, 80, 0.25);
+            
+            --color-status: rgba(244, 67, 54, 0.08);      /* 底部状态栏红色 */
+            --color-status-border: rgba(244, 67, 54, 0.25);
+
+            --font-main: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            
+            /* 霓虹发光色 */
+            --theme-glow-green: 0 0 15px rgba(57, 255, 20, 0.25);
+            --theme-glow-blue: 0 0 15px rgba(0, 242, 254, 0.25);
+            --theme-glow-yellow: 0 0 15px rgba(255, 223, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--color-text);
+            font-family: var(--font-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── 1. 顶部菜单与属性条 ── */
+        header {
+            background-color: var(--color-menu);
+            border: 1px solid var(--color-menu-border);
+            margin: 8px 8px 4px 8px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .header-title {
+            font-weight: 700;
+            color: #ffc107;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .header-desc {
+            font-size: 11px;
+            color: var(--color-text-muted);
+        }
+
+        /* ── 2. 主体三栏布局 ── */
+        #main-container {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            padding: 4px 8px;
+            height: calc(100vh - 160px);
+        }
+
+        /* 2.1 极简窄工具条 (最左侧) */
+        #tools-toolbar {
+            width: 54px;
+            background-color: var(--color-tools);
+            border: 1px solid var(--color-tools-border);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+            gap: 12px;
+        }
+
+        .tool-icon-btn {
+            width: 38px;
+            height: 38px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .tool-icon-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--color-text-muted);
+            transition: fill 0.2s ease;
+        }
+
+        .tool-icon-btn:hover {
+            border-color: #e040fb;
+            background: rgba(224, 64, 251, 0.05);
+        }
+
+        .tool-icon-btn:hover svg {
+            fill: #e040fb;
+        }
+
+        .tool-icon-btn.active {
+            border-color: #e040fb;
+            background: rgba(224, 64, 251, 0.15);
+            box-shadow: 0 0 10px rgba(224, 64, 251, 0.2);
+        }
+
+        .tool-icon-btn.active svg {
+            fill: #e040fb;
+        }
+
+        /* 工具气泡提示 */
+        .tool-icon-btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 64px;
+            background: #0f1622;
+            border: 1px solid #e040fb;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            color: #e040fb;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+            z-index: 1000;
+        }
+
+        .tool-icon-btn:hover::after {
+            opacity: 1;
+        }
+
+        /* 2.2 超显眼的主题材质大货架 (左侧 2) */
+        #theme-shelf-panel {
+            width: 320px;
+            background-color: var(--color-shelf);
+            border: 1px solid var(--color-shelf-border);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+        }
+
+        .shelf-title {
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #00f2fe;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(0, 242, 254, 0.15);
+            padding-bottom: 6px;
+        }
+
+        .theme-cards-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }
+
+        /* 主题大卡片 */
+        .theme-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .theme-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .theme-card-img-container {
+            width: 100%;
+            height: 90px;
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .theme-card-img-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-card:hover .theme-card-img-container img {
+            transform: scale(1.1);
+        }
+
+        .theme-card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .theme-card-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--color-text);
+        }
+
+        .theme-card-desc {
+            font-size: 11px;
+            color: var(--color-text-muted);
+            line-height: 1.3;
+        }
+
+        /* 选中状态 */
+        .theme-card.active-lab {
+            border-color: #39ff14;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.15);
+            background: rgba(57, 255, 20, 0.03);
+        }
+        .theme-card.active-lab .theme-card-title { color: #39ff14; }
+
+        .theme-card.active-base {
+            border-color: #00f2fe;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
+            background: rgba(0, 242, 254, 0.03);
+        }
+        .theme-card.active-base .theme-card-title { color: #00f2fe; }
+
+        .theme-card.active-city {
+            border-color: #ffdf00;
+            box-shadow: 0 0 15px rgba(255, 223, 0, 0.15);
+            background: rgba(255, 223, 0, 0.03);
+        }
+        .theme-card.active-city .theme-card-title { color: #ffdf00; }
+
+        /* 2.3 中间网格画布 (Viewport) */
+        #canvas-viewport {
+            flex: 1;
+            background-color: var(--bg-canvas);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #grid-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .canvas-overlay-info {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 14px;
+            border-radius: 6px;
+            max-width: 280px;
+            font-size: 11px;
+            text-align: center;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            bottom: 20px;
+        }
+
+        /* 2.4 右侧属性细节面板 (Inspector) */
+        #inspector-panel {
+            width: 250px;
+            background-color: var(--color-inspector);
+            border: 1px solid var(--color-inspector-border);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .inspector-title {
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #69f0ae;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(105, 240, 174, 0.15);
+            padding-bottom: 6px;
+        }
+
+        /* 子构件属性配置 */
+        .preview-box {
+            width: 100%;
+            height: 130px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(105, 240, 174, 0.15);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 6px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 10px rgba(105, 240, 174, 0.25));
+            transition: transform 0.3s ease;
+        }
+
+        .vid-select-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 10px;
+        }
+
+        .vid-select-label {
+            font-size: 10px;
+            color: var(--color-text-muted);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .vid-select {
+            background: #0a0e14;
+            border: 1px solid rgba(105, 240, 174, 0.25);
+            color: var(--color-text);
+            padding: 7px;
+            border-radius: 4px;
+            font-size: 11px;
+            outline: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .vid-select:focus, .vid-select:hover {
+            border-color: #69f0ae;
+            background: #0f1520;
+        }
+
+        .vid-detail-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 6px;
+            margin-top: 10px;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .vid-detail-item {
+            color: var(--color-text-muted);
+        }
+
+        .vid-detail-value {
+            color: #69f0ae;
+            font-family: monospace;
+            text-align: right;
+            font-weight: bold;
+        }
+
+        /* ── 3. 底部状态栏 ── */
+        footer {
+            background-color: var(--color-status);
+            border: 1px solid var(--color-status-border);
+            margin: 4px 8px 8px 8px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .footer-title {
+            font-weight: 700;
+            color: #ff5252;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── 1. 顶部栏 ── -->
+    <header>
+        <div class="header-title-group">
+            <div class="header-title">区域 1: 顶栏 (Top Action Bar)</div>
+            <div class="header-desc">
+                保存、导入、清空，或点击 F5 直接将画好的几何轮廓调用 C++ DLL 编译为孤胆枪手 .MAP 地图文件。
+            </div>
+        </div>
+        <div style="font-size: 11px; color: var(--color-text-muted);">
+            对齐网格: <span style="color:#ffc107;">40×28 (标准)</span>
+        </div>
+    </header>
+
+    <!-- ── 2. 中间三栏主体 ── -->
+    <main id="main-container">
+        
+        <!-- 2.1 极简工具栏 (画笔选择) -->
+        <nav id="tools-toolbar">
+            <div class="tool-icon-btn active" data-tool="select" data-tooltip="选择元素 (V)">
+                <svg viewBox="0 0 24 24"><path d="M7 2l12 11.2-5.8.8 3.5 6-1.7 1-3.5-6-4.5 4z"/></svg>
+            </div>
+            <div class="tool-icon-btn" data-tool="draw" data-tooltip="划线绘制 (W)">
+                <svg viewBox="0 0 24 24"><path d="M19 4H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 14H5v-4h5v4zm0-6H5V8h5v4zm9 6h-7v-4h7v4zm0-6h-7V8h7v4z"/></svg>
+            </div>
+            <div class="tool-icon-btn" data-tool="eraser" data-tooltip="擦除构件 (E)">
+                <svg viewBox="0 0 24 24"><path d="M16.24 7.76C15.07 6.59 13.54 6 12 6v6l-4.24 4.24c2.34 2.34 6.14 2.34 8.49 0l4.24-4.24-4.25-4.24zM6.1 12c0-1.66.67-3.16 1.76-4.24L12 12H6.1z"/></svg>
+            </div>
+            <div class="tool-icon-btn" data-tool="pan" data-tooltip="拖拽画布 (Space)">
+                <svg viewBox="0 0 24 24"><path d="M23 12l-4-4v3H13V5h3l-4-4-4 4h3v6H5V8l-4 4 4 4v-3h6v6H8l4 4 4-4h-3v-6h6v3z"/></svg>
+            </div>
+        </nav>
+
+        <!-- 2.2 超显眼的主题材质大货架 (大图+大标题，没玩过的也能看懂) -->
+        <aside id="theme-shelf-panel">
+            <div class="shelf-title">区域 2: 选择墙壁/场景组合 (Visual Themes)</div>
+            
+            <div class="theme-cards-container">
+                
+                <!-- 卡片 1: 实验室 -->
+                <div class="theme-card active-lab" id="card-lab" onclick="selectTheme('vid_std_lab')">
+                    <div class="theme-card-img-container">
+                        <img src="wall_preview.png" alt="Lab Preview">
+                    </div>
+                    <div class="theme-card-info">
+                        <div class="theme-card-title">🧪 实验室风格 (Lab Green)</div>
+                        <div class="theme-card-desc">充满科幻能量管道、绿光合金钢板，代表研究所及中后期高科技关卡。</div>
+                    </div>
+                </div>
+
+                <!-- 卡片 2: 军事基地 -->
+                <div class="theme-card" id="card-base" onclick="selectTheme('vid_std_rust')">
+                    <div class="theme-card-img-container">
+                        <img src="base_preview.png" alt="Base Preview">
+                    </div>
+                    <div class="theme-card-info">
+                        <div class="theme-card-title">🔩 军事基地 (Military Base)</div>
+                        <div class="theme-card-desc">厚重、带有斑驳铁锈的装甲防护板。孤胆枪手最经典的关卡前期风格。</div>
+                    </div>
+                </div>
+
+                <!-- 卡片 3: 城市街区 -->
+                <div class="theme-card" id="card-city" onclick="selectTheme('vid_std_brick')">
+                    <div class="theme-card-img-container">
+                        <img src="city_preview.png" alt="City Preview">
+                    </div>
+                    <div class="theme-card-info">
+                        <div class="theme-card-title">🧱 城市街区 (City Ruin)</div>
+                        <div class="theme-card-desc">地表废墟红砖墙、沥青路，表现外星人入侵后的破败城市建筑。</div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- 2.3 中间画布 (2.5D轴测斜线网格) -->
+        <section id="canvas-viewport">
+            <canvas id="grid-canvas"></canvas>
+            
+            <div class="canvas-overlay-info">
+                <div style="font-weight: 700; color: #00f2fe; margin-bottom: 4px;">区域 3: 2.5D 轴测网格画布</div>
+                <span style="color: #a0aec0;">直接在这里沿斜向网格拉线或点击放置选定的构件。</span>
+            </div>
+        </section>
+
+        <!-- 2.4 右侧构件配置器 (合并墙体/门) -->
+        <aside class="side-panel" id="inspector-panel">
+            <div>
+                <div class="inspector-title">区域 4: 构件属性 (Inspector)</div>
+                <div class="panel-body">
+                    
+                    <span style="font-size: 11px; color: var(--color-text-muted);">构件 2.5D 实时图鉴：</span>
+                    <!-- 预览图 -->
+                    <div class="preview-box">
+                        <img id="inspector-preview-img" src="wall_preview.png" alt="Component Preview">
+                    </div>
+                    
+                    <!-- 墙体与各种门合并在同个预设包的下拉框里 -->
+                    <div class="vid-select-group">
+                        <span class="vid-select-label">选择构件细分类型:</span>
+                        <select class="vid-select" id="component-type-combo" onchange="onComponentTypeChanged()">
+                            <option value="wall">🧱 墙体主体 (Wall Body)</option>
+                            <option value="door_a">🚪 标准安全门 (门 A)</option>
+                            <option value="door_b">🔒 激光防爆门 (门 B)</option>
+                            <option value="prop">🏮 附属装饰物/障碍 (Other)</option>
+                        </select>
+                    </div>
+
+                    <!-- 对应构件的具体资源 VID -->
+                    <div class="vid-detail-grid">
+                        <div class="vid-detail-item">主资源 (Main VID)</div>
+                        <div class="vid-detail-value" id="vid-val-main">VID: 0152 [绿管]</div>
+                        
+                        <div class="vid-detail-item">边界配饰 (Edge)</div>
+                        <div class="vid-detail-value" id="vid-val-edge">VID: 0154</div>
+
+                        <div class="vid-detail-item">转弯配件 (Corner)</div>
+                        <div class="vid-detail-value" id="vid-val-corner">VID: 0179</div>
+                    </div>
+
+                </div>
+            </div>
+            
+            <div style="font-size: 10px; color: var(--color-text-muted); line-height: 1.3;">
+                💡 <strong>操作流程：</strong>
+                <br>1. 左侧大图选“风格主题”
+                <br>2. 右侧选择“画墙”或“画门”
+                <br>3. 在中间斜线网格上开始画！
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- ── 3. 底部区域 ── -->
+    <footer>
+        <div class="footer-title">区域 5: 状态栏 (Status Bar)</div>
+        <div style="font-size: 11px; text-align: right; color: var(--color-text-muted);">
+            当前主题: <span id="status-theme" style="color: #69f0ae; font-weight: bold;">Lab 实验室风格</span> | 
+            画笔构件: <span id="status-comp" style="color: #00f2fe; font-weight: bold;">墙体主体</span>
+        </div>
+    </footer>
+
+    <!-- ── 交互数据逻辑与 Canvas 2.5D 网格渲染 ── -->
+    <script>
+        // 三大主题极其对应的子部件 VID 数据字典
+        const THEME_DATA = {
+            vid_std_lab: {
+                name: "Lab 实验室风格",
+                image: "wall_preview.png",
+                gridColor: 'rgba(57, 255, 20, 0.12)', // 绿色网格
+                glowClass: 'active-lab',
+                components: {
+                    wall: { vid: "VID: 0152 [绿管]", edge: "VID: 0154", corner: "VID: 0179", preview: "wall_preview.png" },
+                    door_a: { vid: "VID: 0188 [滑门]", edge: "VID: 0154", corner: "VID: 0179", preview: "wall_preview.png" },
+                    door_b: { vid: "VID: 0204 [激光]", edge: "VID: 0154", corner: "VID: 0179", preview: "wall_preview.png" },
+                    prop: { vid: "VID: 0210 [冷却罐]", edge: "—", corner: "—", preview: "wall_preview.png" }
+                }
+            },
+            vid_std_rust: {
+                name: "Base 军事基地",
+                image: "base_preview.png",
+                gridColor: 'rgba(0, 242, 254, 0.12)', // 蓝色网格
+                glowClass: 'active-base',
+                components: {
+                    wall: { vid: "VID: 0042 [铁锈]", edge: "VID: 0045", corner: "VID: 0088", preview: "base_preview.png" },
+                    door_a: { vid: "VID: 0052 [气密]", edge: "VID: 0045", corner: "VID: 0088", preview: "base_preview.png" },
+                    door_b: { vid: "VID: 0070 [铁门]", edge: "VID: 0045", corner: "VID: 0088", preview: "base_preview.png" },
+                    prop: { vid: "VID: 0096 [弹药箱]", edge: "—", corner: "—", preview: "base_preview.png" }
+                }
+            },
+            vid_std_brick: {
+                name: "City 城市街区",
+                image: "city_preview.png",
+                gridColor: 'rgba(255, 223, 0, 0.12)', // 黄色网格
+                glowClass: 'active-city',
+                components: {
+                    wall: { vid: "VID: 0501 [红砖]", edge: "VID: 0503", corner: "VID: 0506", preview: "city_preview.png" },
+                    door_a: { vid: "VID: 0520 [铁栅]", edge: "VID: 0503", corner: "VID: 0506", preview: "city_preview.png" },
+                    door_b: { vid: "VID: 0540 [卷闸]", edge: "VID: 0503", corner: "VID: 0506", preview: "city_preview.png" },
+                    prop: { vid: "VID: 0599 [废弃车]", edge: "—", corner: "—", preview: "city_preview.png" }
+                }
+            }
+        };
+
+        // 当前状态
+        let currentThemeId = 'vid_std_lab';
+        let currentComponentType = 'wall';
+
+        // ── 风格卡片点击交互 ──
+        function selectTheme(themeId) {
+            currentThemeId = themeId;
+            
+            // 更新卡片激活样式
+            document.querySelectorAll('.theme-card').forEach(c => {
+                c.classList.remove('active-lab', 'active-base', 'active-city');
+            });
+            
+            const cardId = themeId === 'vid_std_lab' ? 'card-lab' :
+                           themeId === 'vid_std_rust' ? 'card-base' : 'card-city';
+            const card = document.getElementById(cardId);
+            card.classList.add(THEME_DATA[themeId].glowClass);
+
+            // 更新状态栏
+            document.getElementById('status-theme').textContent = THEME_DATA[themeId].name;
+
+            // 触发属性检查面板联动更新
+            updateInspector();
+            
+            // 重新绘制画布 (网格线条颜色联动变化！)
+            drawIsoGrid();
+        }
+
+        // ── 右侧下拉框联动交互 ──
+        function onComponentTypeChanged() {
+            currentComponentType = document.getElementById('component-type-combo').value;
+            
+            // 更新状态栏
+            const comboText = document.getElementById('component-type-combo').options[document.getElementById('component-type-combo').selectedIndex].text;
+            document.getElementById('status-comp').textContent = comboText;
+            
+            updateInspector();
+        }
+
+        // 更新 Inspector 信息 (预览图和 VID 资源码)
+        function updateInspector() {
+            const data = THEME_DATA[currentThemeId];
+            const comp = data.components[currentComponentType];
+            
+            // 1. 更新预览图
+            document.getElementById('inspector-preview-img').src = comp.preview;
+            
+            // 2. 更新明细 VID 文本
+            document.getElementById('vid-val-main').textContent = comp.vid;
+            document.getElementById('vid-val-edge').textContent = comp.edge;
+            document.getElementById('vid-val-corner').textContent = comp.corner;
+        }
+
+        // ── Canvas 轴测斜线网格背景渲染 ──
+        const canvas = document.getElementById('grid-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            drawIsoGrid();
+        }
+
+        function drawIsoGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const stepX = 40;
+            const stepY = 28;
+            
+            // 根据当前激活的主题，动态决定网格底线颜色，细节满满
+            ctx.strokeStyle = THEME_DATA[currentThemeId].gridColor;
+            ctx.lineWidth = 1;
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2 - 80;
+            const range = 25;
+
+            // 绘制主斜向线族 1
+            for (let i = -range; i <= range; i++) {
+                ctx.beginPath();
+                const p1 = toIso(i, -range, centerX, centerY, stepX, stepY);
+                const p2 = toIso(i, range, centerX, centerY, stepX, stepY);
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            }
+
+            // 绘制主斜向线族 2
+            for (let j = -range; j <= range; j++) {
+                ctx.beginPath();
+                const p1 = toIso(-range, j, centerX, centerY, stepX, stepY);
+                const p2 = toIso(range, j, centerX, centerY, stepX, stepY);
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            }
+
+            // 十字中心点
+            ctx.fillStyle = THEME_DATA[currentThemeId].gridColor.replace('0.12', '0.6');
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function toIso(x, y, originX, originY, stepX, stepY) {
+            const physX = x * stepX;
+            const physY = y * stepY;
+            const isoX = physX - physY;
+            const isoY = (physX + physY) * 0.7;
+            return { x: originX + isoX, y: originY + isoY };
+        }
+
+        // ── 窄条画笔点击排他性高亮 ──
+        document.querySelectorAll('.tool-icon-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-icon-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            // 初始化 Inspector 面板
+            updateInspector();
+        });
+    </script>
+</body>
+</html>
