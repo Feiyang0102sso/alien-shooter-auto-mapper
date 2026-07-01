@@ -13,6 +13,8 @@ from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_t
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 
 
+MIN_ZOOM = 0.002
+MAX_ZOOM = 30.0
 MIN_GRID_COLUMNS = 1
 MIN_GRID_ROWS = 1
 DOOR_STATE_CLOSED = 0
@@ -209,10 +211,10 @@ class MapViewport(QWidget):
         else:
             new_zoom = old_zoom / 1.15
 
-        if new_zoom < 0.35:
-            new_zoom = 0.35
-        if new_zoom > 3.5:
-            new_zoom = 3.5
+        if new_zoom < MIN_ZOOM:
+            new_zoom = MIN_ZOOM
+        if new_zoom > MAX_ZOOM:
+            new_zoom = MAX_ZOOM
 
         cursor_position = event.position()
         physical_before_zoom = self.screen_to_physical(cursor_position)
@@ -234,27 +236,87 @@ class MapViewport(QWidget):
         step_x = profile["step_x"]
         step_y = profile["step_y"]
 
-        # grid color no need to change now !
-        grid_pen = QPen(self.grid_color)
-        grid_pen.setWidth(1)
-        grid_pen.setCosmetic(True)
-        painter.setPen(grid_pen)
+        # 1. 计算当前缩放比例下，相邻网格线的屏幕像素间距
+        # 相邻网格点之间的物理距离是 math.sqrt(step_x**2 + step_y**2)
+        # 屏幕上的距离需要乘上当前的 zoom_factor
+        grid_physical_dist = math.sqrt(step_x * step_x + step_y * step_y)
+        grid_pixel_dist = self.zoom_factor * grid_physical_dist
 
-        min_grid, max_grid = self._get_grid_draw_range(step_x, step_y)
+        # 2. 根据相邻网格的屏幕像素间距，自适应地调整绘制步长 (LOD)
+        if grid_pixel_dist >= 12.0:
+            draw_step = 1
+        elif grid_pixel_dist >= 6.0:
+            draw_step = 2
+        elif grid_pixel_dist >= 3.0:
+            draw_step = 5
+        elif grid_pixel_dist >= 1.5:
+            draw_step = 10
+        elif grid_pixel_dist >= 0.5:
+            draw_step = 50
+        else:
+            # 缩放比例极小时，网格线会密集成一片，此时完全不绘制网格线以优化性能，仅画外边界
+            draw_step = None
 
-        row = min_grid
-        while row <= max_grid:
-            start = self.grid_to_screen(min_grid, row, self.active_wall_type)
-            end = self.grid_to_screen(max_grid, row, self.active_wall_type)
-            painter.drawLine(start, end)
-            row += 1
+        if draw_step is not None:
+            # 3. 计算可视区域内的网格行和列的范围 (Frustum Culling)
+            w = self.width()
+            h = self.height()
+            screen_corners = [
+                QPointF(0.0, 0.0),
+                QPointF(w, 0.0),
+                QPointF(0.0, h),
+                QPointF(w, h),
+            ]
 
-        column = min_grid
-        while column <= max_grid:
-            start = self.grid_to_screen(column, min_grid, self.active_wall_type)
-            end = self.grid_to_screen(column, max_grid, self.active_wall_type)
-            painter.drawLine(start, end)
-            column += 1
+            visible_x = []
+            visible_y = []
+            for corner in screen_corners:
+                physical_pt = self.screen_to_physical(corner)
+                grid_x, grid_y = self.physical_to_grid(physical_pt, self.active_wall_type)
+                visible_x.append(grid_x)
+                visible_y.append(grid_y)
+
+            # 向外扩展 1 格以防边缘网格在滚动或放大时出现突兀的空缺
+            min_visible_x = math.floor(min(visible_x)) - 1
+            max_visible_x = math.ceil(max(visible_x)) + 1
+            min_visible_y = math.floor(min(visible_y)) - 1
+            max_visible_y = math.ceil(max(visible_y)) + 1
+
+            # 网格全局有效范围限制
+            min_grid, max_grid = self._get_grid_draw_range(step_x, step_y)
+
+            grid_pen = QPen(self.grid_color)
+            grid_pen.setWidth(1)
+            grid_pen.setCosmetic(True)
+            painter.setPen(grid_pen)
+
+            # 4. 绘制行线（平行于 X 轴，从 start_x 变动到 end_x，y 固定为 row）
+            start_row = math.ceil(max(min_grid, min_visible_y) / draw_step) * draw_step
+            end_row = min(max_grid, max_visible_y)
+            start_x = max(min_grid, min_visible_x)
+            end_x = min(max_grid, max_visible_x)
+
+            if start_x <= end_x:
+                row = start_row
+                while row <= end_row:
+                    start = self.grid_to_screen(start_x, row, self.active_wall_type)
+                    end = self.grid_to_screen(end_x, row, self.active_wall_type)
+                    painter.drawLine(start, end)
+                    row += draw_step
+
+            # 5. 绘制列线（平行于 Y 轴，从 start_y 变动到 end_y，x 固定为 column）
+            start_col = math.ceil(max(min_grid, min_visible_x) / draw_step) * draw_step
+            end_col = min(max_grid, max_visible_x)
+            start_y = max(min_grid, min_visible_y)
+            end_y = min(max_grid, max_visible_y)
+
+            if start_y <= end_y:
+                column = start_col
+                while column <= end_col:
+                    start = self.grid_to_screen(column, start_y, self.active_wall_type)
+                    end = self.grid_to_screen(column, end_y, self.active_wall_type)
+                    painter.drawLine(start, end)
+                    column += draw_step
 
         # 绘制地图可用区域边界矩形（与旧版 mask rectangle 对应）
         bounds = self._get_physical_bounds(step_x, step_y)
@@ -564,10 +626,10 @@ class MapViewport(QWidget):
         zoom_y = (widget_height * VIEW_FIT_MARGIN) / world_height
         new_zoom = min(zoom_x, zoom_y)
 
-        if new_zoom < 0.35:
-            new_zoom = 0.35
-        if new_zoom > 3.5:
-            new_zoom = 3.5
+        if new_zoom < MIN_ZOOM:
+            new_zoom = MIN_ZOOM
+        if new_zoom > MAX_ZOOM:
+            new_zoom = MAX_ZOOM
 
         self.zoom_factor = new_zoom
 
