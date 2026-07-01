@@ -52,6 +52,7 @@ class MapViewport(QWidget):
         self.active_wall_type = get_default_wall_type()
         default_profile = get_wall_profile(self.active_wall_type)
         self.theme_color = QColor(default_profile["color"])
+        self.grid_color = QColor(default_profile["color"])
         self.active_drawable_part = PART_WALL_BODY
         self.map_size_x = DEFAULT_MAP_SIZE_X
         self.map_size_y = DEFAULT_MAP_SIZE_Y
@@ -233,7 +234,8 @@ class MapViewport(QWidget):
         step_x = profile["step_x"]
         step_y = profile["step_y"]
 
-        grid_pen = QPen(QColor(profile["color"]))
+        # grid color no need to change now !
+        grid_pen = QPen(self.grid_color)
         grid_pen.setWidth(1)
         grid_pen.setCosmetic(True)
         painter.setPen(grid_pen)
@@ -433,10 +435,10 @@ class MapViewport(QWidget):
         else:
             end_x = start_x
 
-        # 边界回退：逐步缩短线段直到终点落入 bounds 内
+        # 边界回退：逐步缩短线段直到终点落入 bounds（含临界一格）内
         while (end_x != start_x or end_y != start_y):
             test_physical = self.grid_to_physical(end_x, end_y)
-            if self._is_physical_point_in_bounds(test_physical):
+            if self._is_physical_point_near_bounds(test_physical):
                 break
 
             if end_x > start_x:
@@ -794,13 +796,9 @@ class MapViewport(QWidget):
         """
         Convert widget coordinates into the nearest in-bounds grid point.
         Exactly matches legacy snap_to_grid:
-        - 钳制物理坐标算 base_grid（确保搜索起点在 bounds 附近）
-        - 用原始物理坐标算距离（选出离鼠标最近的合法点）
-        - 永远返回一个点（不返回 None）
         """
         physical_point = self.screen_to_physical(screen_point)
 
-        # 钳制到 bounds 内，确保 base_grid 在边界附近（旧版 clamp loosely first）
         clamped_point = self._clamp_physical_point(physical_point)
         grid_float = self.physical_to_grid(clamped_point)
 
@@ -810,7 +808,6 @@ class MapViewport(QWidget):
         best_point = (base_grid_x, base_grid_y)
         best_distance = float('inf')
 
-        # 搜索邻域，只接受物理坐标在 bounds 内的网格点
         offset_x = -4
         while offset_x <= 4:
             offset_y = -4
@@ -819,8 +816,7 @@ class MapViewport(QWidget):
                 test_grid_y = base_grid_y + offset_y
                 test_physical = self.grid_to_physical(test_grid_x, test_grid_y)
 
-                if self._is_physical_point_in_bounds(test_physical):
-                    # 用原始未钳制坐标算距离，选出离实际鼠标位置最近的点
+                if self._is_physical_point_near_bounds(test_physical):
                     delta_x = test_physical.x() - physical_point.x()
                     delta_y = test_physical.y() - physical_point.y()
                     distance = delta_x * delta_x + delta_y * delta_y
@@ -880,7 +876,7 @@ class MapViewport(QWidget):
 
     def _is_physical_point_in_bounds(self, physical_point: QPointF) -> bool:
         """
-        Return whether a physical point is inside the map bounds.
+        Return whether a physical point is strictly inside the map bounds.
         """
         bounds = self._get_physical_bounds(self.active_step_x, self.active_step_y)
         min_x = bounds[0]
@@ -895,6 +891,25 @@ class MapViewport(QWidget):
         if physical_point.x() > max_x:
             return False
         if physical_point.y() > max_y:
+            return False
+
+        return True
+
+    def _is_physical_point_near_bounds(self, physical_point: QPointF) -> bool:
+        """
+        Return whether a physical point is within one grid step of the map bounds.
+        """
+        bounds = self._get_physical_bounds(self.active_step_x, self.active_step_y)
+        margin_x = self.active_step_x
+        margin_y = self.active_step_y
+
+        if physical_point.x() < bounds[0] - margin_x:
+            return False
+        if physical_point.y() < bounds[1] - margin_y:
+            return False
+        if physical_point.x() > bounds[2] + margin_x:
+            return False
+        if physical_point.y() > bounds[3] + margin_y:
             return False
 
         return True
