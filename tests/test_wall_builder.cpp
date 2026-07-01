@@ -178,3 +178,29 @@ TEST(WallBuilderTest, FloorCeilingManualGoldAlignment) {
               << ", Lab Floors=" << floor_lab_count << ", Ceilings=" << ceiling_count << std::endl;
 }
 
+/**
+ * Tests for AS1 floor builder
+ * normal floor + lab floor mixed scene
+ * make sure it is aligned and can be manually modified
+ * no missing
+ */
+TEST(FloorBuilderTest, FloorGoldenMap) {
+    const std::string json_path = resolve_test_path("tests/golden/floor_builder.gold.json");
+    TestScene scene = load_test_scene(json_path);
+
+    ASSERT_GT(scene.segments.size(), 0u);
+
+    WallBuilder builder(scene.map_size_x, scene.map_size_y);
+    std::vector<io::Sprite> sprites = builder.build(scene.segments, true, false);
+
+    const std::string temp_output_path = "current_floor_builder.map";
+    TempFileCleaner cleaner(temp_output_path);
+
+    bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);
+    ASSERT_TRUE(write_success);
+
+    const std::string golden_map_path = resolve_test_path("tests/golden/floor_builder.gold.map");
+    bool files_match = compare_binary_files(temp_output_path, golden_map_path);
+
+    EXPECT_TRUE(files_match);
+}

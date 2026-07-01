@@ -304,6 +304,44 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
     for (int ft : floor_types) {
         const FloorProfile& f_prof = get_floor_profile(ft);
         MapPoint shift = get_floor_ceiling_shift(map_size_x_, f_prof.step_x, f_prof.step_y, f_prof.grid_divisor);
+        float sample_offset_x = f_prof.step_x * 0.65f;
+        float sample_offset_y = f_prof.step_y * 0.65f;
+        std::vector<std::pair<float, float>> sample_offsets = {
+            {0.0f, 0.0f},
+            {-sample_offset_x, 0.0f},
+            {sample_offset_x, 0.0f},
+            {0.0f, -sample_offset_y},
+            {0.0f, sample_offset_y},
+            {-sample_offset_x, -sample_offset_y},
+            {sample_offset_x, -sample_offset_y},
+            {-sample_offset_x, sample_offset_y},
+            {sample_offset_x, sample_offset_y},
+        };
+
+        auto sample_matches_floor = [&](float sample_px, float sample_py) {
+            int grid_x = (sample_px - grid_ctx.min_px) / cell_size;
+            int grid_y = (sample_py - grid_ctx.min_py) / cell_size;
+
+            if (grid_x < 0 || grid_x >= grid_ctx.grid_w) {
+                return false;
+            }
+
+            if (grid_y < 0 || grid_y >= grid_ctx.grid_h) {
+                return false;
+            }
+
+            int grid_index = grid_y * grid_ctx.grid_w + grid_x;
+            if (grid_ctx.outside_grid[grid_index]) {
+                return false;
+            }
+
+            int cell_ft = grid_ctx.floor_type_grid[grid_index];
+            if (cell_ft == -1) {
+                cell_ft = FLOOR_TYPE_STANDARD;
+            }
+
+            return cell_ft == ft;
+        };
 
         for (int gx = -150; gx <= 150; ++gx) {
             for (int gy = -150; gy <= 150; ++gy) {
@@ -313,19 +351,18 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
 
                 if (px < b_min_px || px > b_max_px || py < b_min_py || py > b_max_py) continue;
 
-                int grid_x = (px - grid_ctx.min_px) / cell_size;
-                int grid_y = (py - grid_ctx.min_py) / cell_size;
-
-                if (grid_x >= 0 && grid_x < grid_ctx.grid_w && grid_y >= 0 && grid_y < grid_ctx.grid_h) {
-                    bool is_outside = grid_ctx.outside_grid[grid_y * grid_ctx.grid_w + grid_x];
-                    if (!is_outside) {
-                        int cell_ft = grid_ctx.floor_type_grid[grid_y * grid_ctx.grid_w + grid_x];
-                        if (cell_ft == -1) cell_ft = FLOOR_TYPE_STANDARD;
-                        
-                        if (cell_ft == ft) {
-                            floor_sprites.push_back(place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor));
-                        }
+                bool should_place_floor = false;
+                for (const auto& sample_offset : sample_offsets) {
+                    float sample_px = px + sample_offset.first;
+                    float sample_py = py + sample_offset.second;
+                    if (sample_matches_floor(sample_px, sample_py)) {
+                        should_place_floor = true;
+                        break;
                     }
+                }
+
+                if (should_place_floor) {
+                    floor_sprites.push_back(place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor));
                 }
             }
         }
