@@ -254,6 +254,22 @@ class MapViewport(QWidget):
             painter.drawLine(start, end)
             column += 1
 
+        # 绘制地图可用区域边界矩形（与旧版 mask rectangle 对应）
+        bounds = self._get_physical_bounds(step_x, step_y)
+        top_left = self._physical_to_screen(QPointF(bounds[0], bounds[1]))
+        bottom_right = self._physical_to_screen(QPointF(bounds[2], bounds[3]))
+
+        border_pen = QPen(QColor("#c0c0c0"))
+        border_pen.setWidth(2)
+        border_pen.setCosmetic(True)
+        painter.setPen(border_pen)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawRect(
+            top_left.x(), top_left.y(),
+            bottom_right.x() - top_left.x(),
+            bottom_right.y() - top_left.y(),
+        )
+
     def _draw_selected_point(self, painter: QPainter) -> None:
         if self.selected_grid_point is None:
             return
@@ -399,13 +415,16 @@ class MapViewport(QWidget):
 
     def get_orthogonal_point(self, start_point, raw_end_point):
         """
-        Clamp a raw end point to the dominant horizontal or vertical grid axis.
+        Clamp a raw end point to the dominant axis, then step back
+        towards start until the end point is inside the grid bounds.
+        Matches the legacy get_clamped_orthogonal logic.
         """
         start_x = start_point[0]
         start_y = start_point[1]
         end_x = raw_end_point[0]
         end_y = raw_end_point[1]
 
+        # 正交约束：锁定到变化更大的轴
         delta_x = abs(end_x - start_x)
         delta_y = abs(end_y - start_y)
 
@@ -413,6 +432,21 @@ class MapViewport(QWidget):
             end_y = start_y
         else:
             end_x = start_x
+
+        # 边界回退：逐步缩短线段直到终点落入 bounds 内
+        while (end_x != start_x or end_y != start_y):
+            test_physical = self.grid_to_physical(end_x, end_y)
+            if self._is_physical_point_in_bounds(test_physical):
+                break
+
+            if end_x > start_x:
+                end_x -= 1
+            elif end_x < start_x:
+                end_x += 1
+            elif end_y > start_y:
+                end_y -= 1
+            elif end_y < start_y:
+                end_y += 1
 
         return end_x, end_y
 
@@ -507,19 +541,25 @@ class MapViewport(QWidget):
     def fit_map_to_view(self) -> None:
         """
         Fit current map bounds into the visible widget area.
+        Uses a 0.90 safety factor on full widget size to keep zoom
+        and pan_offset calculations consistent (matching legacy auto_zoom).
         """
+        widget_width = self.width()
+        widget_height = self.height()
+
+        # 安全系数，留白比例与旧版 0.95 类似
+        VIEW_FIT_MARGIN = 0.90
+
         world_width = self.map_size_x
         world_height = self.map_size_y
-        available_width = self.width() - 96
-        available_height = self.height() - 140
 
         if world_width <= 0:
             world_width = self.active_step_x
         if world_height <= 0:
             world_height = self.active_step_y
 
-        zoom_x = available_width / world_width
-        zoom_y = available_height / world_height
+        zoom_x = (widget_width * VIEW_FIT_MARGIN) / world_width
+        zoom_y = (widget_height * VIEW_FIT_MARGIN) / world_height
         new_zoom = min(zoom_x, zoom_y)
 
         if new_zoom < 0.35:
@@ -529,9 +569,10 @@ class MapViewport(QWidget):
 
         self.zoom_factor = new_zoom
 
+        # pan_offset 居中：与 grid_to_screen / screen_to_physical 的映射公式一致
         self.pan_offset = QPointF(
-            (self.width() - world_width * self.zoom_factor) / 2,
-            (self.height() - world_height * self.zoom_factor) / 2,
+            (widget_width - world_width * self.zoom_factor) / 2,
+            (widget_height - world_height * self.zoom_factor) / 2,
         )
         self.view_changed.emit(self.zoom_factor)
 
@@ -751,18 +792,25 @@ class MapViewport(QWidget):
 
     def screen_to_grid(self, screen_point: QPointF):
         """
-        Convert widget coordinates into the nearest logical grid point.
+        Convert widget coordinates into the nearest in-bounds grid point.
+        Exactly matches legacy snap_to_grid:
+        - 钳制物理坐标算 base_grid（确保搜索起点在 bounds 附近）
+        - 用原始物理坐标算距离（选出离鼠标最近的合法点）
+        - 永远返回一个点（不返回 None）
         """
         physical_point = self.screen_to_physical(screen_point)
-        snapped_physical = self._clamp_physical_point(physical_point)
-        grid_float = self.physical_to_grid(snapped_physical)
+
+        # 钳制到 bounds 内，确保 base_grid 在边界附近（旧版 clamp loosely first）
+        clamped_point = self._clamp_physical_point(physical_point)
+        grid_float = self.physical_to_grid(clamped_point)
 
         base_grid_x = int(round(grid_float[0]))
         base_grid_y = int(round(grid_float[1]))
 
-        best_point = None
-        best_distance = None
+        best_point = (base_grid_x, base_grid_y)
+        best_distance = float('inf')
 
+        # 搜索邻域，只接受物理坐标在 bounds 内的网格点
         offset_x = -4
         while offset_x <= 4:
             offset_y = -4
@@ -772,11 +820,12 @@ class MapViewport(QWidget):
                 test_physical = self.grid_to_physical(test_grid_x, test_grid_y)
 
                 if self._is_physical_point_in_bounds(test_physical):
+                    # 用原始未钳制坐标算距离，选出离实际鼠标位置最近的点
                     delta_x = test_physical.x() - physical_point.x()
                     delta_y = test_physical.y() - physical_point.y()
                     distance = delta_x * delta_x + delta_y * delta_y
 
-                    if best_distance is None or distance < best_distance:
+                    if distance < best_distance:
                         best_distance = distance
                         best_point = (test_grid_x, test_grid_y)
 
@@ -874,13 +923,16 @@ class MapViewport(QWidget):
 
     def _get_grid_draw_range(self, step_x: float, step_y: float) -> tuple:
         """
-        Return a practical logical range that covers the map bounds.
+        Return the logical grid range that covers the valid physical bounds.
+        Uses _get_physical_bounds instead of [0, map_size] so the drawn grid
+        exactly matches the clickable/drawable area.
         """
+        bounds = self._get_physical_bounds(step_x, step_y)
         corners = [
-            QPointF(0.0, 0.0),
-            QPointF(self.map_size_x, 0.0),
-            QPointF(0.0, self.map_size_y),
-            QPointF(self.map_size_x, self.map_size_y),
+            QPointF(bounds[0], bounds[1]),
+            QPointF(bounds[2], bounds[1]),
+            QPointF(bounds[0], bounds[3]),
+            QPointF(bounds[2], bounds[3]),
         ]
 
         logical_values = []
@@ -891,6 +943,14 @@ class MapViewport(QWidget):
             logical_values.append(grid_point[0])
             logical_values.append(grid_point[1])
 
-        min_grid = math.floor(min(logical_values)) - 2
-        max_grid = math.ceil(max(logical_values)) + 2
+        min_grid = math.floor(min(logical_values)) - 1
+        max_grid = math.ceil(max(logical_values)) + 1
         return min_grid, max_grid
+
+    def _physical_to_screen(self, physical_point: QPointF) -> QPointF:
+        """
+        Convert physical coordinates directly to screen coordinates.
+        """
+        screen_x = physical_point.x() * self.zoom_factor + self.pan_offset.x()
+        screen_y = physical_point.y() * self.zoom_factor + self.pan_offset.y()
+        return QPointF(screen_x, screen_y)
