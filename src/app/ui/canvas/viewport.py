@@ -1,4 +1,4 @@
-"""
+﻿"""
 Interactive isometric viewport.
 """
 import math
@@ -7,10 +7,10 @@ from PySide6.QtCore import QPointF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
-from app.binding import dll_registry
 from app.editor.drawable_parts import PART_WALL_BODY
 from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.ui.tools.drawing_tool import DrawingToolController
 
 
 MIN_ZOOM = 0.002
@@ -18,17 +18,9 @@ MAX_ZOOM = 30.0
 MIN_GRID_COLUMNS = 1
 MIN_GRID_ROWS = 1
 DOOR_STATE_CLOSED = 0
-DOOR_STATE_OPEN = 1
 LIGHT_STATE_GREEN = 0
 LIGHT_STATE_RED = 1
 LIGHT_STATE_BROKEN = 2
-PART_ACTIVE_DOOR = "active_door"
-PART_DEAD_DOOR_CLOSED = "dead_door_closed"
-PART_DEAD_DOOR_JAMMED = "dead_door_jammed"
-PART_DEAD_DOOR_OPEN = "dead_door_open"
-PART_LAB_LASER_CLOSED = "lab_laser_closed"
-PART_LAB_LASER_OPEN = "lab_laser_open"
-PART_LAB_DECORATION_DOOR = "lab_decoration_door"
 
 
 class MapViewport(QWidget):
@@ -67,6 +59,7 @@ class MapViewport(QWidget):
         self.preview_end_point = None
         self.segments = []
         self.doors = []
+        self.drawing_tool = DrawingToolController(self)
         self.last_cursor_grid_point = None
         self.is_panning = False
         self.pan_start_position = QPointF(0.0, 0.0)
@@ -96,6 +89,15 @@ class MapViewport(QWidget):
         """
         self.active_drawable_part = part_id
         self.cancel_pending_segment()
+        self.update()
+
+    def set_drawing_mode(self, drawing_mode) -> None:
+        """
+        Update the active drawing tool mode.
+        """
+        self.drawing_tool.set_mode(drawing_mode)
+        self.pending_start_point = None
+        self.preview_end_point = None
         self.update()
 
     def set_map_size(self, map_size_x: float, map_size_y: float, fit_to_view: bool = True) -> None:
@@ -172,7 +174,7 @@ class MapViewport(QWidget):
                 self.cursor_grid_changed.emit(grid_point[0], grid_point[1])
 
             if self.pending_start_point is not None:
-                self.preview_end_point = self.get_orthogonal_point(self.pending_start_point, grid_point)
+                self.drawing_tool.update_preview(grid_point)
                 self.update()
 
         super().mouseMoveEvent(event)
@@ -236,13 +238,13 @@ class MapViewport(QWidget):
         step_x = profile["step_x"]
         step_y = profile["step_y"]
 
-        # 1. 计算当前缩放比例下，相邻网格线的屏幕像素间距
-        # 相邻网格点之间的物理距离是 math.sqrt(step_x**2 + step_y**2)
-        # 屏幕上的距离需要乘上当前的 zoom_factor
+        # 1. 璁＄畻褰撳墠缂╂斁姣斾緥涓嬶紝鐩搁偦缃戞牸绾跨殑灞忓箷鍍忕礌闂磋窛
+        # 鐩搁偦缃戞牸鐐逛箣闂寸殑鐗╃悊璺濈鏄?math.sqrt(step_x**2 + step_y**2)
+        # 灞忓箷涓婄殑璺濈闇€瑕佷箻涓婂綋鍓嶇殑 zoom_factor
         grid_physical_dist = math.sqrt(step_x * step_x + step_y * step_y)
         grid_pixel_dist = self.zoom_factor * grid_physical_dist
 
-        # 2. 根据相邻网格的屏幕像素间距，自适应地调整绘制步长 (LOD)
+        # 2. 鏍规嵁鐩搁偦缃戞牸鐨勫睆骞曞儚绱犻棿璺濓紝鑷€傚簲鍦拌皟鏁寸粯鍒舵闀?(LOD)
         if grid_pixel_dist >= 12.0:
             draw_step = 1
         elif grid_pixel_dist >= 6.0:
@@ -254,11 +256,11 @@ class MapViewport(QWidget):
         elif grid_pixel_dist >= 0.5:
             draw_step = 50
         else:
-            # 缩放比例极小时，网格线会密集成一片，此时完全不绘制网格线以优化性能，仅画外边界
+            # 缂╂斁姣斾緥鏋佸皬鏃讹紝缃戞牸绾夸細瀵嗛泦鎴愪竴鐗囷紝姝ゆ椂瀹屽叏涓嶇粯鍒剁綉鏍肩嚎浠ヤ紭鍖栨€ц兘锛屼粎鐢诲杈圭晫
             draw_step = None
 
         if draw_step is not None:
-            # 3. 计算可视区域内的网格行和列的范围 (Frustum Culling)
+            # 3. 璁＄畻鍙鍖哄煙鍐呯殑缃戞牸琛屽拰鍒楃殑鑼冨洿 (Frustum Culling)
             w = self.width()
             h = self.height()
             screen_corners = [
@@ -276,13 +278,13 @@ class MapViewport(QWidget):
                 visible_x.append(grid_x)
                 visible_y.append(grid_y)
 
-            # 向外扩展 1 格以防边缘网格在滚动或放大时出现突兀的空缺
+            # Expand one grid outward to avoid edge gaps while panning or zooming.
             min_visible_x = math.floor(min(visible_x)) - 1
             max_visible_x = math.ceil(max(visible_x)) + 1
             min_visible_y = math.floor(min(visible_y)) - 1
             max_visible_y = math.ceil(max(visible_y)) + 1
 
-            # 网格全局有效范围限制
+            # 缃戞牸鍏ㄥ眬鏈夋晥鑼冨洿闄愬埗
             min_grid, max_grid = self._get_grid_draw_range(step_x, step_y)
 
             grid_pen = QPen(self.grid_color)
@@ -290,7 +292,7 @@ class MapViewport(QWidget):
             grid_pen.setCosmetic(True)
             painter.setPen(grid_pen)
 
-            # 4. 绘制行线（平行于 X 轴，从 start_x 变动到 end_x，y 固定为 row）
+            # Draw row lines with fixed y and changing x.
             start_row = math.ceil(max(min_grid, min_visible_y) / draw_step) * draw_step
             end_row = min(max_grid, max_visible_y)
             start_x = max(min_grid, min_visible_x)
@@ -304,7 +306,7 @@ class MapViewport(QWidget):
                     painter.drawLine(start, end)
                     row += draw_step
 
-            # 5. 绘制列线（平行于 Y 轴，从 start_y 变动到 end_y，x 固定为 column）
+            # Draw column lines with fixed x and changing y.
             start_col = math.ceil(max(min_grid, min_visible_x) / draw_step) * draw_step
             end_col = min(max_grid, max_visible_x)
             start_y = max(min_grid, min_visible_y)
@@ -318,7 +320,7 @@ class MapViewport(QWidget):
                     painter.drawLine(start, end)
                     column += draw_step
 
-        # 绘制地图可用区域边界矩形（与旧版 mask rectangle 对应）
+        # Draw the usable physical map boundary.
         bounds = self._get_physical_bounds(step_x, step_y)
         top_left = self._physical_to_screen(QPointF(bounds[0], bounds[1]))
         bottom_right = self._physical_to_screen(QPointF(bounds[2], bounds[3]))
@@ -373,7 +375,8 @@ class MapViewport(QWidget):
     def _draw_preview_segment(self, painter: QPainter) -> None:
         if self.pending_start_point is None:
             return
-        if self.preview_end_point is None:
+        preview_segments = self.drawing_tool.get_preview_segments()
+        if not preview_segments:
             return
 
         preview_pen = QPen(QColor("#e0b95c"))
@@ -382,9 +385,13 @@ class MapViewport(QWidget):
         preview_pen.setStyle(Qt.DashLine)
         painter.setPen(preview_pen)
 
-        screen_start = self.grid_to_screen(self.pending_start_point[0], self.pending_start_point[1], self.active_wall_type)
-        screen_end = self.grid_to_screen(self.preview_end_point[0], self.preview_end_point[1], self.active_wall_type)
-        painter.drawLine(screen_start, screen_end)
+        for segment in preview_segments:
+            start_point = segment[0]
+            end_point = segment[1]
+            wall_type = segment[2]
+            screen_start = self.grid_to_screen(start_point[0], start_point[1], wall_type)
+            screen_end = self.grid_to_screen(end_point[0], end_point[1], wall_type)
+            painter.drawLine(screen_start, screen_end)
 
     def _draw_doors(self, painter: QPainter) -> None:
         """
@@ -450,69 +457,27 @@ class MapViewport(QWidget):
         self.selected_grid_point = grid_point
         self.grid_point_selected.emit(grid_point[0], grid_point[1])
 
-        if self.pending_start_point is None:
-            self.pending_start_point = grid_point
-            self.preview_end_point = None
+        was_waiting_for_end_point = self.drawing_tool.is_waiting_for_end_point()
+        result = self.drawing_tool.handle_left_click(grid_point)
+        self.pending_start_point = self.drawing_tool.get_start_point()
+        self.preview_end_point = None
+
+        if not was_waiting_for_end_point and self.pending_start_point is not None:
             self.segment_started.emit(grid_point[0], grid_point[1])
             return
 
-        end_point = self.get_orthogonal_point(self.pending_start_point, grid_point)
-        if end_point == self.pending_start_point:
-            self.preview_end_point = None
-            return
-
-        start_point = self.pending_start_point
-
-        if self.active_drawable_part == PART_WALL_BODY:
-            segment = (start_point, end_point, self.active_wall_type)
+        for segment in result["segments"]:
             self.segments.append(segment)
             count = len(self.segments)
+            start_point = segment[0]
+            end_point = segment[1]
             self.segment_created.emit(start_point[0], start_point[1], end_point[0], end_point[1], count)
-        else:
-            door = self._build_door_from_points(start_point, end_point)
-            if door is not None:
-                self.doors.append(door)
-                self.door_created.emit(door[0], door[1], len(self.doors))
 
-        self.pending_start_point = None
-        self.preview_end_point = None
+        for door in result["doors"]:
+            self.doors.append(door)
+            self.door_created.emit(door[0], door[1], len(self.doors))
 
-    def get_orthogonal_point(self, start_point, raw_end_point):
-        """
-        Clamp a raw end point to the dominant axis, then step back
-        towards start until the end point is inside the grid bounds.
-        Matches the legacy get_clamped_orthogonal logic.
-        """
-        start_x = start_point[0]
-        start_y = start_point[1]
-        end_x = raw_end_point[0]
-        end_y = raw_end_point[1]
-
-        # 正交约束：锁定到变化更大的轴
-        delta_x = abs(end_x - start_x)
-        delta_y = abs(end_y - start_y)
-
-        if delta_x > delta_y:
-            end_y = start_y
-        else:
-            end_x = start_x
-
-        # 边界回退：逐步缩短线段直到终点落入 bounds（含临界一格）内
-        while (end_x != start_x or end_y != start_y):
-            test_physical = self.grid_to_physical(end_x, end_y)
-            if self._is_physical_point_near_bounds(test_physical):
-                break
-
-            if end_x > start_x:
-                end_x -= 1
-            elif end_x < start_x:
-                end_x += 1
-            elif end_y > start_y:
-                end_y -= 1
-            elif end_y < start_y:
-                end_y += 1
-
-        return end_x, end_y
+        self.pending_start_point = self.drawing_tool.get_start_point()
 
     def clear_segments(self) -> None:
         """
@@ -522,6 +487,7 @@ class MapViewport(QWidget):
         self.doors.clear()
         self.pending_start_point = None
         self.preview_end_point = None
+        self.drawing_tool.cancel()
         self.selected_grid_point = None
         self.update()
 
@@ -546,6 +512,7 @@ class MapViewport(QWidget):
 
         self.pending_start_point = None
         self.preview_end_point = None
+        self.drawing_tool.cancel()
         self.selected_grid_point = None
         self._recalculate_grid_limits()
         self.update()
@@ -586,6 +553,7 @@ class MapViewport(QWidget):
 
         self.pending_start_point = None
         self.preview_end_point = None
+        self.drawing_tool.cancel()
         self.selected_grid_point = None
         self._recalculate_grid_limits()
         self.update()
@@ -611,7 +579,7 @@ class MapViewport(QWidget):
         widget_width = self.width()
         widget_height = self.height()
 
-        # 安全系数，留白比例与旧版 0.95 类似
+        # 瀹夊叏绯绘暟锛岀暀鐧芥瘮渚嬩笌鏃х増 0.95 绫讳技
         VIEW_FIT_MARGIN = 0.90
 
         world_width = self.map_size_x
@@ -633,7 +601,7 @@ class MapViewport(QWidget):
 
         self.zoom_factor = new_zoom
 
-        # pan_offset 居中：与 grid_to_screen / screen_to_physical 的映射公式一致
+        # Keep pan offset aligned with grid_to_screen and screen_to_physical.
         self.pan_offset = QPointF(
             (widget_width - world_width * self.zoom_factor) / 2,
             (widget_height - world_height * self.zoom_factor) / 2,
@@ -674,85 +642,11 @@ class MapViewport(QWidget):
         if self.pending_start_point is None:
             return
 
+        self.drawing_tool.cancel()
         self.pending_start_point = None
         self.preview_end_point = None
         self.drawing_cancelled.emit()
         self.update()
-
-    def _build_door_from_points(self, start_point, end_point):
-        """
-        Build a door tuple from two grid points.
-        """
-        start_x = int(start_point[0])
-        start_y = int(start_point[1])
-        end_x = int(end_point[0])
-        end_y = int(end_point[1])
-
-        if start_x == end_x and start_y == end_y:
-            return None
-
-        if start_x == end_x:
-            direction_type = 0
-            raw_size = abs(end_y - start_y)
-            pos_x = start_x
-            pos_y = min(start_y, end_y)
-        else:
-            direction_type = 1
-            raw_size = abs(end_x - start_x)
-            pos_x = min(start_x, end_x)
-            pos_y = start_y
-
-        size = self._get_door_size(raw_size)
-        door_state = DOOR_STATE_CLOSED
-        light_state = LIGHT_STATE_BROKEN
-        z_offset = 0.0
-
-        if self.active_drawable_part == PART_ACTIVE_DOOR:
-            door_state = DOOR_STATE_OPEN
-            light_state = LIGHT_STATE_GREEN
-        elif self.active_drawable_part == PART_DEAD_DOOR_CLOSED:
-            door_state = DOOR_STATE_CLOSED
-            light_state = LIGHT_STATE_BROKEN
-        elif self.active_drawable_part == PART_DEAD_DOOR_JAMMED:
-            door_state = DOOR_STATE_CLOSED
-            light_state = LIGHT_STATE_BROKEN
-            z_offset = dll_registry.get_standard_door_jam_z_offset(size)
-        elif self.active_drawable_part == PART_DEAD_DOOR_OPEN:
-            door_state = DOOR_STATE_OPEN
-            light_state = LIGHT_STATE_BROKEN
-            z_offset = dll_registry.get_standard_door_dead_open_z_offset(size)
-        elif self.active_drawable_part == PART_LAB_LASER_CLOSED:
-            door_state = DOOR_STATE_CLOSED
-            light_state = LIGHT_STATE_RED
-            size = 1
-        elif self.active_drawable_part == PART_LAB_LASER_OPEN:
-            door_state = DOOR_STATE_OPEN
-            light_state = LIGHT_STATE_RED
-            size = 1
-        elif self.active_drawable_part == PART_LAB_DECORATION_DOOR:
-            door_state = DOOR_STATE_CLOSED
-            light_state = LIGHT_STATE_BROKEN
-            size = 1
-        else:
-            return None
-
-        return pos_x, pos_y, self.active_wall_type, direction_type, size, door_state, light_state, z_offset
-
-    def _get_door_size(self, raw_size: int) -> int:
-        """
-        Clamp a drawn door length to the DLL-supported size range.
-        """
-        if raw_size < 1:
-            raw_size = 1
-
-        if self.active_drawable_part in (
-            PART_LAB_LASER_CLOSED,
-            PART_LAB_LASER_OPEN,
-            PART_LAB_DECORATION_DOOR,
-        ):
-            return 1
-
-        return dll_registry.clamp_standard_door_size(raw_size)
 
     def _get_door_grid_points(self, door: tuple) -> tuple:
         """
@@ -975,6 +869,12 @@ class MapViewport(QWidget):
             return False
 
         return True
+
+    def is_physical_point_near_bounds(self, physical_point: QPointF) -> bool:
+        """
+        Public wrapper used by drawing tool controllers.
+        """
+        return self._is_physical_point_near_bounds(physical_point)
 
     def _get_physical_bounds(self, step_x: float, step_y: float) -> tuple:
         """

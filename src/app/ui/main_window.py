@@ -16,6 +16,8 @@ from app.project.io import load_project_json, save_project_json
 from app.ui.canvas.viewport import MapViewport
 from app.ui.panels.inspector import InspectorPanel
 from app.ui.panels.theme_shelf import ThemeShelfPanel
+from app.ui.tools.drawing_modes import DRAWING_MODE_LABELS, DrawingMode
+from app.ui.tools.drawing_toolbar import DrawingToolbar
 from app.binding.dll_registry import register_all_from_dll
 from app.editor.wall_profiles import get_wall_profile
 
@@ -34,16 +36,24 @@ class MainWindow(QMainWindow):
         self._register_dll_metadata()
 
         self.viewport = MapViewport()
+        self.drawing_toolbar = DrawingToolbar(self)
         self.theme_shelf = ThemeShelfPanel()
         self.inspector = InspectorPanel()
 
         self.setCentralWidget(self.viewport)
+        self._build_drawing_toolbar()
         self._build_toolbar()
         self._build_docks()
         self._connect_signals()
 
         self.statusBar().showMessage("Ready")
         logger.debug("Main window initialized")
+
+    def _build_drawing_toolbar(self) -> None:
+        """
+        Build the left-side drawing tool selector.
+        """
+        self.addToolBar(Qt.LeftToolBarArea, self.drawing_toolbar)
 
     def _register_dll_metadata(self) -> None:
         """
@@ -120,6 +130,7 @@ class MainWindow(QMainWindow):
         Connect first-pass panel interactions.
         """
         self.theme_shelf.wall_set_selected.connect(self._on_wall_set_selected)
+        self.drawing_toolbar.drawing_mode_changed.connect(self._on_drawing_mode_changed)
         self.viewport.grid_point_selected.connect(self._on_grid_point_selected)
         self.viewport.cursor_grid_changed.connect(self._on_cursor_grid_changed)
         self.viewport.view_changed.connect(self._on_view_changed)
@@ -138,6 +149,15 @@ class MainWindow(QMainWindow):
         self.inspector.set_wall_set(wall_type, wall_name)
         self.statusBar().showMessage(f"Wall set selected: {wall_name}")
         logger.info(f"Wall set selected: {wall_type}")
+
+    def _on_drawing_mode_changed(self, drawing_mode: DrawingMode) -> None:
+        """
+        Apply the selected drawing tool to the viewport.
+        """
+        self.viewport.set_drawing_mode(drawing_mode)
+        mode_label = DRAWING_MODE_LABELS[drawing_mode]
+        self.statusBar().showMessage(f"Drawing tool selected: {mode_label}")
+        logger.info(f"Drawing tool selected: {drawing_mode.value}")
 
     def _on_grid_point_selected(self, grid_x: int, grid_y: int) -> None:
         """

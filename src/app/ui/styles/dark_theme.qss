@@ -11,6 +11,13 @@ QToolBar {
     padding: 8px;
 }
 
+#drawingToolbar {
+    border-right: 1px solid #263740;
+    border-bottom: 0;
+    spacing: 6px;
+    padding: 8px 6px;
+}
+
 QToolButton {
     background: #223039;
     border: 1px solid #36505d;
@@ -22,6 +29,12 @@ QToolButton {
 QToolButton:hover {
     background: #2a3d47;
     border-color: #4f7fbf;
+}
+
+QToolButton:checked {
+    background: #2aa879;
+    border-color: #45c797;
+    color: #07110d;
 }
 
 QCheckBox {
