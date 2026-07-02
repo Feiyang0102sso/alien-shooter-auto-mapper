@@ -15,17 +15,12 @@ class EraserPropertiesWidget(QGroupBox):
     def __init__(self, parent=None) -> None:
         super().__init__(tr(TextKey.GROUP_TOOL_PROPERTIES), parent)
         self.setObjectName("toolPropertiesGroup")
-        self.setStyleSheet(
-            "QGroupBox { color: white; }"
-            "QGroupBox::title { color: white; }"
-        )
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 12, 10, 10)
         layout.setSpacing(8)
 
         label = QLabel(tr(TextKey.LABEL_ERASER_SIZE))
-        label.setStyleSheet("color: white;")
         layout.addWidget(label)
 
         row = QHBoxLayout()

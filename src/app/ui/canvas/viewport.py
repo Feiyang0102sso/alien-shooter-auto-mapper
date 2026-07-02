@@ -12,6 +12,24 @@ from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_t
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.ui.colors import (
+    CANVAS_BACKGROUND,
+    CANVAS_BOUNDARY,
+    CANVAS_LABEL_TEXT,
+    CANVAS_MARKER_OUTLINE,
+    CANVAS_PREVIEW_SEGMENT,
+    CANVAS_SEGMENT_DEFAULT,
+    DOOR_ACTIVE_DOT,
+    DOOR_ACTIVE_LINE,
+    DOOR_CLOSED_DOT,
+    DOOR_CLOSED_LINE,
+    DOOR_LIGHT_GREEN_DOT,
+    DOOR_LIGHT_GREEN_LINE,
+    DOOR_LIGHT_RED_DOT,
+    DOOR_LIGHT_RED_LINE,
+    DOOR_OPEN_DOT,
+    DOOR_OPEN_LINE,
+)
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.drawing_tool import DrawingToolController
 from app.ui.tools.eraser import EraserToolController
@@ -254,7 +272,7 @@ class MapViewport(QWidget):
         event.accept()
 
     def _fill_background(self, painter: QPainter) -> None:
-        painter.fillRect(self.rect(), QColor("#10161a"))
+        painter.fillRect(self.rect(), QColor(CANVAS_BACKGROUND))
 
     def _draw_grid(self, painter: QPainter) -> None:
         profile = get_wall_profile(self.active_wall_type)
@@ -348,7 +366,7 @@ class MapViewport(QWidget):
         top_left = self._physical_to_screen(QPointF(bounds[0], bounds[1]))
         bottom_right = self._physical_to_screen(QPointF(bounds[2], bounds[3]))
 
-        border_pen = QPen(QColor("#c0c0c0"))
+        border_pen = QPen(QColor(CANVAS_BOUNDARY))
         border_pen.setWidth(2)
         border_pen.setCosmetic(True)
         painter.setPen(border_pen)
@@ -367,7 +385,7 @@ class MapViewport(QWidget):
         grid_y = self.selected_grid_point[1]
         center = self.grid_to_screen(grid_x, grid_y, self.active_wall_type)
 
-        marker_pen = QPen(QColor("#f1f6f3"))
+        marker_pen = QPen(QColor(CANVAS_MARKER_OUTLINE))
         marker_pen.setWidth(2)
         marker_pen.setCosmetic(True)
         painter.setPen(marker_pen)
@@ -375,7 +393,7 @@ class MapViewport(QWidget):
         painter.drawEllipse(center, 6, 6)
 
     def _draw_segments(self, painter: QPainter) -> None:
-        segment_pen = QPen(QColor("#f1f6f3"))
+        segment_pen = QPen(QColor(CANVAS_SEGMENT_DEFAULT))
         segment_pen.setWidth(4)
         segment_pen.setCosmetic(True)
         painter.setPen(segment_pen)
@@ -402,7 +420,7 @@ class MapViewport(QWidget):
         if not preview_segments:
             return
 
-        preview_pen = QPen(QColor("#e0b95c"))
+        preview_pen = QPen(QColor(CANVAS_PREVIEW_SEGMENT))
         preview_pen.setWidth(3)
         preview_pen.setCosmetic(True)
         preview_pen.setStyle(Qt.DashLine)
@@ -451,14 +469,14 @@ class MapViewport(QWidget):
             painter.setPen(dot_pen)
 
             if hollow:
-                painter.setBrush(QBrush(QColor("#10161a")))
+                painter.setBrush(QBrush(QColor(CANVAS_BACKGROUND)))
             else:
                 painter.setBrush(QBrush(QColor(dot_color)))
 
             painter.drawEllipse(QPointF(mid_x, mid_y), radius, radius)
 
     def _draw_origin_marker(self, painter: QPainter) -> None:
-        label_pen = QPen(QColor("#d9e8e2"))
+        label_pen = QPen(QColor(CANVAS_LABEL_TEXT))
         painter.setPen(label_pen)
         painter.drawText(24, 32, tr(TextKey.CANVAS_TITLE))
         profile = get_wall_profile(self.active_wall_type)
@@ -703,16 +721,16 @@ class MapViewport(QWidget):
         Return line color, dot color, and hollow flag for a door marker.
         """
         if light_state == LIGHT_STATE_RED:
-            return "#2E8B57", "#32CD32", False
+            return DOOR_LIGHT_RED_LINE, DOOR_LIGHT_RED_DOT, False
         if light_state == LIGHT_STATE_GREEN:
-            return "#32CD32", "#00FF00", False
+            return DOOR_LIGHT_GREEN_LINE, DOOR_LIGHT_GREEN_DOT, False
 
         if z_offset == 0.0:
-            return "#8B0000", "#FF0000", False
+            return DOOR_ACTIVE_LINE, DOOR_ACTIVE_DOT, False
         if door_state == DOOR_STATE_CLOSED:
-            return "#D2691E", "#FFD700", False
+            return DOOR_CLOSED_LINE, DOOR_CLOSED_DOT, False
 
-        return "#808080", "#D3D3D3", True
+        return DOOR_OPEN_LINE, DOOR_OPEN_DOT, True
 
     @property
     def active_step_x(self) -> float:

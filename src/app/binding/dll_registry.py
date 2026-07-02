@@ -5,6 +5,7 @@ Central registry for DLL-exported metadata used by the UI layer.
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 from app.logger import logger
+from app.ui.colors import WALL_PROFILE_FALLBACK, WALL_PROFILE_LAB, WALL_PROFILE_STANDARD
 
 
 WALL_PROFILES = {}
@@ -18,13 +19,13 @@ WALL_PROFILE_UI_METADATA = {
     WALL_TYPE_STANDARD: {
         "short_label_key": TextKey.WALL_STANDARD_SHORT_LABEL,
         "description_key": TextKey.WALL_STANDARD_DESCRIPTION,
-        "color": "#4f7fbf",
+        "color": WALL_PROFILE_STANDARD,
         "preview_key": "base",
     },
     WALL_TYPE_LAB: {
         "short_label_key": TextKey.WALL_LAB_SHORT_LABEL,
         "description_key": TextKey.WALL_LAB_DESCRIPTION,
-        "color": "#2aa879",
+        "color": WALL_PROFILE_LAB,
         "preview_key": "lab",
     },
 }
@@ -287,7 +288,7 @@ def _get_wall_profile_ui_metadata(wall_type: int) -> dict:
     metadata = {
         "short_label": tr(TextKey.WALL_TYPE_FALLBACK_SHORT_LABEL, wall_type=wall_type),
         "description": tr(TextKey.WALL_TYPE_FALLBACK_DESCRIPTION),
-        "color": "#c0a05a",
+        "color": WALL_PROFILE_FALLBACK,
         "preview_key": "",
     }
     return metadata

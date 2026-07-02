@@ -5,7 +5,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor, QPen
 
 from app.editor.wall_profiles import get_wall_profile
-from app.ui.tools.eraser.config import DEFAULT_ERASER_SIZE, ERASER_PREVIEW_ALPHA, ERASER_PREVIEW_COLOR
+from app.ui.colors import ERASER_PREVIEW_ALPHA, ERASER_PREVIEW_COLOR
+from app.ui.tools.eraser.config import DEFAULT_ERASER_SIZE
 from app.ui.tools.eraser.geometry import erase_doors, erase_segments, get_effective_radius
 
 

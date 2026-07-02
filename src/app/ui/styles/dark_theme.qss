@@ -233,6 +233,12 @@ QGroupBox::title {
     color: #f1f6f3;
 }
 
+#toolPropertiesGroup,
+#toolPropertiesGroup::title,
+#toolPropertiesGroup QLabel {
+    color: #f1f6f3;
+}
+
 #activeThemeLabel {
     background: #1f302c;
     border: 1px solid #2aa879;
