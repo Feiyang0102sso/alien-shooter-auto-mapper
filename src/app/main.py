@@ -7,8 +7,9 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication
 
 from app.config import init_app_env
+from app.i18n.locale import load_locale_preference, tr
+from app.i18n.text_keys import TextKey
 from app.logger import logger
-from app.ui.main_window import MainWindow
 
 
 STYLE_PATH = Path(__file__).resolve().parent / "ui" / "styles" / "dark_theme.qss"
@@ -32,10 +33,13 @@ def main() -> int:
     Start the Auto Mapper PySide6 UI.
     """
     init_app_env()
+    load_locale_preference()
+
+    from app.ui.main_window import MainWindow
 
     app = QApplication(sys.argv)
-    app.setApplicationName("Auto Mapper")
-    app.setOrganizationName("Auto Mapper")
+    app.setApplicationName(tr(TextKey.APP_NAME))
+    app.setOrganizationName(tr(TextKey.APP_NAME))
 
     load_style(app)
 

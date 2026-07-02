@@ -11,6 +11,18 @@ QToolBar {
     padding: 8px;
 }
 
+#languageToggleButton {
+    background: #223039;
+    border: 1px solid #36505d;
+    border-radius: 6px;
+    padding: 0px;
+}
+
+#languageToggleButton:hover {
+    background: #2a3d47;
+    border-color: #4f7fbf;
+}
+
 #drawingToolbar {
     border-right: 1px solid #263740;
     border-bottom: 0;

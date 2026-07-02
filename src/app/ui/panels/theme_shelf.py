@@ -8,6 +8,8 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profiles
+from app.i18n.locale import tr
+from app.i18n.text_keys import TextKey
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -35,7 +37,7 @@ class ThemeShelfPanel(QWidget):
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(12)
 
-        title = QLabel("Wall Sets")
+        title = QLabel(tr(TextKey.PANEL_WALL_SETS))
         title.setObjectName("panelTitle")
         layout.addWidget(title)
 
@@ -81,7 +83,7 @@ class ThemeShelfPanel(QWidget):
         detail.setWordWrap(True)
         card_layout.addWidget(detail)
 
-        button = QPushButton("Select")
+        button = QPushButton(tr(TextKey.BUTTON_SELECT))
         button.clicked.connect(lambda checked=False: self._select_wall_set(wall_type, title_text))
         card_layout.addWidget(button)
 
@@ -93,7 +95,7 @@ class ThemeShelfPanel(QWidget):
             image.setPixmap(pixmap.scaled(260, 118, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
             return
 
-        image.setText("Preview missing")
+        image.setText(tr(TextKey.LABEL_PREVIEW_MISSING))
 
     def _select_wall_set(self, wall_type: int, wall_name: str) -> None:
         self.selected_wall_type = wall_type

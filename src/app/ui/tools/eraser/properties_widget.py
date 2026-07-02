@@ -2,6 +2,8 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLabel, QSlider, QSpinBox, QVBoxLayout
 
+from app.i18n.locale import tr
+from app.i18n.text_keys import TextKey
 from app.ui.tools.eraser.config import DEFAULT_ERASER_SIZE, ERASER_SIZE_MAX, ERASER_SIZE_MIN
 
 
@@ -11,7 +13,7 @@ class EraserPropertiesWidget(QGroupBox):
     size_changed = Signal(int)
 
     def __init__(self, parent=None) -> None:
-        super().__init__("Tool Properties", parent)
+        super().__init__(tr(TextKey.GROUP_TOOL_PROPERTIES), parent)
         self.setObjectName("toolPropertiesGroup")
         self.setStyleSheet(
             "QGroupBox { color: white; }"
@@ -22,7 +24,7 @@ class EraserPropertiesWidget(QGroupBox):
         layout.setContentsMargins(10, 12, 10, 10)
         layout.setSpacing(8)
 
-        label = QLabel("Eraser Size (grid units)")
+        label = QLabel(tr(TextKey.LABEL_ERASER_SIZE))
         label.setStyleSheet("color: white;")
         layout.addWidget(label)
 

@@ -18,6 +18,7 @@ ENV/
 # --- LOGS ---
 *.log
 *.tmp
+ui_settings.json
 
 # --- C / C++ / CMake ---
 build*/

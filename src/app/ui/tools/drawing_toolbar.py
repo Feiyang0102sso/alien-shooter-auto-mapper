@@ -3,6 +3,8 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QToolBar
 
+from app.i18n.locale import tr
+from app.i18n.text_keys import TextKey
 from app.ui.tools.drawing_modes import DRAWING_MODE_LABELS, DrawingMode
 
 
@@ -12,7 +14,7 @@ class DrawingToolbar(QToolBar):
     drawing_mode_changed = Signal(object)
 
     def __init__(self, parent=None) -> None:
-        super().__init__("Drawing Tools", parent)
+        super().__init__(tr(TextKey.TOOLBAR_DRAWING_TOOLS), parent)
         self.setObjectName("drawingToolbar")
         self.setMovable(False)
         self.setOrientation(Qt.Vertical)
@@ -22,11 +24,11 @@ class DrawingToolbar(QToolBar):
         self.action_group.setExclusive(True)
         self._actions = {}
 
-        self._add_mode_action(DrawingMode.POLYLINE, "Polyline")
-        self._add_mode_action(DrawingMode.STRAIGHT_LINE, "Line")
-        self._add_mode_action(DrawingMode.RECTANGLE, "Rect")
+        self._add_mode_action(DrawingMode.POLYLINE, tr(TextKey.DRAWING_POLYLINE))
+        self._add_mode_action(DrawingMode.STRAIGHT_LINE, tr(TextKey.DRAWING_LINE))
+        self._add_mode_action(DrawingMode.RECTANGLE, tr(TextKey.DRAWING_RECT))
         self.addSeparator()
-        self._add_mode_action(DrawingMode.ERASER, "Eraser")
+        self._add_mode_action(DrawingMode.ERASER, tr(TextKey.DRAWING_ERASER))
 
         default_action = self._actions[DrawingMode.POLYLINE]
         default_action.setChecked(True)

@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
 
 from app.editor.drawable_parts import get_drawable_parts
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
+from app.i18n.locale import tr
+from app.i18n.text_keys import TextKey
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.eraser import EraserPropertiesWidget
@@ -37,7 +39,7 @@ class InspectorPanel(QWidget):
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(12)
 
-        title = QLabel("Inspector")
+        title = QLabel(tr(TextKey.PANEL_INSPECTOR))
         title.setObjectName("panelTitle")
         layout.addWidget(title)
 
@@ -54,7 +56,7 @@ class InspectorPanel(QWidget):
         layout.addWidget(self.component_combo)
         self.set_wall_set(default_wall_type, default_profile["short_label"])
 
-        map_size_group = QGroupBox("Map Size")
+        map_size_group = QGroupBox(tr(TextKey.GROUP_MAP_SIZE))
         map_size_group.setObjectName("mapSizeGroup")
         map_size_layout = QVBoxLayout(map_size_group)
         map_size_layout.setContentsMargins(10, 12, 10, 10)
@@ -75,27 +77,27 @@ class InspectorPanel(QWidget):
         self.map_size_y_input.setSingleStep(50.0)
         self.map_size_y_input.setValue(DEFAULT_MAP_SIZE_Y)
 
-        map_size_form.addRow("Map Size X", self.map_size_x_input)
-        map_size_form.addRow("Map Size Y", self.map_size_y_input)
+        map_size_form.addRow(tr(TextKey.LABEL_MAP_SIZE_X), self.map_size_x_input)
+        map_size_form.addRow(tr(TextKey.LABEL_MAP_SIZE_Y), self.map_size_y_input)
         map_size_layout.addLayout(map_size_form)
 
-        self.apply_map_size_button = QPushButton("Apply Map Size")
+        self.apply_map_size_button = QPushButton(tr(TextKey.BUTTON_APPLY_MAP_SIZE))
         self.apply_map_size_button.clicked.connect(self._emit_map_size_applied)
         map_size_layout.addWidget(self.apply_map_size_button)
 
         layout.addWidget(map_size_group)
 
-        self.preview = QLabel("Component preview")
+        self.preview = QLabel(tr(TextKey.LABEL_COMPONENT_PREVIEW))
         self.preview.setObjectName("componentPreview")
         self.preview.setMinimumHeight(170)
         layout.addWidget(self.preview)
 
         form = QFormLayout()
         form.setSpacing(8)
-        form.addRow("Main VID", QLabel("pending"))
-        form.addRow("Side VID", QLabel("pending"))
-        form.addRow("Corner VID", QLabel("pending"))
-        form.addRow("Z Offset", QLabel("pending"))
+        form.addRow(tr(TextKey.LABEL_MAIN_VID), QLabel(tr(TextKey.LABEL_PENDING)))
+        form.addRow(tr(TextKey.LABEL_SIDE_VID), QLabel(tr(TextKey.LABEL_PENDING)))
+        form.addRow(tr(TextKey.LABEL_CORNER_VID), QLabel(tr(TextKey.LABEL_PENDING)))
+        form.addRow(tr(TextKey.LABEL_Z_OFFSET), QLabel(tr(TextKey.LABEL_PENDING)))
         layout.addLayout(form)
 
         self.eraser_properties = EraserPropertiesWidget()

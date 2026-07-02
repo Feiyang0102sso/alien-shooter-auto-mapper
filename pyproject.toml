@@ -21,6 +21,9 @@ package-dir = {"" = "src"}
 # find all python package under src folder
 where = ["src"]
 
+[tool.setuptools.package-data]
+app = ["i18n/locales/*.json"]
+
 [tool.setuptools.dynamic]
 # find variable __version__ in app.version.__version__
 version = {attr = "app.version.__version__"}

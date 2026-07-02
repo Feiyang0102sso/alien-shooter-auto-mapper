@@ -2,6 +2,8 @@
 Central registry for DLL-exported metadata used by the UI layer.
 """
 
+from app.i18n.locale import tr
+from app.i18n.text_keys import TextKey
 from app.logger import logger
 
 
@@ -14,28 +16,28 @@ WALL_TYPE_LAB = 1
 
 WALL_PROFILE_UI_METADATA = {
     WALL_TYPE_STANDARD: {
-        "short_label": "Standard Wall",
-        "description": "Classic steel wall set: standard walls, active doors, and dead door variants.",
+        "short_label_key": TextKey.WALL_STANDARD_SHORT_LABEL,
+        "description_key": TextKey.WALL_STANDARD_DESCRIPTION,
         "color": "#4f7fbf",
         "preview_key": "base",
     },
     WALL_TYPE_LAB: {
-        "short_label": "Lab Wall",
-        "description": "Green laser laboratory set: lab walls, laser doors, and decoration frames.",
+        "short_label_key": TextKey.WALL_LAB_SHORT_LABEL,
+        "description_key": TextKey.WALL_LAB_DESCRIPTION,
         "color": "#2aa879",
         "preview_key": "lab",
     },
 }
 
 DRAWABLE_PART_LABELS = {
-    "wall_body": "Wall Body",
-    "active_door": "Active Door",
-    "dead_door_closed": "Dead Door (Closed)",
-    "dead_door_jammed": "Dead Door (Jammed)",
-    "dead_door_open": "Dead Door (Open)",
-    "lab_laser_closed": "Laser Door (Closed)",
-    "lab_laser_open": "Laser Door (Open)",
-    "lab_decoration_door": "Decoration Door",
+    "wall_body": TextKey.DRAWABLE_WALL_BODY,
+    "active_door": TextKey.DRAWABLE_ACTIVE_DOOR,
+    "dead_door_closed": TextKey.DRAWABLE_DEAD_DOOR_CLOSED,
+    "dead_door_jammed": TextKey.DRAWABLE_DEAD_DOOR_JAMMED,
+    "dead_door_open": TextKey.DRAWABLE_DEAD_DOOR_OPEN,
+    "lab_laser_closed": TextKey.DRAWABLE_LAB_LASER_CLOSED,
+    "lab_laser_open": TextKey.DRAWABLE_LAB_LASER_OPEN,
+    "lab_decoration_door": TextKey.DRAWABLE_LAB_DECORATION_DOOR,
 }
 
 
@@ -277,11 +279,14 @@ def _get_wall_profile_ui_metadata(wall_type: int) -> dict:
     Return UI-owned metadata for a wall profile.
     """
     if wall_type in WALL_PROFILE_UI_METADATA:
-        return dict(WALL_PROFILE_UI_METADATA[wall_type])
+        metadata = dict(WALL_PROFILE_UI_METADATA[wall_type])
+        metadata["short_label"] = tr(metadata.pop("short_label_key"))
+        metadata["description"] = tr(metadata.pop("description_key"))
+        return metadata
 
     metadata = {
-        "short_label": f"Wall Type {wall_type}",
-        "description": "Wall set loaded from the C++ DLL.",
+        "short_label": tr(TextKey.WALL_TYPE_FALLBACK_SHORT_LABEL, wall_type=wall_type),
+        "description": tr(TextKey.WALL_TYPE_FALLBACK_DESCRIPTION),
         "color": "#c0a05a",
         "preview_key": "",
     }
@@ -295,7 +300,12 @@ def _build_drawable_part_items(part_ids: list) -> list:
     items = []
 
     for part_id in part_ids:
-        label = DRAWABLE_PART_LABELS.get(part_id, part_id)
+        label_key = DRAWABLE_PART_LABELS.get(part_id)
+        if label_key is None:
+            label = part_id
+        else:
+            label = tr(label_key)
+
         items.append((part_id, label))
 
     return items
