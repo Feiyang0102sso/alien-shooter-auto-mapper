@@ -10,7 +10,9 @@ from PySide6.QtWidgets import QWidget
 from app.editor.drawable_parts import PART_WALL_BODY
 from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.drawing_tool import DrawingToolController
+from app.ui.tools.eraser import EraserToolController
 
 
 MIN_ZOOM = 0.002
@@ -60,6 +62,7 @@ class MapViewport(QWidget):
         self.segments = []
         self.doors = []
         self.drawing_tool = DrawingToolController(self)
+        self.eraser_tool = EraserToolController(self)
         self.last_cursor_grid_point = None
         self.is_panning = False
         self.pan_start_position = QPointF(0.0, 0.0)
@@ -98,7 +101,12 @@ class MapViewport(QWidget):
         self.drawing_tool.set_mode(drawing_mode)
         self.pending_start_point = None
         self.preview_end_point = None
+        self.eraser_tool.set_enabled(drawing_mode == DrawingMode.ERASER)
         self.update()
+
+    def set_eraser_size(self, size: int) -> None:
+        """Set eraser size in grid units."""
+        self.eraser_tool.set_size(size)
 
     def set_map_size(self, map_size_x: float, map_size_y: float, fit_to_view: bool = True) -> None:
         """
@@ -127,6 +135,7 @@ class MapViewport(QWidget):
         self._draw_preview_segment(painter)
         self._draw_selected_point(painter)
         self._draw_origin_marker(painter)
+        self.eraser_tool.draw_preview(painter)
 
     def mousePressEvent(self, event) -> None:
         """
@@ -141,6 +150,10 @@ class MapViewport(QWidget):
             return
 
         if event.button() == Qt.LeftButton:
+            if self.eraser_tool.handle_left_press(event.position()):
+                event.accept()
+                return
+
             grid_point = self.screen_to_grid(event.position())
             self._handle_left_click(grid_point)
             self.update()
@@ -167,6 +180,8 @@ class MapViewport(QWidget):
             event.accept()
             return
 
+        self.eraser_tool.handle_mouse_move(event.position())
+
         grid_point = self.screen_to_grid(event.position())
         if grid_point is not None:
             if grid_point != self.last_cursor_grid_point:
@@ -189,6 +204,10 @@ class MapViewport(QWidget):
             event.accept()
             return
 
+        if event.button() == Qt.LeftButton and self.eraser_tool.handle_left_release():
+            event.accept()
+            return
+
         super().mouseReleaseEvent(event)
 
     def leaveEvent(self, event) -> None:
@@ -196,6 +215,7 @@ class MapViewport(QWidget):
         Clear hover coordinate state when the cursor leaves the canvas.
         """
         self.last_cursor_grid_point = None
+        self.eraser_tool.clear_hover()
         super().leaveEvent(event)
 
     def wheelEvent(self, event) -> None:
@@ -664,6 +684,12 @@ class MapViewport(QWidget):
             end_point = (pos_x + size, pos_y)
 
         return start_point, end_point
+
+    def get_door_grid_points(self, door: tuple) -> tuple:
+        """
+        Return start and end grid points for callers outside the viewport.
+        """
+        return self._get_door_grid_points(door)
 
     def _get_door_colors(self, door_state: int, light_state: int, z_offset: float) -> tuple:
         """

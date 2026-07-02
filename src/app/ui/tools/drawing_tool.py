@@ -25,7 +25,7 @@ class DrawingToolController:
 
     def __init__(self, viewport) -> None:
         self.viewport = viewport
-        self.mode = DrawingMode.STRAIGHT_LINE
+        self.mode = DrawingMode.POLYLINE
         self.start_point = None
         self.preview_segments = []
 

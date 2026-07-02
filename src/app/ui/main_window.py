@@ -140,6 +140,7 @@ class MainWindow(QMainWindow):
         self.viewport.drawing_cancelled.connect(self._on_drawing_cancelled)
         self.inspector.map_size_applied.connect(self._on_map_size_applied)
         self.inspector.drawable_part_changed.connect(self._on_drawable_part_changed)
+        self.inspector.eraser_size_changed.connect(self._on_eraser_size_changed)
 
     def _on_wall_set_selected(self, wall_type: int, wall_name: str) -> None:
         """
@@ -158,6 +159,7 @@ class MainWindow(QMainWindow):
         mode_label = DRAWING_MODE_LABELS[drawing_mode]
         self.statusBar().showMessage(f"Drawing tool selected: {mode_label}")
         logger.info(f"Drawing tool selected: {drawing_mode.value}")
+        self.inspector.set_tool_properties_for_mode(drawing_mode)
 
     def _on_grid_point_selected(self, grid_x: int, grid_y: int) -> None:
         """
@@ -387,3 +389,9 @@ class MainWindow(QMainWindow):
         """
         self.statusBar().showMessage("Command placeholder: implementation pending")
         logger.info("Toolbar command clicked before implementation")
+
+    def _on_eraser_size_changed(self, size: int) -> None:
+        """Sync eraser size from the inspector to the viewport."""
+        self.viewport.set_eraser_size(size)
+        self.statusBar().showMessage(f"Eraser size: {size}")
+        logger.info(f"Eraser size changed: {size}")

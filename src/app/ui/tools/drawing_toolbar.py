@@ -22,11 +22,13 @@ class DrawingToolbar(QToolBar):
         self.action_group.setExclusive(True)
         self._actions = {}
 
-        self._add_mode_action(DrawingMode.STRAIGHT_LINE, "Line")
         self._add_mode_action(DrawingMode.POLYLINE, "Polyline")
+        self._add_mode_action(DrawingMode.STRAIGHT_LINE, "Line")
         self._add_mode_action(DrawingMode.RECTANGLE, "Rect")
+        self.addSeparator()
+        self._add_mode_action(DrawingMode.ERASER, "Eraser")
 
-        default_action = self._actions[DrawingMode.STRAIGHT_LINE]
+        default_action = self._actions[DrawingMode.POLYLINE]
         default_action.setChecked(True)
 
     def _add_mode_action(self, mode: DrawingMode, text: str) -> None:

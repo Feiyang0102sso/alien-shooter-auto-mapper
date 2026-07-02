@@ -2,11 +2,22 @@
 Inspector panel for the selected theme and component placeholder data.
 """
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QFormLayout, QGroupBox, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from app.editor.drawable_parts import get_drawable_parts
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.ui.tools.drawing_modes import DrawingMode
+from app.ui.tools.eraser import EraserPropertiesWidget
 
 
 class InspectorPanel(QWidget):
@@ -16,6 +27,7 @@ class InspectorPanel(QWidget):
 
     map_size_applied = Signal(float, float)
     drawable_part_changed = Signal(str)
+    eraser_size_changed = Signal(int)
 
     def __init__(self) -> None:
         super().__init__()
@@ -86,6 +98,10 @@ class InspectorPanel(QWidget):
         form.addRow("Z Offset", QLabel("pending"))
         layout.addLayout(form)
 
+        self.eraser_properties = EraserPropertiesWidget()
+        self.eraser_properties.size_changed.connect(self.eraser_size_changed)
+        layout.addWidget(self.eraser_properties)
+
         layout.addStretch(1)
 
     def set_theme(self, theme_name: str) -> None:
@@ -128,6 +144,18 @@ class InspectorPanel(QWidget):
         map_size_x = self.map_size_x_input.value()
         map_size_y = self.map_size_y_input.value()
         return map_size_x, map_size_y
+
+    def get_eraser_size(self) -> int:
+        """
+        Return the current eraser size.
+        """
+        return self.eraser_properties.get_size()
+
+    def set_tool_properties_for_mode(self, drawing_mode: DrawingMode) -> None:
+        """
+        Show tool properties for the active drawing mode.
+        """
+        self.eraser_properties.setVisible(drawing_mode == DrawingMode.ERASER)
 
     def _emit_map_size_applied(self) -> None:
         """

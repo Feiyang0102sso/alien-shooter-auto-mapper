@@ -8,10 +8,12 @@ class DrawingMode(str, Enum):
     STRAIGHT_LINE = "straight_line"
     POLYLINE = "polyline"
     RECTANGLE = "rectangle"
+    ERASER = "eraser"
 
 
 DRAWING_MODE_LABELS = {
     DrawingMode.STRAIGHT_LINE: "Straight Line",
     DrawingMode.POLYLINE: "Polyline",
     DrawingMode.RECTANGLE: "Rectangle",
+    DrawingMode.ERASER: "Eraser",
 }
