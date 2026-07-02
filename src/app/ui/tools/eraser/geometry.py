@@ -7,13 +7,18 @@ def get_effective_radius(size: int) -> float:
     return size - 0.5
 
 
-def erase_segments(segments: list, grid_point: tuple, radius: float) -> list:
-    """Erase wall segment units near a grid point and return surviving segments."""
+def erase_segments(segments: list, grid_point: tuple, radius: float, active_wall_type: int) -> list:
+    """Erase only active wall segment units near a grid point."""
     new_segments = []
     mouse_x = grid_point[0]
     mouse_y = grid_point[1]
 
     for segment in segments:
+        wall_type = int(segment[2])
+        if wall_type != active_wall_type:
+            new_segments.append(segment)
+            continue
+
         surviving_segments = erase_segment(segment, mouse_x, mouse_y, radius)
         new_segments.extend(surviving_segments)
 
@@ -49,13 +54,18 @@ def erase_segment(segment: tuple, mouse_x: int, mouse_y: int, radius: float) -> 
     return merge_units(kept_units, wall_type)
 
 
-def erase_doors(doors: list, grid_point: tuple, radius: float, get_door_grid_points) -> list:
-    """Erase doors near a grid point and return surviving doors."""
+def erase_doors(doors: list, grid_point: tuple, radius: float, active_wall_type: int, get_door_grid_points) -> list:
+    """Erase only active wall doors near a grid point."""
     kept_doors = []
     mouse_x = grid_point[0]
     mouse_y = grid_point[1]
 
     for door in doors:
+        wall_type = int(door[2])
+        if wall_type != active_wall_type:
+            kept_doors.append(door)
+            continue
+
         door_start, door_end = get_door_grid_points(door)
         distance = point_to_segment_distance(mouse_x, mouse_y, door_start, door_end)
         if distance > radius:

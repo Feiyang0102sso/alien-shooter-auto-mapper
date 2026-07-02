@@ -14,11 +14,7 @@ from app.i18n.text_keys import TextKey
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.drawing_tool import DrawingToolController
-
-# 橡皮擦配置
-DEFAULT_ERASER_SIZE = 1
-ERASER_PREVIEW_COLOR = "#ff6b6b"
-ERASER_PREVIEW_ALPHA = 80
+from app.ui.tools.eraser import EraserToolController
 
 
 MIN_ZOOM = 0.002
@@ -68,16 +64,11 @@ class MapViewport(QWidget):
         self.segments = []
         self.doors = []
         self.drawing_tool = DrawingToolController(self)
+        self.eraser_tool = EraserToolController(self)
         self.last_cursor_grid_point = None
         self.is_panning = False
         self.pan_start_position = QPointF(0.0, 0.0)
         self.pan_start_offset = QPointF(0.0, 0.0)
-
-        # 橡皮擦状态
-        self.current_drawing_mode = DrawingMode.POLYLINE
-        self.eraser_size = DEFAULT_ERASER_SIZE
-        self.is_erasing = False  # 左键按下拖拽擦除中
-        self.eraser_cursor_screen_pos = None  # 鼠标屏幕位置，用于绘制预览圈
 
         self.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, fit_to_view=False)
 
@@ -110,17 +101,15 @@ class MapViewport(QWidget):
         """
         Update the active drawing tool mode.
         """
-        self.current_drawing_mode = drawing_mode
         self.drawing_tool.set_mode(drawing_mode)
         self.pending_start_point = None
         self.preview_end_point = None
-        self.is_erasing = False
+        self.eraser_tool.set_enabled(drawing_mode == DrawingMode.ERASER)
         self.update()
 
     def set_eraser_size(self, size: int) -> None:
-        """设置橡皮擦大小（网格单位）。"""
-        self.eraser_size = size
-        self.update()
+        """Set eraser size in grid units."""
+        self.eraser_tool.set_size(size)
 
     def set_map_size(self, map_size_x: float, map_size_y: float, fit_to_view: bool = True) -> None:
         """
@@ -149,7 +138,7 @@ class MapViewport(QWidget):
         self._draw_preview_segment(painter)
         self._draw_selected_point(painter)
         self._draw_origin_marker(painter)
-        self._draw_eraser_preview(painter)
+        self.eraser_tool.draw_preview(painter)
 
     def mousePressEvent(self, event) -> None:
         """
@@ -164,13 +153,7 @@ class MapViewport(QWidget):
             return
 
         if event.button() == Qt.LeftButton:
-            # 橡皮擦模式：按下左键开始擦除
-            if self.current_drawing_mode == DrawingMode.ERASER:
-                self.is_erasing = True
-                grid_point = self.screen_to_grid(event.position())
-                if grid_point is not None:
-                    self._erase_at(grid_point)
-                self.update()
+            if self.eraser_tool.handle_left_press(event.position()):
                 event.accept()
                 return
 
@@ -200,14 +183,7 @@ class MapViewport(QWidget):
             event.accept()
             return
 
-        # 橡皮擦模式：跟踪鼠标位置绘制预览圈 + 拖拽擦除
-        if self.current_drawing_mode == DrawingMode.ERASER:
-            self.eraser_cursor_screen_pos = event.position()
-            if self.is_erasing:
-                grid_point = self.screen_to_grid(event.position())
-                if grid_point is not None:
-                    self._erase_at(grid_point)
-            self.update()
+        self.eraser_tool.handle_mouse_move(event.position())
 
         grid_point = self.screen_to_grid(event.position())
         if grid_point is not None:
@@ -231,9 +207,7 @@ class MapViewport(QWidget):
             event.accept()
             return
 
-        # 橡皮擦模式：松开左键结束擦除
-        if event.button() == Qt.LeftButton and self.is_erasing:
-            self.is_erasing = False
+        if event.button() == Qt.LeftButton and self.eraser_tool.handle_left_release():
             event.accept()
             return
 
@@ -244,7 +218,7 @@ class MapViewport(QWidget):
         Clear hover coordinate state when the cursor leaves the canvas.
         """
         self.last_cursor_grid_point = None
-        self.eraser_cursor_screen_pos = None
+        self.eraser_tool.clear_hover()
         super().leaveEvent(event)
 
     def wheelEvent(self, event) -> None:
@@ -499,106 +473,6 @@ class MapViewport(QWidget):
         painter.drawText(24, 54, size_text)
         painter.drawText(24, 76, tr(TextKey.CANVAS_HELP))
 
-    def _draw_eraser_preview(self, painter: QPainter) -> None:
-        """在橡皮擦模式下，于鼠标位置绘制擦除范围的预览圈。"""
-        if self.current_drawing_mode != DrawingMode.ERASER:
-            return
-        if self.eraser_cursor_screen_pos is None:
-            return
-
-        # 将 eraser_size（网格单位）转换为屏幕像素半径
-        profile = get_wall_profile(self.active_wall_type)
-        step_x = profile["step_x"]
-        step_y = profile["step_y"]
-        grid_physical_dist = math.sqrt(step_x * step_x + step_y * step_y)
-        pixel_radius = self.eraser_size * grid_physical_dist * self.zoom_factor
-
-        preview_color = QColor(ERASER_PREVIEW_COLOR)
-        preview_color.setAlpha(ERASER_PREVIEW_ALPHA)
-
-        pen = QPen(QColor(ERASER_PREVIEW_COLOR))
-        pen.setWidth(2)
-        pen.setCosmetic(True)
-        pen.setStyle(Qt.DashLine)
-        painter.setPen(pen)
-        painter.setBrush(QBrush(preview_color))
-
-        center = self.eraser_cursor_screen_pos
-        painter.drawEllipse(center, pixel_radius, pixel_radius)
-
-    def _erase_at(self, grid_point) -> None:
-        """
-        擦除给定网格点附近的线段和门。
-
-        判定逻辑：计算鼠标网格坐标到每条线段的最短距离，
-        若距离 <= eraser_size 则移除该线段。
-        门按门的两端坐标组成的线段与鼠标坐标的距离判定。
-        """
-        mx = grid_point[0]
-        my = grid_point[1]
-        radius = self.eraser_size
-
-        # 过滤线段：保留距离超出 eraser_size 的线段
-        kept_segments = []
-        for segment in self.segments:
-            start_point = segment[0]
-            end_point = segment[1]
-            dist = self._point_to_segment_distance(mx, my, start_point, end_point)
-            if dist > radius:
-                kept_segments.append(segment)
-        self.segments = kept_segments
-
-        # 过滤门：保留距离超出 eraser_size 的门
-        kept_doors = []
-        for door in self.doors:
-            door_points = self._get_door_grid_points(door)
-            door_start = door_points[0]
-            door_end = door_points[1]
-            dist = self._point_to_segment_distance(mx, my, door_start, door_end)
-            if dist > radius:
-                kept_doors.append(door)
-        self.doors = kept_doors
-
-    @staticmethod
-    def _point_to_segment_distance(px, py, seg_start, seg_end) -> float:
-        """
-        计算点 P(px, py) 到线段 AB 的最短欧几里得距离。
-
-        将投影参数 t 限制在 [0, 1] 以得到线段上的最近点 C，
-        然后返回 |PC|。
-        """
-        ax = seg_start[0]
-        ay = seg_start[1]
-        bx = seg_end[0]
-        by = seg_end[1]
-
-        abx = bx - ax
-        aby = by - ay
-        ab_len_sq = abx * abx + aby * aby
-
-        # 线段退化为一个点
-        if ab_len_sq == 0:
-            dx = px - ax
-            dy = py - ay
-            return math.sqrt(dx * dx + dy * dy)
-
-        # 投影比例 t，限制在 [0, 1]
-        apx = px - ax
-        apy = py - ay
-        t = (apx * abx + apy * aby) / ab_len_sq
-        if t < 0.0:
-            t = 0.0
-        elif t > 1.0:
-            t = 1.0
-
-        # 线段上的最近点
-        cx = ax + t * abx
-        cy = ay + t * aby
-
-        dx = px - cx
-        dy = py - cy
-        return math.sqrt(dx * dx + dy * dy)
-
     def _handle_left_click(self, grid_point) -> None:
         """
         Start or finish a wall segment from a grid click.
@@ -817,6 +691,12 @@ class MapViewport(QWidget):
             end_point = (pos_x + size, pos_y)
 
         return start_point, end_point
+
+    def get_door_grid_points(self, door: tuple) -> tuple:
+        """
+        Return start and end grid points for callers outside the viewport.
+        """
+        return self._get_door_grid_points(door)
 
     def _get_door_colors(self, door_state: int, light_state: int, z_offset: float) -> tuple:
         """
@@ -1078,12 +958,6 @@ class MapViewport(QWidget):
         return min_grid, max_grid
 
     def _physical_to_screen(self, physical_point: QPointF) -> QPointF:
-        """
-        Convert physical coordinates directly to screen coordinates.
-        """
-        screen_x = physical_point.x() * self.zoom_factor + self.pan_offset.x()
-        screen_y = physical_point.y() * self.zoom_factor + self.pan_offset.y()
-        return QPointF(screen_x, screen_y)
         """
         Convert physical coordinates directly to screen coordinates.
         """

@@ -43,14 +43,11 @@ class EraserToolController:
         return True
 
     def handle_mouse_move(self, screen_pos) -> bool:
-        """Track cursor position and erase while dragging."""
+        """Track cursor position for the eraser preview."""
         if not self.enabled:
             return False
 
         self.cursor_screen_pos = screen_pos
-        if self.is_erasing:
-            self.erase_at_screen_pos(screen_pos)
-
         self.viewport.update()
         return True
 
@@ -93,11 +90,18 @@ class EraserToolController:
             return
 
         radius = get_effective_radius(self.size)
-        self.viewport.segments = erase_segments(self.viewport.segments, grid_point, radius)
+        active_wall_type = int(self.viewport.active_wall_type)
+        self.viewport.segments = erase_segments(
+            self.viewport.segments,
+            grid_point,
+            radius,
+            active_wall_type,
+        )
         self.viewport.doors = erase_doors(
             self.viewport.doors,
             grid_point,
             radius,
+            active_wall_type,
             self.viewport.get_door_grid_points,
         )
 
