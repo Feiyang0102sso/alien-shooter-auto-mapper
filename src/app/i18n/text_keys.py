@@ -17,6 +17,7 @@ class TextKey:
 
     CHECK_FLOOR = "check.floor"
     CHECK_CEILING = "check.ceiling"
+    CHECK_IS_DOOR_OPEN = "check.is_door_open"
 
     DOCK_WALL_SETS = "dock.wall_sets"
     DOCK_INSPECTOR = "dock.inspector"

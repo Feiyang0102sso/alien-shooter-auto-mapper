@@ -18,3 +18,4 @@ class ProjectData:
     map_size_y: float = DEFAULT_MAP_SIZE_Y
     segments: list = field(default_factory=list)
     doors: list = field(default_factory=list)
+    is_door_open: bool = False

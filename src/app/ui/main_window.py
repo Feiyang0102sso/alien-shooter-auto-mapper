@@ -107,6 +107,11 @@ class MainWindow(QMainWindow):
         self.ceiling_check.setChecked(False)
         self.ceiling_check.clicked.connect(self._show_ceiling_warning)
 
+        self.is_door_open_check = QCheckBox(tr(TextKey.CHECK_IS_DOOR_OPEN))
+        self.is_door_open_check.setObjectName("isDoorOpenCheck")
+        self.is_door_open_check.setChecked(False)
+        self.is_door_open_check.clicked.connect(self._on_is_door_open_changed)
+
         new_action.triggered.connect(self._clear_canvas)
         import_action.triggered.connect(self._import_json)
         export_action.triggered.connect(self._export_json)
@@ -121,6 +126,7 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         toolbar.addWidget(self.floor_check)
         toolbar.addWidget(self.ceiling_check)
+        toolbar.addWidget(self.is_door_open_check)
 
         toolbar_spacer = QWidget(self)
         toolbar_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -423,6 +429,8 @@ class MainWindow(QMainWindow):
         Clear the current in-memory drawing.
         """
         self.viewport.clear_segments()
+        self.is_door_open_check.setChecked(False)
+        self.viewport.set_is_door_open(False)
         self.inspector.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
         self.viewport.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
         profile = get_wall_profile(self.viewport.active_wall_type)
@@ -517,6 +525,8 @@ class MainWindow(QMainWindow):
 
         self.viewport.set_segments(project_data.segments)
         self.viewport.set_doors(project_data.doors)
+        self.is_door_open_check.setChecked(project_data.is_door_open)
+        self.viewport.set_is_door_open(project_data.is_door_open)
         self.inspector.set_map_size(project_data.map_size_x, project_data.map_size_y)
         self.viewport.set_map_size(project_data.map_size_x, project_data.map_size_y)
 
@@ -607,6 +617,7 @@ class MainWindow(QMainWindow):
             map_size_y=map_size[1],
             segments=self.viewport.get_segments(),
             doors=self.viewport.get_doors(),
+            is_door_open=self.is_door_open_check.isChecked(),
         )
         return project_data
 
@@ -622,3 +633,8 @@ class MainWindow(QMainWindow):
         self.viewport.set_eraser_size(size)
         self.statusBar().showMessage(tr(TextKey.STATUS_ERASER_SIZE, size=size))
         logger.info(f"Eraser size changed: {size}")
+
+    def _on_is_door_open_changed(self, checked: bool) -> None:
+        """Update the viewport open door state and redraw."""
+        self.viewport.set_is_door_open(checked)
+        logger.info(f"Global is_door_open changed: {checked}")

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Interactive isometric viewport.
 """
 import math
@@ -19,16 +19,21 @@ from app.ui.colors import (
     CANVAS_MARKER_OUTLINE,
     CANVAS_PREVIEW_SEGMENT,
     CANVAS_SEGMENT_DEFAULT,
-    DOOR_ACTIVE_DOT,
-    DOOR_ACTIVE_LINE,
-    DOOR_CLOSED_DOT,
-    DOOR_CLOSED_LINE,
-    DOOR_LIGHT_GREEN_DOT,
-    DOOR_LIGHT_GREEN_LINE,
-    DOOR_LIGHT_RED_DOT,
-    DOOR_LIGHT_RED_LINE,
-    DOOR_OPEN_DOT,
-    DOOR_OPEN_LINE,
+    DOOR_STD_ACTIVE_LINE,
+    DOOR_STD_ACTIVE_DOT_OPEN,
+    DOOR_STD_ACTIVE_DOT_CLOSED,
+    DOOR_STD_DEAD_CLOSED_LINE,
+    DOOR_STD_DEAD_CLOSED_DOT,
+    DOOR_STD_DEAD_OPEN_LINE,
+    DOOR_STD_DEAD_OPEN_DOT,
+    DOOR_STD_DEAD_JAMMED_LINE,
+    DOOR_STD_DEAD_JAMMED_DOT,
+    DOOR_LAB_LASER_WITH_LINE,
+    DOOR_LAB_LASER_WITH_DOT,
+    DOOR_LAB_LASER_WITHOUT_LINE,
+    DOOR_LAB_LASER_WITHOUT_DOT,
+    DOOR_LAB_DECO_LINE,
+    DOOR_LAB_DECO_DOT,
 )
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.drawing_tool import DrawingToolController
@@ -81,6 +86,7 @@ class MapViewport(QWidget):
         self.preview_end_point = None
         self.segments = []
         self.doors = []
+        self.is_door_open = False
         self.drawing_tool = DrawingToolController(self)
         self.eraser_tool = EraserToolController(self)
         self.last_cursor_grid_point = None
@@ -94,6 +100,13 @@ class MapViewport(QWidget):
         """
         Update the grid accent color from the selected theme.
         """
+        self.update()
+
+    def set_is_door_open(self, is_open: bool) -> None:
+        """
+        Set whether standard doors are open globally and redraw.
+        """
+        self.is_door_open = is_open
         self.update()
 
     def set_wall_type(self, wall_type: int) -> None:
@@ -449,7 +462,7 @@ class MapViewport(QWidget):
 
             screen_start = self.grid_to_screen(start_point[0], start_point[1], wall_type)
             screen_end = self.grid_to_screen(end_point[0], end_point[1], wall_type)
-            colors = self._get_door_colors(door_state, light_state, z_offset)
+            colors = self._get_door_colors(wall_type, door_state, light_state, z_offset)
             line_color = colors[0]
             dot_color = colors[1]
             hollow = colors[2]
@@ -716,21 +729,42 @@ class MapViewport(QWidget):
         """
         return self._get_door_grid_points(door)
 
-    def _get_door_colors(self, door_state: int, light_state: int, z_offset: float) -> tuple:
+    def _get_door_colors(self, wall_type: int, door_state: int, light_state: int, z_offset: float) -> tuple:
         """
         Return line color, dot color, and hollow flag for a door marker.
         """
-        if light_state == LIGHT_STATE_RED:
-            return DOOR_LIGHT_RED_LINE, DOOR_LIGHT_RED_DOT, False
-        if light_state == LIGHT_STATE_GREEN:
-            return DOOR_LIGHT_GREEN_LINE, DOOR_LIGHT_GREEN_DOT, False
+        WALL_TYPE_STANDARD = 0
+        WALL_TYPE_LAB = 1
 
+        # --- 1. Lab Wall Set (Base wall is Emerald Green) ---
+        if wall_type == WALL_TYPE_LAB:
+            # Lab Decoration Door
+            if light_state == LIGHT_STATE_BROKEN:
+                return DOOR_LAB_DECO_LINE, DOOR_LAB_DECO_DOT, False
+            # Laser Door with Laser (Closed)
+            if door_state == DOOR_STATE_CLOSED:
+                return DOOR_LAB_LASER_WITH_LINE, DOOR_LAB_LASER_WITH_DOT, False
+            # Laser Door without Laser (Open)
+            return DOOR_LAB_LASER_WITHOUT_LINE, DOOR_LAB_LASER_WITHOUT_DOT, True
+
+        # --- 2. Standard Wall Set (Base wall is Deep Blue) ---
+        is_active_door = (light_state != LIGHT_STATE_BROKEN)
+        if is_active_door:
+            # Active Door (State controlled by global is_door_open)
+            if self.is_door_open:
+                return DOOR_STD_ACTIVE_LINE, DOOR_STD_ACTIVE_DOT_OPEN, True
+            else:
+                return DOOR_STD_ACTIVE_LINE, DOOR_STD_ACTIVE_DOT_CLOSED, False
+
+        # Dead Doors (3 variants)
         if z_offset == 0.0:
-            return DOOR_ACTIVE_LINE, DOOR_ACTIVE_DOT, False
+            # Dead Door (Closed)
+            return DOOR_STD_DEAD_CLOSED_LINE, DOOR_STD_DEAD_CLOSED_DOT, False
         if door_state == DOOR_STATE_CLOSED:
-            return DOOR_CLOSED_LINE, DOOR_CLOSED_DOT, False
-
-        return DOOR_OPEN_LINE, DOOR_OPEN_DOT, True
+            # Dead Door (Jammed)
+            return DOOR_STD_DEAD_JAMMED_LINE, DOOR_STD_DEAD_JAMMED_DOT, False
+        # Dead Door (Open)
+        return DOOR_STD_DEAD_OPEN_LINE, DOOR_STD_DEAD_OPEN_DOT, True
 
     @property
     def active_step_x(self) -> float:

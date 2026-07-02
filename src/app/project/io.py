@@ -55,6 +55,7 @@ def build_project_json_data(project_data: ProjectData) -> dict:
         "map_size_y": project_data.map_size_y,
         "segments": segment_items,
         "doors": door_items,
+        "is_door_open": project_data.is_door_open,
     }
     return data
 
@@ -86,6 +87,7 @@ def parse_project_data(data: dict) -> ProjectData:
 
     map_size_x = float(data.get("map_size_x", 600.0))
     map_size_y = float(data.get("map_size_y", 600.0))
+    is_door_open = bool(data.get("is_door_open", False))
     segments = parse_segments(data)
     doors = parse_doors(data)
 
@@ -94,6 +96,7 @@ def parse_project_data(data: dict) -> ProjectData:
         map_size_y=map_size_y,
         segments=segments,
         doors=doors,
+        is_door_open=is_door_open,
     )
     return project_data
 

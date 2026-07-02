@@ -9,6 +9,7 @@
   "action.generate_map": "生成 .MAP",
   "check.floor": "地板",
   "check.ceiling": "天花板",
+  "check.is_door_open": "是否开门",
   "dock.wall_sets": "墙体套装",
   "dock.inspector": "属性面板",
   "panel.wall_sets": "墙体套装",

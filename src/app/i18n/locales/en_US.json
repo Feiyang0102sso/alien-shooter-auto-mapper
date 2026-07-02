@@ -9,6 +9,7 @@
   "action.generate_map": "Generate .MAP",
   "check.floor": "Floor",
   "check.ceiling": "Ceiling",
+  "check.is_door_open": "Doors Open",
   "dock.wall_sets": "Wall Sets",
   "dock.inspector": "Inspector",
   "panel.wall_sets": "Wall Sets",

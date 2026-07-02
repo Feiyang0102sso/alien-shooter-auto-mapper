@@ -199,7 +199,7 @@ class AutoMapperLibClient:
             raise FileNotFoundError(f"DLL not found: {self.dll_path}")
 
         segment_array = self._build_segment_array(project_data.segments)
-        door_array = self._build_door_array(project_data.doors)
+        door_array = self._build_door_array(project_data.doors, project_data.is_door_open)
         output_path_bytes = str(output_path).encode("utf-8")
 
         success = self.lib.generate_map_from_segments(
@@ -237,23 +237,50 @@ class AutoMapperLibClient:
 
         return segment_array
 
-    def _build_door_array(self, doors: list):
+    def _build_door_array(self, doors: list, is_door_open: bool = False):
         """
-        Convert Python door tuples into a C array.
+        Convert Python door tuples into a C array, applying global is_door_open override
+        only to Standard Active Doors (excluding dead doors and lab laser doors).
         """
         DoorArray = CDoor * len(doors)
         door_array = DoorArray()
 
+        WALL_TYPE_STANDARD = 0
+        LIGHT_STATE_GREEN = 0
+        LIGHT_STATE_RED = 1
+        LIGHT_STATE_BROKEN = 2
+        DOOR_STATE_OPEN = 1
+        DOOR_STATE_CLOSED = 0
+
         index = 0
         for door in doors:
-            door_array[index].x = int(door[0])
-            door_array[index].y = int(door[1])
-            door_array[index].wall_type = int(door[2])
-            door_array[index].direction_type = int(door[3])
-            door_array[index].size = int(door[4])
-            door_array[index].door_state = int(door[5])
-            door_array[index].light_state = int(door[6])
-            door_array[index].z_offset = float(door[7])
+            pos_x = int(door[0])
+            pos_y = int(door[1])
+            wall_type = int(door[2])
+            direction_type = int(door[3])
+            size = int(door[4])
+            door_state = int(door[5])
+            light_state = int(door[6])
+            z_offset = float(door[7])
+
+            # Apply global state only to Standard Active doors
+            is_active_door = (light_state != LIGHT_STATE_BROKEN)
+            if wall_type == WALL_TYPE_STANDARD and is_active_door:
+                if is_door_open:
+                    light_state = LIGHT_STATE_GREEN
+                    door_state = DOOR_STATE_OPEN
+                else:
+                    light_state = LIGHT_STATE_RED
+                    door_state = DOOR_STATE_CLOSED
+
+            door_array[index].x = pos_x
+            door_array[index].y = pos_y
+            door_array[index].wall_type = wall_type
+            door_array[index].direction_type = direction_type
+            door_array[index].size = size
+            door_array[index].door_state = door_state
+            door_array[index].light_state = light_state
+            door_array[index].z_offset = z_offset
             index += 1
 
         return door_array
