@@ -224,6 +224,17 @@ class InspectorPanel(QWidget):
                 rel_img_path = "lab/lab_wall_door_laser_off.webp"
             elif part_id == "lab_decoration_door":
                 rel_img_path = "lab/lab_wall_door_decoration.webp"
+        elif wall_type == 2:
+            if part_id == "wall_body":
+                rel_img_path = "standard_dark/standard_wall_dark.webp"
+            elif part_id == "active_door":
+                rel_img_path = "standard_dark/standard_wall_dark_door_active.webp"
+            elif part_id == "dead_door_closed":
+                rel_img_path = "standard_dark/standard_wall_dark_door_dead_closed.webp"
+            elif part_id == "dead_door_jammed":
+                rel_img_path = "standard_dark/standard_wall_dark_door_dead_jammed.webp"
+            elif part_id == "dead_door_open":
+                rel_img_path = "standard_dark/standard_wall_dark_door_dead_open.webp"
 
         image_path = IMAGE_ROOT / rel_img_path if rel_img_path else None
 
@@ -261,9 +272,13 @@ class InspectorPanel(QWidget):
                     nvids = ["653"]
                 elif part_id == "lab_decoration_door":
                     nvids = ["654"]
+            elif wall_type == 2:
+                if part_id == "active_door":
+                    nvids = ["423", "424", "605", "607", "623", "624"]
+                elif part_id in ("dead_door_closed", "dead_door_jammed", "dead_door_open"):
+                    nvids = ["425", "611", "617", "623", "624"]
 
         if nvids:
             self.nvid_label.setText("nvid=" + "; ".join(nvids) + ";")
         else:
             self.nvid_label.clear()
-

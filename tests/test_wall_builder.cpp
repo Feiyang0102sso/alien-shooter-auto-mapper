@@ -45,6 +45,44 @@ TEST(WallBuilderTest, WallOnlyGolden) {
     EXPECT_TRUE(files_match);
 }
 
+TEST(WallBuilderTest, StandardDarkWallUsesDarkProfileVids) {
+    WallBuilder builder(600.0f, 600.0f);
+
+    std::vector<Segment> segments = {
+        {{0, 0}, {2, 0}, WALL_TYPE_STANDARD_DARK},
+        {{2, 0}, {2, 2}, WALL_TYPE_STANDARD_DARK},
+        {{2, 2}, {0, 2}, WALL_TYPE_STANDARD_DARK},
+        {{0, 2}, {0, 0}, WALL_TYPE_STANDARD_DARK},
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    bool found_dir_a = false;
+    bool found_dir_b = false;
+    bool found_pillar = false;
+    bool found_floor = false;
+
+    for (const auto& sprite : sprites) {
+        if (sprite.vid == WALL_STANDARD_DARK.dir_a_vid) {
+            found_dir_a = true;
+        }
+        if (sprite.vid == WALL_STANDARD_DARK.dir_b_vid) {
+            found_dir_b = true;
+        }
+        if (sprite.vid == WALL_STANDARD_DARK.pillar_vid) {
+            found_pillar = true;
+        }
+        if (sprite.vid == FLOOR_STANDARD_DARK.vid) {
+            found_floor = true;
+        }
+    }
+
+    EXPECT_TRUE(found_dir_a);
+    EXPECT_TRUE(found_dir_b);
+    EXPECT_TRUE(found_pillar);
+    EXPECT_TRUE(found_floor);
+}
+
 
 /**
  * Tests for AS1 Celling Floor builder

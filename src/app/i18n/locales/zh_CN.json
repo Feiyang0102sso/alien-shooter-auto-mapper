@@ -39,6 +39,8 @@
   "canvas.help": "左键点击两次：绘制墙体。右键：取消。中键拖拽：平移。滚轮：缩放。",
   "wall.standard.short_label": "标准墙",
   "wall.standard.description": "灰白墙体套装：包含标准墙、活动门和失效门变体。",
+  "wall.standard_dark.short_label": "深色标准墙",
+  "wall.standard_dark.description": "深色标准墙体套装：逻辑同标准墙，仅替换深色墙体和门框 VID。",
   "wall.lab.short_label": "实验室墙",
   "wall.lab.description": "蓝色实验室套装：包含实验室墙、激光门和装饰框。",
   "wall.fallback.short_label": "墙体类型 {wall_type}",

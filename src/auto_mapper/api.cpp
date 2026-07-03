@@ -39,7 +39,8 @@ static bool is_supported_wall_type(int wall_type) {
 }
 
 static const CDrawablePart* get_drawable_parts(int wall_type, int& count) {
-    if (wall_type == auto_mapper::core::WALL_TYPE_STANDARD) {
+    if (wall_type == auto_mapper::core::WALL_TYPE_STANDARD ||
+        wall_type == auto_mapper::core::WALL_TYPE_STANDARD_DARK) {
         count = static_cast<int>(sizeof(STANDARD_DRAWABLE_PARTS) / sizeof(STANDARD_DRAWABLE_PARTS[0]));
         return STANDARD_DRAWABLE_PARTS;
     }

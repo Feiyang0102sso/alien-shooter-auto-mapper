@@ -112,10 +112,20 @@ QDockWidget::title {
     border-color: #2aa879;
 }
 
+#themeShelfScrollArea {
+    background: transparent;
+    border: 0;
+}
+
+#themeShelfScrollContent {
+    background: transparent;
+}
+
 #themePreview {
     background: #0d1317;
     border-radius: 6px;
     min-height: 118px;
+    max-height: 118px;
 }
 
 #cardTitle {
@@ -258,6 +268,31 @@ QGroupBox::title {
 QStatusBar {
     background: #172126;
     color: #9fb4ad;
+}
+
+QScrollBar:vertical {
+    background: #10161a;
+    border: 0;
+    margin: 0;
+    width: 10px;
+}
+
+QScrollBar::handle:vertical {
+    background: #36505d;
+    border-radius: 5px;
+    min-height: 32px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #4f7fbf;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: transparent;
+    border: 0;
 }
 
 #inspectorPanel QLabel {

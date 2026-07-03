@@ -36,6 +36,26 @@ static bool is_lab_dead_door(const DoorInstance& door) {
     return door.light_state == LIGHT_STATE_BROKEN;
 }
 
+static bool is_standard_family_wall(int wall_type) {
+    if (wall_type == WALL_TYPE_STANDARD) {
+        return true;
+    }
+
+    if (wall_type == WALL_TYPE_STANDARD_DARK) {
+        return true;
+    }
+
+    return false;
+}
+
+static const StandardDoorProfile& get_standard_door_profile(int wall_type) {
+    if (wall_type == WALL_TYPE_STANDARD_DARK) {
+        return DOOR_STANDARD_DARK;
+    }
+
+    return DOOR_STANDARD;
+}
+
 const StandardDoorSizeVariant& get_standard_door_variant(int size) {
     if (size == DOOR_STANDARD.small.span_steps) {
         return DOOR_STANDARD.small;
@@ -77,17 +97,17 @@ static float get_standard_panel_z_offset(const StandardDoorSizeVariant& variant,
     return door.z_offset;
 }
 
-static int get_standard_light_id(const DoorInstance& door) {
+static int get_standard_light_id(const StandardDoorProfile& profile, const DoorInstance& door) {
     if (door.light_state == LIGHT_STATE_GREEN) {
-        return DOOR_STANDARD.vid_light_green;
+        return profile.vid_light_green;
     }
 
     if (door.light_state == LIGHT_STATE_RED) {
-        return DOOR_STANDARD.vid_light_red;
+        return profile.vid_light_red;
     }
 
     if (door.light_state == LIGHT_STATE_BROKEN) {
-        return DOOR_STANDARD.vid_light_broken;
+        return profile.vid_light_broken;
     }
 
     return 0;
@@ -142,22 +162,28 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
             continue;
         }
 
-        const StandardDoorSizeVariant& variant = get_standard_door_variant(door.size);
+        if (!is_standard_family_wall(door.wall_type)) {
+            continue;
+        }
+
+        const StandardDoorProfile& door_profile = get_standard_door_profile(door.wall_type);
+        const StandardDoorSizeVariant& variant =
+            (door.size == door_profile.small.span_steps) ? door_profile.small : door_profile.large;
 
         int frame_vid = variant.vid_frame;
-        uint32_t frame_dir = get_sprite_dir(DOOR_STANDARD.frame_dir_map, door.direction_type);
+        uint32_t frame_dir = get_sprite_dir(door_profile.frame_dir_map, door.direction_type);
         if (frame_vid > 0) {
             door_sprites.push_back(io::Sprite(frame_vid, pt.x, pt.y, 0.0f, frame_dir));
         }
 
         int panel_vid = get_standard_panel_id(variant, door);
-        uint32_t panel_dir = get_sprite_dir(DOOR_STANDARD.panel_dir_map, door.direction_type);
+        uint32_t panel_dir = get_sprite_dir(door_profile.panel_dir_map, door.direction_type);
         float panel_z_offset = get_standard_panel_z_offset(variant, door);
         if (panel_vid > 0) {
             door_sprites.push_back(io::Sprite(panel_vid, pt.x, pt.y, panel_z_offset, panel_dir));
         }
 
-        int light_vid = get_standard_light_id(door);
+        int light_vid = get_standard_light_id(door_profile, door);
         if (light_vid > 0) {
             door_sprites.push_back(io::Sprite(light_vid, pt.x, pt.y, 10.0f, frame_dir));
         }

@@ -5,7 +5,12 @@ Central registry for DLL-exported metadata used by the UI layer.
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 from app.logger import logger
-from app.ui.colors import WALL_PROFILE_FALLBACK, WALL_PROFILE_LAB, WALL_PROFILE_STANDARD
+from app.ui.colors import (
+    WALL_PROFILE_FALLBACK,
+    WALL_PROFILE_LAB,
+    WALL_PROFILE_STANDARD,
+    WALL_PROFILE_STANDARD_DARK,
+)
 
 
 WALL_PROFILES = {}
@@ -14,6 +19,7 @@ STANDARD_DOOR_SIZES = []
 AUTO_MAPPER_CLIENT = None
 WALL_TYPE_STANDARD = 0
 WALL_TYPE_LAB = 1
+WALL_TYPE_STANDARD_DARK = 2
 
 WALL_PROFILE_UI_METADATA = {
     WALL_TYPE_STANDARD: {
@@ -27,6 +33,12 @@ WALL_PROFILE_UI_METADATA = {
         "description_key": TextKey.WALL_LAB_DESCRIPTION,
         "color": WALL_PROFILE_LAB,
         "preview_key": "lab",
+    },
+    WALL_TYPE_STANDARD_DARK: {
+        "short_label_key": TextKey.WALL_STANDARD_DARK_SHORT_LABEL,
+        "description_key": TextKey.WALL_STANDARD_DARK_DESCRIPTION,
+        "color": WALL_PROFILE_STANDARD_DARK,
+        "preview_key": "standard_dark",
     },
 }
 

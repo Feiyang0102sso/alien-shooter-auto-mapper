@@ -55,6 +55,8 @@ class TextKey:
 
     WALL_STANDARD_SHORT_LABEL = "wall.standard.short_label"
     WALL_STANDARD_DESCRIPTION = "wall.standard.description"
+    WALL_STANDARD_DARK_SHORT_LABEL = "wall.standard_dark.short_label"
+    WALL_STANDARD_DARK_DESCRIPTION = "wall.standard_dark.description"
     WALL_LAB_SHORT_LABEL = "wall.lab.short_label"
     WALL_LAB_DESCRIPTION = "wall.lab.description"
     WALL_TYPE_FALLBACK_SHORT_LABEL = "wall.fallback.short_label"

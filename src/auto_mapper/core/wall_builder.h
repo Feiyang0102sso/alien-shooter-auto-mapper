@@ -47,6 +47,7 @@ struct CeilingProfile {
 // ── Pre-defined wall profiles ──
 inline constexpr int WALL_TYPE_STANDARD = 0;
 inline constexpr int WALL_TYPE_LAB      = 1;
+inline constexpr int WALL_TYPE_STANDARD_DARK = 2;
 
 inline constexpr WallProfile WALL_STANDARD = {
     .dir_a_vid = 601,
@@ -78,9 +79,25 @@ inline constexpr WallProfile WALL_LAB = {
     .grid_divisor = 2
 };
 
+inline constexpr WallProfile WALL_STANDARD_DARK = {
+    .dir_a_vid = 620,
+    .dir_b_vid = 621,
+    .pillar_vid = 622,
+    .step_x = 40.0f,
+    .step_y = 28.0f,
+    .offset_a_x = 0.0f,
+    .offset_a_y = 0.0f,
+    .offset_b_x = -40.0f,
+    .offset_b_y = 0.0f,
+    .offset_p_x = 0.0f,
+    .offset_p_y = 0.0f,
+    .grid_divisor = 1
+};
+
 inline constexpr int SUPPORTED_WALL_TYPES[] = {
     WALL_TYPE_STANDARD,
-    WALL_TYPE_LAB
+    WALL_TYPE_LAB,
+    WALL_TYPE_STANDARD_DARK
 };
 
 inline constexpr int SUPPORTED_WALL_TYPE_COUNT =
@@ -89,6 +106,7 @@ inline constexpr int SUPPORTED_WALL_TYPE_COUNT =
 // ── Pre-defined floor and ceiling profiles ──
 inline constexpr int FLOOR_TYPE_STANDARD = 0;
 inline constexpr int FLOOR_TYPE_LAB      = 1;
+inline constexpr int FLOOR_TYPE_STANDARD_DARK = 2;
 
 inline constexpr FloorProfile FLOOR_STANDARD = {
     .vid = 500,
@@ -101,6 +119,13 @@ inline constexpr FloorProfile FLOOR_LAB = {
     .vid = 503,
     .step_x = 80.0f,
     .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+inline constexpr FloorProfile FLOOR_STANDARD_DARK = {
+    .vid = 502,
+    .step_x = 40.0f,
+    .step_y = 28.0f,
     .pos_z = 0.0f,
     .grid_divisor = 1
 };

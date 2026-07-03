@@ -17,7 +17,7 @@ def get_app_root() -> Path:
 
     - bundled EXE
     - python scripts (python main.py ... or python -m package.main ...)
-    - CLI Wrapper / Shim (pip install e . then enter package name in console) ** recommended **
+    - CLI Wrapper / Shim (python -m pip install -e . then enter package name in console)
 
     Returns:
         Path: application root directory
@@ -69,7 +69,7 @@ LOG_FILE_PATH = ROOT_DIR / LOG_FILE_NAME
 # --- DLL Path ---
 DLL_NAME_EXE = "AutoMapper.dll"
 DLL_NAME_DEV = "libauto_mapper.dll"
-DLL_DEV_BUILD_DIR = Path(__file__).resolve().parent.parent.parent / "build" / "mingw-release"
+DLL_DEV_BUILD_DIR = ROOT_DIR / "build" / "mingw-release"
 
 def get_dll_path() -> Path:
     """

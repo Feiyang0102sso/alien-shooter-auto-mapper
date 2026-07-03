@@ -218,6 +218,37 @@ TEST(DoorBuilderTest, StandardDeadOpenUsesDeadOpenPanelVid) {
     EXPECT_FLOAT_EQ(sprites[1].posZ, DOOR_STANDARD.small.dead_open_z_offset.min_z);
 }
 
+TEST(DoorBuilderTest, StandardDarkDoorUsesDarkFramesAndStandardPanels) {
+    DoorBuilder builder(600.0f, 600.0f);
+
+    DoorInstance small_door = {
+        {0, 0},
+        WALL_TYPE_STANDARD_DARK,
+        0,
+        1,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    DoorInstance large_door = small_door;
+    large_door.size = 2;
+
+    auto small_sprites = builder.build({small_door});
+    auto large_sprites = builder.build({large_door});
+
+    ASSERT_EQ(small_sprites.size(), 3);
+    ASSERT_EQ(large_sprites.size(), 3);
+
+    EXPECT_EQ(small_sprites[0].vid, 623);
+    EXPECT_EQ(small_sprites[1].vid, 605);
+    EXPECT_EQ(small_sprites[2].vid, 424);
+
+    EXPECT_EQ(large_sprites[0].vid, 624);
+    EXPECT_EQ(large_sprites[1].vid, 607);
+    EXPECT_EQ(large_sprites[2].vid, 424);
+}
+
 TEST(DoorBuilderTest, LabLaserDoorUsesFrameAndPillar) {
     DoorBuilder builder(1200.0f, 1200.0f);
 

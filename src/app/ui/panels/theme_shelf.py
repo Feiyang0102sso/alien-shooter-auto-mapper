@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profiles
 from app.i18n.locale import tr
@@ -18,6 +18,13 @@ IMAGE_ROOT = PROJECT_ROOT / "src" / "app" / "resources" / "images" / "preview" /
 PREVIEW_IMAGES = {
     "base": IMAGE_ROOT / "standard" / "standard_wall.webp",
     "lab": IMAGE_ROOT / "lab" / "lab_wall.webp",
+    "standard_dark": IMAGE_ROOT / "standard_dark" / "standard_wall_dark.webp",
+}
+
+WALL_SET_ORDER = {
+    0: 0,
+    2: 1,
+    1: 2,
 }
 
 
@@ -41,18 +48,36 @@ class ThemeShelfPanel(QWidget):
         title.setObjectName("panelTitle")
         layout.addWidget(title)
 
-        for profile in get_wall_profiles():
+        scroll_area = QScrollArea()
+        scroll_area.setObjectName("themeShelfScrollArea")
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        content = QWidget()
+        content.setObjectName("themeShelfScrollContent")
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(12)
+
+        profiles = sorted(
+            get_wall_profiles(),
+            key=lambda profile: WALL_SET_ORDER.get(profile["wall_type"], profile["wall_type"]),
+        )
+
+        for profile in profiles:
             preview_key = profile["preview_key"]
             image_path = PREVIEW_IMAGES.get(preview_key)
             self._add_card(
-                layout,
+                content_layout,
                 profile["wall_type"],
                 profile["short_label"],
                 profile["description"],
                 image_path,
             )
 
-        layout.addStretch(1)
+        content_layout.addStretch(1)
+        scroll_area.setWidget(content)
+        layout.addWidget(scroll_area)
 
     def _add_card(
         self,
@@ -71,11 +96,13 @@ class ThemeShelfPanel(QWidget):
         image = QLabel()
         image.setObjectName("themePreview")
         image.setAlignment(Qt.AlignCenter)
+        image.setFixedHeight(118)
         self._load_preview(image, image_path)
         card_layout.addWidget(image)
 
         title = QLabel(title_text)
         title.setObjectName("cardTitle")
+        title.setWordWrap(True)
         card_layout.addWidget(title)
 
         detail = QLabel(detail_text)

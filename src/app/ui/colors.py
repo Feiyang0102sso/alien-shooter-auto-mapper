@@ -11,6 +11,7 @@ CANVAS_LABEL_TEXT = "#d9e8e2"
 # Wall profile accent colors.
 WALL_PROFILE_STANDARD = "#4f7fbf"
 WALL_PROFILE_LAB = "#2aa879"
+WALL_PROFILE_STANDARD_DARK = "#7d8794"
 WALL_PROFILE_FALLBACK = "#c0a05a"
 
 # === Standard Wall Set (Base wall is Deep Blue #4f7fbf) ===

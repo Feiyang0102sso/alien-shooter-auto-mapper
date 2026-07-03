@@ -40,11 +40,27 @@ bool is_random_direction_sprite(int vid) {
         return true;
     }
 
+    if (vid == WALL_STANDARD_DARK.dir_a_vid) {
+        return true;
+    }
+
+    if (vid == WALL_STANDARD_DARK.dir_b_vid) {
+        return true;
+    }
+
+    if (vid == WALL_STANDARD_DARK.pillar_vid) {
+        return true;
+    }
+
     if (vid == FLOOR_STANDARD.vid) {
         return true;
     }
 
     if (vid == FLOOR_LAB.vid) {
+        return true;
+    }
+
+    if (vid == FLOOR_STANDARD_DARK.vid) {
         return true;
     }
 

@@ -31,6 +31,10 @@ const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
         return WALL_LAB;
     }
 
+    if (wall_type == WALL_TYPE_STANDARD_DARK) {
+        return WALL_STANDARD_DARK;
+    }
+
     Logger::warning("Unknown wall_type={}, falling back to STANDARD", wall_type);
     return WALL_STANDARD;
 }
@@ -38,7 +42,8 @@ const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
 const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {
     static const std::unordered_map<int, FloorProfile> profiles = {
         {FLOOR_TYPE_STANDARD, FLOOR_STANDARD},
-        {FLOOR_TYPE_LAB,      FLOOR_LAB}
+        {FLOOR_TYPE_LAB,      FLOOR_LAB},
+        {FLOOR_TYPE_STANDARD_DARK, FLOOR_STANDARD_DARK}
     };
     if (profiles.find(floor_type) != profiles.end()) {
         return profiles.at(floor_type);
@@ -300,7 +305,7 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
     b_min_px -= 200.0f; b_max_px += 200.0f;
     b_min_py -= 200.0f; b_max_py += 200.0f;
 
-    std::vector<int> floor_types = {FLOOR_TYPE_STANDARD, FLOOR_TYPE_LAB};
+    std::vector<int> floor_types = {FLOOR_TYPE_STANDARD, FLOOR_TYPE_LAB, FLOOR_TYPE_STANDARD_DARK};
     for (int ft : floor_types) {
         const FloorProfile& f_prof = get_floor_profile(ft);
         MapPoint shift = get_floor_ceiling_shift(map_size_x_, f_prof.step_x, f_prof.step_y, f_prof.grid_divisor);

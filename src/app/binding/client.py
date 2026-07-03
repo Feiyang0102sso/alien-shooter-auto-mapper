@@ -249,6 +249,7 @@ class AutoMapperLibClient:
         door_array = DoorArray()
 
         WALL_TYPE_STANDARD = 0
+        WALL_TYPE_STANDARD_DARK = 2
         LIGHT_STATE_GREEN = 0
         LIGHT_STATE_RED = 1
         LIGHT_STATE_BROKEN = 2
@@ -266,9 +267,10 @@ class AutoMapperLibClient:
             light_state = int(door[6])
             z_offset = float(door[7])
 
-            # Apply global state only to Standard Active doors
+            # Apply global state only to standard-family active doors.
             is_active_door = (light_state != LIGHT_STATE_BROKEN)
-            if wall_type == WALL_TYPE_STANDARD and is_active_door:
+            is_standard_family = wall_type == WALL_TYPE_STANDARD or wall_type == WALL_TYPE_STANDARD_DARK
+            if is_standard_family and is_active_door:
                 if is_door_open:
                     light_state = LIGHT_STATE_GREEN
                     door_state = DOOR_STATE_OPEN
