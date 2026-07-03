@@ -1,7 +1,6 @@
 """Simple JSON-backed UI text translation."""
 
 import json
-from json import JSONDecodeError
 from pathlib import Path
 
 from app.config import ROOT_DIR
@@ -12,8 +11,19 @@ DEFAULT_LOCALE = "en_US"
 LOCALE_EN_US = "en_US"
 LOCALE_ZH_CN = "zh_CN"
 LOCALE_DIR = Path(__file__).resolve().parent / "locales"
-LOCALE_SETTINGS_PATH = ROOT_DIR / "ui_settings.json"
-LOCALE_SETTINGS_KEY = "locale"
+APP_CONFIG_PATH = ROOT_DIR / "AutoMapper.cfg"
+LANGUAGE_CONFIG_KEY = "language"
+LANGUAGE_UNSET = 0
+LANGUAGE_EN_US = 1
+LANGUAGE_ZH_CN = 2
+LANGUAGE_TO_LOCALE = {
+    LANGUAGE_EN_US: LOCALE_EN_US,
+    LANGUAGE_ZH_CN: LOCALE_ZH_CN,
+}
+LOCALE_TO_LANGUAGE = {
+    LOCALE_EN_US: LANGUAGE_EN_US,
+    LOCALE_ZH_CN: LANGUAGE_ZH_CN,
+}
 
 _current_locale = DEFAULT_LOCALE
 _text_cache = {}
@@ -38,23 +48,12 @@ def get_locale() -> str:
 
 def load_locale_preference() -> str:
     """Load the saved UI locale and make it active."""
-    locale_name = DEFAULT_LOCALE
-
-    if not LOCALE_SETTINGS_PATH.exists():
+    language_value = load_language_config_value()
+    locale_name = LANGUAGE_TO_LOCALE.get(language_value)
+    if locale_name is None:
+        locale_name = DEFAULT_LOCALE
         set_locale(locale_name)
         return locale_name
-
-    try:
-        settings_text = LOCALE_SETTINGS_PATH.read_text(encoding="utf-8")
-        settings = json.loads(settings_text)
-    except (OSError, JSONDecodeError) as error:
-        logger.warning(f"Failed to load UI settings: {error}")
-        set_locale(locale_name)
-        return locale_name
-
-    saved_locale = settings.get(LOCALE_SETTINGS_KEY)
-    if isinstance(saved_locale, str):
-        locale_name = saved_locale
 
     set_locale(locale_name)
     return get_locale()
@@ -66,12 +65,89 @@ def save_locale_preference(locale_name: str) -> None:
         logger.warning(f"Unsupported locale preference: {locale_name}")
         return
 
-    settings = {
-        LOCALE_SETTINGS_KEY: locale_name,
-    }
-    settings_text = json.dumps(settings, indent=2)
-    LOCALE_SETTINGS_PATH.write_text(settings_text, encoding="utf-8")
+    language_value = LOCALE_TO_LANGUAGE[locale_name]
+    save_language_config_value(language_value)
     logger.info(f"Saved UI locale preference: {locale_name}")
+
+
+def is_language_initialization_required() -> bool:
+    """Return whether startup should ask the user to choose a language."""
+    language_value = load_language_config_value()
+    return language_value == LANGUAGE_UNSET
+
+
+def load_language_config_value() -> int:
+    """Read the language value from AutoMapper.cfg."""
+    if not APP_CONFIG_PATH.exists():
+        save_language_config_value(LANGUAGE_UNSET)
+        return LANGUAGE_UNSET
+
+    try:
+        config_text = APP_CONFIG_PATH.read_text(encoding="utf-8")
+    except OSError as error:
+        logger.warning(f"Failed to read app config: {error}")
+        return LANGUAGE_UNSET
+
+    for line in config_text.splitlines():
+        stripped_line = line.strip()
+        if not stripped_line:
+            continue
+        if stripped_line.startswith("#"):
+            continue
+
+        key, separator, value_text = stripped_line.partition("=")
+        if not separator:
+            continue
+        if key.strip() != LANGUAGE_CONFIG_KEY:
+            continue
+
+        try:
+            return int(value_text.strip())
+        except ValueError:
+            logger.warning(f"Invalid language config value: {value_text.strip()}")
+            return LANGUAGE_UNSET
+
+    save_language_config_value(LANGUAGE_UNSET)
+    return LANGUAGE_UNSET
+
+
+def save_language_config_value(language_value: int) -> None:
+    """Write the language value to AutoMapper.cfg."""
+    language_line = f"{LANGUAGE_CONFIG_KEY} = {language_value}"
+    if not APP_CONFIG_PATH.exists():
+        config_lines = [
+            "# Auto Mapper configuration",
+            "# language: 0 = ask on startup, 1 = English, 2 = Chinese",
+            language_line,
+            "",
+        ]
+        config_text = "\n".join(config_lines)
+        APP_CONFIG_PATH.write_text(config_text, encoding="utf-8")
+        return
+
+    try:
+        config_text = APP_CONFIG_PATH.read_text(encoding="utf-8")
+    except OSError as error:
+        logger.warning(f"Failed to update app config: {error}")
+        return
+
+    config_lines = []
+    has_language_line = False
+    for line in config_text.splitlines():
+        key, separator, _ = line.partition("=")
+        if separator and key.strip() == LANGUAGE_CONFIG_KEY:
+            config_lines.append(language_line)
+            has_language_line = True
+            continue
+
+        config_lines.append(line)
+
+    if not has_language_line:
+        config_lines.append(language_line)
+
+    config_lines.append("")
+    config_text = "\n".join(config_lines)
+    APP_CONFIG_PATH.write_text(config_text, encoding="utf-8")
 
 
 def tr(text_key: str, **values: object) -> str:

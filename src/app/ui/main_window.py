@@ -2,21 +2,20 @@
 Main window assembly for the Auto Mapper editor.
 """
 from json import JSONDecodeError
-import math
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt
-from PySide6.QtGui import QAction, QBrush, QColor, QIcon, QPainter, QPen, QPixmap, QPolygonF
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
     QDockWidget,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QPushButton,
     QSizePolicy,
     QToolBar,
-    QToolButton,
     QWidget,
 )
 
@@ -34,6 +33,9 @@ from app.ui.tools.drawing_modes import DRAWING_MODE_LABELS, DrawingMode
 from app.ui.tools.drawing_toolbar import DrawingToolbar
 from app.binding.dll_registry import register_all_from_dll
 from app.editor.wall_profiles import get_wall_profile
+
+
+LANGUAGE_BUTTON_TEXT = "语言\nlanguage"
 
 
 class MainWindow(QMainWindow):
@@ -143,11 +145,10 @@ class MainWindow(QMainWindow):
 
         self.language_button = QPushButton(self)
         self.language_button.setObjectName("languageToggleButton")
-        self.language_button.setIcon(self._create_language_icon())
-        self.language_button.setIconSize(QSize(88, 34))
+        self.language_button.setText(LANGUAGE_BUTTON_TEXT)
         self.language_button.setFixedSize(112, 52)
-        self.language_button.setToolTip("Switch language")
-        self.language_button.clicked.connect(self._on_language_toggle_clicked)
+        self.language_button.setToolTip("Select language")
+        self.language_button.setMenu(self._create_language_menu())
         toolbar.addWidget(self.language_button)
 
     def _build_docks(self) -> None:
@@ -271,15 +272,38 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(self, tr(TextKey.DIALOG_CEILING), tr(TextKey.ERROR_CEILING_DISABLED))
         self.statusBar().showMessage(tr(TextKey.STATUS_CEILING_DISABLED))
 
-    def _on_language_toggle_clicked(self) -> None:
+    def _create_language_menu(self) -> QMenu:
         """
-        Save the next UI language and ask the user to restart.
+        Build the language selector menu.
         """
-        next_locale = self._get_next_pending_locale()
-        self.pending_locale = next_locale
-        save_locale_preference(next_locale)
+        language_menu = QMenu(self.language_button)
+        self.language_action_group = QActionGroup(self)
+        self.language_action_group.setExclusive(True)
 
-        language_name = self._get_locale_display_name(next_locale)
+        english_action = QAction("English", self)
+        english_action.setCheckable(True)
+        english_action.setChecked(self.pending_locale == LOCALE_EN_US)
+        self.language_action_group.addAction(english_action)
+        english_action.triggered.connect(lambda: self._on_language_selected(LOCALE_EN_US))
+        language_menu.addAction(english_action)
+
+        chinese_action = QAction("中文", self)
+        chinese_action.setCheckable(True)
+        chinese_action.setChecked(self.pending_locale == LOCALE_ZH_CN)
+        self.language_action_group.addAction(chinese_action)
+        chinese_action.triggered.connect(lambda: self._on_language_selected(LOCALE_ZH_CN))
+        language_menu.addAction(chinese_action)
+
+        return language_menu
+
+    def _on_language_selected(self, locale_name: str) -> None:
+        """
+        Save the selected UI language and ask the user to restart.
+        """
+        self.pending_locale = locale_name
+        save_locale_preference(locale_name)
+
+        language_name = self._get_locale_display_name(locale_name)
         message = f"Language saved: {language_name}. Restart to apply it fully."
         self.statusBar().showMessage(message)
         QMessageBox.information(
@@ -288,143 +312,14 @@ class MainWindow(QMainWindow):
             f"Language has been changed to {language_name}. Restart Auto Mapper to apply it fully.",
         )
 
-    def _get_next_pending_locale(self) -> str:
-        """
-        Return the language selected by the next toggle click.
-        """
-        if self.pending_locale == LOCALE_EN_US:
-            return LOCALE_ZH_CN
-
-        return LOCALE_EN_US
-
     def _get_locale_display_name(self, locale_name: str) -> str:
         """
         Return a readable language name for restart prompts.
         """
         if locale_name == LOCALE_ZH_CN:
-            return "中文"
+            return "Chinese"
 
         return "English"
-
-    def _create_language_icon(self) -> QIcon:
-        """
-        Create a two-flag language icon without relying on emoji font support.
-        Optimized for high-DPI scaling.
-        """
-        logical_width = 88
-        logical_height = 34
-
-        ratio = self.devicePixelRatio()
-        if ratio <= 0:
-            ratio = 1.0
-
-        pixmap = QPixmap(int(logical_width * ratio), int(logical_height * ratio))
-        pixmap.fill(Qt.transparent)
-        pixmap.setDevicePixelRatio(ratio)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
-        
-        # Draw both flags with original sizes (38x27) but with better spacing in the 88x34 logical area
-        # Left margin: 4, spacing: 4, right margin: 4 (4 + 38 + 4 + 38 + 4 = 88)
-        self._draw_us_flag(painter, QRectF(4, 3.5, 38, 27))
-        self._draw_china_flag(painter, QRectF(46, 3.5, 38, 27))
-        painter.end()
-
-        return QIcon(pixmap)
-
-    def _draw_star(self, painter: QPainter, cx: float, cy: float, radius: float, color: QColor, angle_offset: float = 0.0) -> None:
-        """
-        Draw a standard 5-point star (pentagram) centered at (cx, cy).
-        """
-        points = []
-        r = radius * 0.382
-        for i in range(10):
-            # Start angle is -pi/2 (top)
-            angle = -math.pi / 2 + i * math.pi / 5 + angle_offset
-            current_r = radius if i % 2 == 0 else r
-            x = cx + current_r * math.cos(angle)
-            y = cy + current_r * math.sin(angle)
-            points.append(QPointF(x, y))
-            
-        polygon = QPolygonF(points)
-        painter.setBrush(QBrush(color))
-        painter.setPen(Qt.NoPen)
-        painter.drawPolygon(polygon)
-
-    def _draw_us_flag(self, painter: QPainter, flag_rect: QRectF) -> None:
-        """
-        Draw a compact US flag for the language toggle with actual stars.
-        """
-        painter.setPen(QPen(QColor("#d8dee9"), 0.8))
-        painter.setBrush(QBrush(QColor("#f8f8f2")))
-        painter.drawRoundedRect(flag_rect, 2, 2)
-
-        stripe_height = flag_rect.height() / 7.0
-        painter.setPen(Qt.NoPen)
-        painter.setBrush(QBrush(QColor("#bf3131")))
-
-        for index in range(0, 7, 2):
-            y = flag_rect.y() + index * stripe_height
-            stripe_rect = QRectF(flag_rect.x(), y, flag_rect.width(), stripe_height)
-            painter.drawRect(stripe_rect)
-
-        canton_rect = QRectF(flag_rect.x(), flag_rect.y(), flag_rect.width() * 0.46, stripe_height * 4)
-        painter.setBrush(QBrush(QColor("#21468b")))
-        painter.drawRect(canton_rect)
-
-        # Draw real stars instead of circle placeholders
-        star_points = [
-            QPointF(canton_rect.x() + 4.5, canton_rect.y() + 4.5),
-            QPointF(canton_rect.x() + 12.5, canton_rect.y() + 4.5),
-            QPointF(canton_rect.x() + 4.5, canton_rect.y() + 11.5),
-            QPointF(canton_rect.x() + 12.5, canton_rect.y() + 11.5),
-        ]
-
-        for point in star_points:
-            self._draw_star(painter, point.x(), point.y(), 1.8, QColor("#ffffff"))
-
-    def _draw_china_flag(self, painter: QPainter, flag_rect: QRectF) -> None:
-        """
-        Draw a standard, geometrically accurate China flag for the language toggle.
-        """
-        # Draw background
-        painter.setPen(QPen(QColor("#d8dee9"), 0.8))
-        painter.setBrush(QBrush(QColor("#de2910")))
-        painter.drawRoundedRect(flag_rect, 2, 2)
-
-        # Scale parameters based on standard 30x20 grid
-        w = flag_rect.width()
-        h = flag_rect.height()
-        x0 = flag_rect.x()
-        y0 = flag_rect.y()
-        
-        # Grid unit size
-        dx = w / 30.0
-        dy = h / 20.0
-
-        # Big star center and radius
-        bx = x0 + 5.0 * dx
-        by = y0 + 5.0 * dy
-        br = 3.0 * dy
-        
-        self._draw_star(painter, bx, by, br, QColor("#ffde00"))
-
-        # Small stars grid positions and rotation angles so they point to the big star
-        small_stars = [
-            (10.0, 2.0),
-            (12.0, 4.0),
-            (12.0, 7.0),
-            (10.0, 9.0)
-        ]
-        
-        sr = 1.0 * dy
-        for sx_grid, sy_grid in small_stars:
-            sx = x0 + sx_grid * dx
-            sy = y0 + sy_grid * dy
-            # Calculate angle from small star to big star and rotate to align one tip
-            angle = math.atan2(by - sy, bx - sx) + math.pi / 2
-            self._draw_star(painter, sx, sy, sr, QColor("#ffde00"), angle)
 
     def _on_drawable_part_changed(self, part_id: str) -> None:
         """
