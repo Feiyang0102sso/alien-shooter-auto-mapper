@@ -101,16 +101,24 @@ class MainWindow(QMainWindow):
         self.floor_check = QCheckBox(tr(TextKey.CHECK_FLOOR))
         self.floor_check.setObjectName("floorCheck")
         self.floor_check.setChecked(False)
+        self.floor_check.setToolTip(tr(TextKey.TOOLTIP_FLOOR))
 
         self.ceiling_check = QCheckBox(tr(TextKey.CHECK_CEILING))
         self.ceiling_check.setObjectName("disabledCeilingCheck")
         self.ceiling_check.setChecked(False)
+        self.ceiling_check.setToolTip(tr(TextKey.TOOLTIP_CEILING))
         self.ceiling_check.clicked.connect(self._show_ceiling_warning)
 
         self.is_door_open_check = QCheckBox(tr(TextKey.CHECK_IS_DOOR_OPEN))
         self.is_door_open_check.setObjectName("isDoorOpenCheck")
         self.is_door_open_check.setChecked(False)
+        self.is_door_open_check.setToolTip(tr(TextKey.TOOLTIP_IS_DOOR_OPEN))
         self.is_door_open_check.clicked.connect(self._on_is_door_open_changed)
+
+        self.random_direction_check = QCheckBox(tr(TextKey.CHECK_RANDOM_DIRECTION))
+        self.random_direction_check.setObjectName("randomDirectionCheck")
+        self.random_direction_check.setChecked(True)
+        self.random_direction_check.setToolTip(tr(TextKey.TOOLTIP_RANDOM_DIRECTION))
 
         new_action.triggered.connect(self._clear_canvas)
         import_action.triggered.connect(self._import_json)
@@ -127,6 +135,7 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(self.floor_check)
         toolbar.addWidget(self.ceiling_check)
         toolbar.addWidget(self.is_door_open_check)
+        toolbar.addWidget(self.random_direction_check)
 
         toolbar_spacer = QWidget(self)
         toolbar_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -573,6 +582,7 @@ class MainWindow(QMainWindow):
                 project_data,
                 generate_floor=self.floor_check.isChecked(),
                 generate_ceiling=False,
+                random_direction=self.random_direction_check.isChecked(),
             )
         except FileNotFoundError as error:
             QMessageBox.critical(

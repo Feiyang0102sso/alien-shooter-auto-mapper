@@ -18,6 +18,12 @@ class TextKey:
     CHECK_FLOOR = "check.floor"
     CHECK_CEILING = "check.ceiling"
     CHECK_IS_DOOR_OPEN = "check.is_door_open"
+    CHECK_RANDOM_DIRECTION = "check.random_direction"
+
+    TOOLTIP_FLOOR = "tooltip.floor"
+    TOOLTIP_CEILING = "tooltip.ceiling"
+    TOOLTIP_IS_DOOR_OPEN = "tooltip.is_door_open"
+    TOOLTIP_RANDOM_DIRECTION = "tooltip.random_direction"
 
     DOCK_WALL_SETS = "dock.wall_sets"
     DOCK_INSPECTOR = "dock.inspector"

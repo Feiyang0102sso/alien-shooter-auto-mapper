@@ -73,7 +73,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     float map_size_x,
     float map_size_y,
     bool gen_floor,
-    bool gen_ceiling
+    bool gen_ceiling,
+    bool random_direction
 );
 
 /**

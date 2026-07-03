@@ -52,6 +52,7 @@ class AutoMapperLibClient:
             ctypes.c_float,
             ctypes.c_bool,
             ctypes.c_bool,
+            ctypes.c_bool,
         ]
         self.lib.generate_map_from_segments.restype = ctypes.c_bool
 
@@ -191,6 +192,7 @@ class AutoMapperLibClient:
         project_data: ProjectData,
         generate_floor: bool = True,
         generate_ceiling: bool = True,
+        random_direction: bool = False,
     ) -> bool:
         """
         Generate a .map file through the C++ DLL.
@@ -212,6 +214,7 @@ class AutoMapperLibClient:
             float(project_data.map_size_y),
             generate_floor,
             generate_ceiling,
+            random_direction,
         )
         return bool(success)
 

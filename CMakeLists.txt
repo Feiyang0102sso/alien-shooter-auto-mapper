@@ -47,6 +47,7 @@ set(CORE_SOURCES
     src/auto_mapper/core/geometry.cpp
     src/auto_mapper/core/wall_builder.cpp
     src/auto_mapper/core/door_builder.cpp
+    src/auto_mapper/core/dir_randomizer.cpp
 )
 add_library(auto_mapper_core STATIC ${CORE_SOURCES})
 target_link_libraries(auto_mapper_core PUBLIC auto_mapper_common auto_mapper_io)
@@ -64,10 +65,13 @@ endif()
 file(GLOB TEST_SOURCES CONFIGURE_DEPENDS "tests/test_*.cpp")
 
 add_executable(auto_mapper_tests ${TEST_SOURCES})
-target_link_libraries(auto_mapper_tests PRIVATE 
+target_link_libraries(auto_mapper_tests PRIVATE
     auto_mapper_core 
     auto_mapper_io 
     auto_mapper_common 
     GTest::gtest_main
 )
+
+add_dependencies(auto_mapper_tests auto_mapper) # build dll every time when running test
+
 add_test(NAME AllTests COMMAND auto_mapper_tests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})

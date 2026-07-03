@@ -1,6 +1,7 @@
 #include "auto_mapper/api.h"
 #include "auto_mapper/core/wall_builder.h"
 #include "auto_mapper/core/door_builder.h"
+#include "auto_mapper/core/dir_randomizer.h"
 #include "auto_mapper/io/map_writer.h"
 #include <vector>
 #include <string>
@@ -217,7 +218,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     float map_size_x,
     float map_size_y,
     bool gen_floor,
-    bool gen_ceiling
+    bool gen_ceiling,
+    bool random_direction
 ) {
     std::string out_path(output_path);
     std::vector<auto_mapper::core::Segment> cpp_segments;
@@ -267,6 +269,10 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     // 1. Build walls with excavations
     auto_mapper::core::WallBuilder wall_builder(map_size_x, map_size_y);
     std::vector<auto_mapper::io::Sprite> sprites = wall_builder.build(cpp_segments, gen_floor, gen_ceiling, excavations);
+
+    if (random_direction) {
+        auto_mapper::core::randomize_wall_and_floor_directions(sprites);
+    }
 
     // 2. Build doors
     auto_mapper::core::DoorBuilder door_builder(map_size_x, map_size_y);
