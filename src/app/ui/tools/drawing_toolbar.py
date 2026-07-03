@@ -1,7 +1,7 @@
 """Left-side toolbar for choosing drawing tools."""
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QActionGroup
-from PySide6.QtWidgets import QToolBar
+from PySide6.QtWidgets import QLabel, QToolBar
 
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
@@ -19,6 +19,12 @@ class DrawingToolbar(QToolBar):
         self.setMovable(False)
         self.setOrientation(Qt.Vertical)
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+
+        # Title label matching panelTitle style
+        title = QLabel(tr(TextKey.PANEL_TOOLS))
+        title.setObjectName("panelTitle")
+        title.setAlignment(Qt.AlignCenter)
+        self.addWidget(title)
 
         self.action_group = QActionGroup(self)
         self.action_group.setExclusive(True)

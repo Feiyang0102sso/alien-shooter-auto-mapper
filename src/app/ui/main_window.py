@@ -145,15 +145,17 @@ class MainWindow(QMainWindow):
         """
         Build left and right editor panels.
         """
-        left_dock = QDockWidget(tr(TextKey.DOCK_WALL_SETS), self)
+        left_dock = QDockWidget(self)
         left_dock.setObjectName("themeShelfDock")
+        left_dock.setTitleBarWidget(QWidget())  # hide docker title bar
         left_dock.setWidget(self.theme_shelf)
         left_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
         left_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.addDockWidget(Qt.LeftDockWidgetArea, left_dock)
 
-        right_dock = QDockWidget(tr(TextKey.DOCK_INSPECTOR), self)
+        right_dock = QDockWidget(self)
         right_dock.setObjectName("inspectorDock")
+        right_dock.setTitleBarWidget(QWidget())  # hide docker title bar
         right_dock.setWidget(self.inspector)
         right_dock.setAllowedAreas(Qt.RightDockWidgetArea)
         right_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)

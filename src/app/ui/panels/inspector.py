@@ -1,7 +1,9 @@
 """
 Inspector panel for the selected theme and component placeholder data.
 """
-from PySide6.QtCore import Signal
+from pathlib import Path
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -21,6 +23,9 @@ from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.eraser import EraserPropertiesWidget
 
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
+IMAGE_ROOT = PROJECT_ROOT / "src" / "app" / "resources" / "images" / "preview" / "AS1"
+
 
 class InspectorPanel(QWidget):
     """
@@ -36,26 +41,14 @@ class InspectorPanel(QWidget):
         self.setObjectName("inspectorPanel")
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setContentsMargins(14, 8, 14, 14)
         layout.setSpacing(12)
 
         title = QLabel(tr(TextKey.PANEL_INSPECTOR))
         title.setObjectName("panelTitle")
         layout.addWidget(title)
 
-        default_wall_type = get_default_wall_type()
-        default_profile = get_wall_profile(default_wall_type)
-
-        self.theme_label = QLabel(default_profile["short_label"])
-        self.theme_label.setObjectName("activeThemeLabel")
-        layout.addWidget(self.theme_label)
-
-        self.component_combo = QComboBox()
-        self._drawable_part_ids = []
-        self.component_combo.currentIndexChanged.connect(self._emit_drawable_part_changed)
-        layout.addWidget(self.component_combo)
-        self.set_wall_set(default_wall_type, default_profile["short_label"])
-
+        # ── Map Size ──
         map_size_group = QGroupBox(tr(TextKey.GROUP_MAP_SIZE))
         map_size_group.setObjectName("mapSizeGroup")
         map_size_layout = QVBoxLayout(map_size_group)
@@ -87,24 +80,48 @@ class InspectorPanel(QWidget):
 
         layout.addWidget(map_size_group)
 
-        self.preview = QLabel(tr(TextKey.LABEL_COMPONENT_PREVIEW))
-        self.preview.setObjectName("componentPreview")
-        self.preview.setMinimumHeight(170)
-        layout.addWidget(self.preview)
+        # ── Component Preview (Component Group) ──
+        component_group = QGroupBox(tr(TextKey.LABEL_COMPONENT_PREVIEW))
+        component_group.setObjectName("componentGroup")
+        component_layout = QVBoxLayout(component_group)
+        component_layout.setContentsMargins(10, 12, 10, 10)
+        component_layout.setSpacing(8)
 
-        form = QFormLayout()
-        form.setSpacing(8)
-        form.addRow(tr(TextKey.LABEL_MAIN_VID), QLabel(tr(TextKey.LABEL_PENDING)))
-        form.addRow(tr(TextKey.LABEL_SIDE_VID), QLabel(tr(TextKey.LABEL_PENDING)))
-        form.addRow(tr(TextKey.LABEL_CORNER_VID), QLabel(tr(TextKey.LABEL_PENDING)))
-        form.addRow(tr(TextKey.LABEL_Z_OFFSET), QLabel(tr(TextKey.LABEL_PENDING)))
-        layout.addLayout(form)
+        default_wall_type = get_default_wall_type()
+        default_profile = get_wall_profile(default_wall_type)
+        self.current_wall_type = default_wall_type
+
+        self.theme_label = QLabel(default_profile["short_label"])
+        self.theme_label.setObjectName("activeThemeLabel")
+        component_layout.addWidget(self.theme_label)
+
+        self.component_combo = QComboBox()
+        self._drawable_part_ids = []
+        self.component_combo.currentIndexChanged.connect(self._emit_drawable_part_changed)
+        component_layout.addWidget(self.component_combo)
+
+        self.preview = QLabel()
+        self.preview.setObjectName("componentPreview")
+        self.preview.setFixedSize(300, 200)
+        self.preview.setAlignment(Qt.AlignCenter)
+        component_layout.addWidget(self.preview)
+
+        self.nvid_label = QLabel()
+        self.nvid_label.setObjectName("nvidLabel")
+        self.nvid_label.setStyleSheet("font-family: monospace; font-size: 12px; color: #69f0ae; padding-top: 4px;")
+        self.nvid_label.setWordWrap(True)
+        component_layout.addWidget(self.nvid_label)
+
+        layout.addWidget(component_group)
 
         self.eraser_properties = EraserPropertiesWidget()
         self.eraser_properties.size_changed.connect(self.eraser_size_changed)
         layout.addWidget(self.eraser_properties)
 
         layout.addStretch(1)
+
+        # Set initial wall choices after widgets are initialized
+        self.set_wall_set(default_wall_type, default_profile["short_label"])
 
     def set_theme(self, theme_name: str) -> None:
         """
@@ -116,6 +133,7 @@ class InspectorPanel(QWidget):
         """
         Update active wall set and its drawable part choices.
         """
+        self.current_wall_type = wall_type
         self.theme_label.setText(wall_name)
 
         self.component_combo.blockSignals(True)
@@ -130,7 +148,9 @@ class InspectorPanel(QWidget):
         self.component_combo.blockSignals(False)
 
         if self._drawable_part_ids:
-            self.drawable_part_changed.emit(self._drawable_part_ids[0])
+            first_part_id = self._drawable_part_ids[0]
+            self._update_preview(wall_type, first_part_id)
+            self.drawable_part_changed.emit(first_part_id)
 
     def set_map_size(self, map_size_x: float, map_size_y: float) -> None:
         """
@@ -176,4 +196,74 @@ class InspectorPanel(QWidget):
             return
 
         part_id = self._drawable_part_ids[index]
+        self._update_preview(self.current_wall_type, part_id)
         self.drawable_part_changed.emit(part_id)
+
+    def _update_preview(self, wall_type: int, part_id: str) -> None:
+        """
+        Update component preview image and nvid labels based on wall type and part ID.
+        """
+        rel_img_path = ""
+        if wall_type == 0:
+            if part_id == "wall_body":
+                rel_img_path = "standard/standard_wall.webp"
+            elif part_id == "active_door":
+                rel_img_path = "standard/standard_wall_door_active.webp"
+            elif part_id == "dead_door_closed":
+                rel_img_path = "standard/standard_wall_door_dead_closed.webp"
+            elif part_id == "dead_door_jammed":
+                rel_img_path = "standard/standard_wall_door_dead_jammed.webp"
+            elif part_id == "dead_door_open":
+                rel_img_path = "standard/standard_wall_door_dead_open.webp"
+        elif wall_type == 1:
+            if part_id == "wall_body":
+                rel_img_path = "lab/lab_wall.webp"
+            elif part_id == "lab_laser_closed":
+                rel_img_path = "lab/lab_wall_door_laser_on.webp"
+            elif part_id == "lab_laser_open":
+                rel_img_path = "lab/lab_wall_door_laser_off.webp"
+            elif part_id == "lab_decoration_door":
+                rel_img_path = "lab/lab_wall_door_decoration.webp"
+
+        image_path = IMAGE_ROOT / rel_img_path if rel_img_path else None
+
+        if image_path and image_path.exists():
+            pixmap = QPixmap(str(image_path))
+            self.preview.setPixmap(
+                pixmap.scaled(
+                    300,
+                    200,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+            )
+        else:
+            self.preview.clear()
+            self.preview.setText(tr(TextKey.LABEL_PREVIEW_MISSING) if hasattr(TextKey, 'LABEL_PREVIEW_MISSING') else "Preview Missing")
+
+        nvids = []
+        if part_id == "wall_body":
+            try:
+                profile = get_wall_profile(wall_type)
+                nvids = [str(profile["dir_a_vid"]), str(profile["dir_b_vid"]), str(profile["pillar_vid"])]
+            except Exception:
+                pass
+        else:
+            if wall_type == 0:
+                if part_id == "active_door":
+                    nvids = ["423", "424", "605", "606", "607", "608"]
+                elif part_id in ("dead_door_closed", "dead_door_jammed", "dead_door_open"):
+                    nvids = ["425",  "606", "608", "611", "617" ]
+            elif wall_type == 1:
+                if part_id == "lab_laser_closed":
+                    nvids = ["164", "653"]
+                elif part_id == "lab_laser_open":
+                    nvids = ["653"]
+                elif part_id == "lab_decoration_door":
+                    nvids = ["654"]
+
+        if nvids:
+            self.nvid_label.setText("nvid=" + "; ".join(nvids) + ";")
+        else:
+            self.nvid_label.clear()
+

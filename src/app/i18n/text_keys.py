@@ -24,6 +24,7 @@ class TextKey:
 
     PANEL_WALL_SETS = "panel.wall_sets"
     PANEL_INSPECTOR = "panel.inspector"
+    PANEL_TOOLS = "panel.tools"
 
     BUTTON_SELECT = "button.select"
     BUTTON_APPLY_MAP_SIZE = "button.apply_map_size"

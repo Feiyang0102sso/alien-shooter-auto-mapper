@@ -56,5 +56,6 @@ test_output.map
 
 # --- some personal note ---
 _personal_note/
+_prep_for_img/
 #*.bat
-*.png
+#*.png

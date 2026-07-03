@@ -13,11 +13,11 @@ from app.i18n.text_keys import TextKey
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
-DEMO_IMAGE_ROOT = PROJECT_ROOT / "_ui_html_demo"
+IMAGE_ROOT = PROJECT_ROOT / "src" / "app" / "resources" / "images" / "preview" / "AS1"
 
 PREVIEW_IMAGES = {
-    "base": DEMO_IMAGE_ROOT / "base_preview.png",
-    "lab": DEMO_IMAGE_ROOT / "wall_preview.png",
+    "base": IMAGE_ROOT / "standard" / "standard_wall.webp",
+    "lab": IMAGE_ROOT / "lab" / "lab_wall.webp",
 }
 
 
@@ -34,7 +34,7 @@ class ThemeShelfPanel(QWidget):
         self.selected_wall_type = get_default_wall_type()
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setContentsMargins(14, 8, 14, 14)
         layout.setSpacing(12)
 
         title = QLabel(tr(TextKey.PANEL_WALL_SETS))
@@ -92,7 +92,7 @@ class ThemeShelfPanel(QWidget):
     def _load_preview(self, image: QLabel, image_path: Path | None) -> None:
         if image_path is not None and image_path.exists():
             pixmap = QPixmap(str(image_path))
-            image.setPixmap(pixmap.scaled(260, 118, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
+            image.setPixmap(pixmap.scaled(260, 118, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             return
 
         image.setText(tr(TextKey.LABEL_PREVIEW_MISSING))
