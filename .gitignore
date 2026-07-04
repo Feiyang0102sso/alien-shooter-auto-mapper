@@ -48,6 +48,9 @@ include/
 *.map
 !empty.map
 !*_sample.map
+release/
+dist/
+dist-nuitka/
 
 # --- testing / output ---
 tests/output/

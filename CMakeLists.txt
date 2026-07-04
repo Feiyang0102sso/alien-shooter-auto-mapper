@@ -52,13 +52,29 @@ set(CORE_SOURCES
 add_library(auto_mapper_core STATIC ${CORE_SOURCES})
 target_link_libraries(auto_mapper_core PUBLIC auto_mapper_common auto_mapper_io)
 
+if(WIN32)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/auto_mapper/version.rc.in
+        ${CMAKE_CURRENT_BINARY_DIR}/version.rc
+        @ONLY
+    )
+    set(RESOURCE_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
+endif()
+
 # main shared library (DLL)
-add_library(auto_mapper SHARED src/auto_mapper/api.cpp)
+add_library(auto_mapper SHARED src/auto_mapper/api.cpp ${RESOURCE_SOURCES})
 target_compile_definitions(auto_mapper PRIVATE AUTO_MAPPER_EXPORTS)
 target_link_libraries(auto_mapper PRIVATE auto_mapper_core auto_mapper_io auto_mapper_common)
 if(MINGW)
     target_link_options(auto_mapper PRIVATE -static -static-libgcc -static-libstdc++)
 endif()
+
+add_custom_command(TARGET auto_mapper POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+        $<TARGET_FILE:auto_mapper>
+        $<TARGET_FILE_DIR:auto_mapper>/AutoMapper.dll
+    COMMENT "Copying build output to AutoMapper.dll"
+)
 
 
 # tests

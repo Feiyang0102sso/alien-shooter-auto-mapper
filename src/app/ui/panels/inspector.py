@@ -1,7 +1,6 @@
 """
 Inspector panel for the selected theme and component placeholder data.
 """
-from pathlib import Path
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
@@ -15,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.config import APP_RESOURCE_DIR
 from app.editor.drawable_parts import get_drawable_parts
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
@@ -23,8 +23,7 @@ from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.eraser import EraserPropertiesWidget
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-IMAGE_ROOT = PROJECT_ROOT / "src" / "app" / "resources" / "images" / "preview" / "AS1"
+IMAGE_ROOT = APP_RESOURCE_DIR / "images" / "preview" / "AS1"
 
 
 class InspectorPanel(QWidget):

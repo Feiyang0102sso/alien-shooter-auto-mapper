@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QLabel, QRadioButton, QVBoxLayout
 
-from app.config import init_app_env
+from app.config import RESOURCE_ROOT, init_app_env
 from app.i18n.locale import (
     LOCALE_EN_US,
     LOCALE_ZH_CN,
@@ -20,20 +20,39 @@ from app.i18n.text_keys import TextKey
 from app.logger import logger
 
 
-STYLE_PATH = Path(__file__).resolve().parent / "ui" / "styles" / "dark_theme.qss"
+STYLE_FILE_NAME = "dark_theme.qss"
+
+
+def get_style_path() -> Path:
+    """
+    Return the QSS path for dev, CLI wrapper, and packaged modes.
+    """
+    candidate_paths = [
+        RESOURCE_ROOT / "ui" / "styles" / STYLE_FILE_NAME,
+        RESOURCE_ROOT / "app" / "ui" / "styles" / STYLE_FILE_NAME,
+        RESOURCE_ROOT / "src" / "app" / "ui" / "styles" / STYLE_FILE_NAME,
+        Path(__file__).resolve().parent / "ui" / "styles" / STYLE_FILE_NAME,
+    ]
+
+    for candidate_path in candidate_paths:
+        if candidate_path.exists():
+            return candidate_path
+
+    return candidate_paths[0]
 
 
 def load_style(app: QApplication) -> None:
     """
     Load the application QSS file.
     """
-    if not STYLE_PATH.exists():
-        logger.warning(f"Style file not found: {STYLE_PATH}")
+    style_path = get_style_path()
+    if not style_path.exists():
+        logger.warning(f"Style file not found: {style_path}")
         return
 
-    style_text = STYLE_PATH.read_text(encoding="utf-8")
+    style_text = style_path.read_text(encoding="utf-8")
     app.setStyleSheet(style_text)
-    logger.debug(f"Loaded QSS style: {STYLE_PATH}")
+    logger.debug(f"Loaded QSS style: {style_path}")
 
 
 def choose_initial_language() -> str:

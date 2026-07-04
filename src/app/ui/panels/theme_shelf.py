@@ -7,13 +7,13 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
+from app.config import APP_RESOURCE_DIR
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profiles
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-IMAGE_ROOT = PROJECT_ROOT / "src" / "app" / "resources" / "images" / "preview" / "AS1"
+IMAGE_ROOT = APP_RESOURCE_DIR / "images" / "preview" / "AS1"
 
 PREVIEW_IMAGES = {
     "base": IMAGE_ROOT / "standard" / "standard_wall.webp",

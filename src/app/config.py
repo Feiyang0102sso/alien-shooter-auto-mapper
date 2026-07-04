@@ -3,6 +3,8 @@ src/app/config.py
 universal config for the exe and relevant paths
 """
 import sys
+import __main__
+import os
 from pathlib import Path
 
 try:
@@ -15,31 +17,50 @@ def get_app_root() -> Path:
     """
     Get application root directory.
 
-    - bundled EXE
+    - bundled EXE / Nuitka onefile
     - python scripts (python main.py ... or python -m package.main ...)
     - CLI Wrapper / Shim (python -m pip install -e . then enter package name in console)
 
     Returns:
         Path: application root directory
     """
+    if is_packaged_app():
+        return Path(sys.argv[0]).parent.resolve()
 
-    # If running as a bundled EXE, get parent dir
-    if getattr(sys, 'frozen', False):
-        logger.debug(f"currently running as an EXE")
-        return Path(sys.executable).parent.resolve()
-
-    # If running as a script, get dir of the main script
-    import __main__
     if hasattr(__main__, "__file__"):
         main_file = Path(__main__.__file__)
-        # Check if the parent is an actual directory to prevent FileExistsError!
         if main_file.parent.is_dir():
-            logger.debug(f"currently running as a python script")
             return main_file.parent.resolve()
 
-    #If running as CLI Wrapper / Shim
-    logger.debug(f"currently running as a CLI Wrapper / Shim")
     return Path.cwd().resolve()
+
+
+def is_packaged_app() -> bool:
+    """
+    Return whether the app is running from a built executable.
+    """
+    if getattr(sys, "frozen", False):
+        return True
+
+    if os.environ.get("NUITKA_ONEFILE_PARENT"):
+        return True
+
+    return False
+
+
+def get_runtime_mode_message() -> str:
+    """
+    Return a short runtime mode message for logging.
+    """
+    if is_packaged_app():
+        return "currently running as a packaged EXE"
+
+    if hasattr(__main__, "__file__"):
+        main_file = Path(__main__.__file__)
+        if main_file.parent.is_dir():
+            return "currently running as a python script"
+
+    return "currently running as a CLI Wrapper / Shim"
 
 
 def get_resource_root(app_root: Path) -> Path:
@@ -57,14 +78,49 @@ def get_resource_root(app_root: Path) -> Path:
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
         return Path(meipass).resolve()
+
+    if is_packaged_app():
+        if hasattr(__main__, "__file__"):
+            main_file = Path(__main__.__file__).resolve()
+            return main_file.parent
+
+        return app_root
+
     return app_root
 
 
 # === Path Configuration ===
 ROOT_DIR = get_app_root()
 RESOURCE_ROOT = get_resource_root(ROOT_DIR)
-LOG_FILE_NAME = "auto_mapper.log"
+LOG_FILE_NAME = "AutoMapper.log"
 LOG_FILE_PATH = ROOT_DIR / LOG_FILE_NAME
+
+
+def get_app_resource_dir() -> Path:
+    """
+    Return the app resource directory for dev and packaged modes.
+    """
+    packaged_resource_dir = RESOURCE_ROOT / "app" / "resources"
+    project_resource_dir = RESOURCE_ROOT / "src" / "app" / "resources"
+    script_resource_dir = RESOURCE_ROOT / "resources"
+
+    candidate_dirs = [
+        packaged_resource_dir,
+        project_resource_dir,
+        script_resource_dir,
+    ]
+
+    for candidate_dir in candidate_dirs:
+        if candidate_dir.exists():
+            return candidate_dir
+
+    if is_packaged_app():
+        return packaged_resource_dir
+
+    return project_resource_dir
+
+
+APP_RESOURCE_DIR = get_app_resource_dir()
 
 # --- DLL Path ---
 DLL_NAME_EXE = "AutoMapper.dll"
@@ -78,12 +134,10 @@ def get_dll_path() -> Path:
     - Frozen EXE: ROOT_DIR / AutoMapper.dll
     - Dev mode: build/mingw-release / libauto_mapper.dll
     """
-    if getattr(sys, 'frozen', False):
+    if is_packaged_app():
         dll_path = ROOT_DIR / DLL_NAME_EXE
-        logger.debug(f"EXE mode, DLL path: {dll_path}")
     else:
         dll_path = DLL_DEV_BUILD_DIR / DLL_NAME_DEV
-        logger.debug(f"Dev mode, DLL path: {dll_path}")
 
     return dll_path
 
@@ -133,6 +187,7 @@ def init_app_env():
     # update_paths() # Reuses the logic to setup folders and logging
 
     add_file_handler(LOG_FILE_PATH)
+    logger.debug(get_runtime_mode_message())
     logger.debug(f"Root Path: {ROOT_DIR}")
     logger.debug(f"Log File Path: {LOG_FILE_PATH}")
     logger.debug(f"DLL Path: {DLL_PATH}")

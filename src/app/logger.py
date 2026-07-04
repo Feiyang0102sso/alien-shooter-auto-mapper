@@ -8,7 +8,7 @@ from pathlib import Path
 
 # === config area ===
 # e.g.  [ERROR] [auto_mapper - main_ui.py:38]
-LOGGER_NAME = "auto_mapper"
+LOGGER_NAME = "AutoMapper"
 
 class ColoredFormatter(logging.Formatter):
     """

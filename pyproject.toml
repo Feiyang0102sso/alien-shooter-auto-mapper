@@ -22,7 +22,13 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-app = ["i18n/locales/*.json"]
+app = [
+    "i18n/locales/*.json",
+    "ui/styles/*.qss",
+    "resources/images/preview/AS1/lab/*.webp",
+    "resources/images/preview/AS1/standard/*.webp",
+    "resources/images/preview/AS1/standard_dark/*.webp",
+]
 
 [tool.setuptools.dynamic]
 # find variable __version__ in app.version.__version__
