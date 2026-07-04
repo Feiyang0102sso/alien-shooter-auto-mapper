@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 126.95 126.95">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #231815;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #e60012;
+        stroke-miterlimit: 10;
+        stroke-width: 6px;
+      }
+    </style>
+  </defs>
+  <title>资源 1</title>
+  <g id="图层_2" data-name="图层 2">
+    <g id="magama_without_wings" data-name="magama without wings">
+      <g id="main_logo" data-name="main logo">
+        <circle id="inner_circle" data-name="inner circle" class="cls-1" cx="63.48" cy="63.48" r="16.45"/>
+        <circle id="outer_circle" data-name="outer circle" class="cls-2" cx="63.48" cy="63.48" r="60.48"/>
+        <g id="sharp_triangles" data-name="sharp triangles">
+          <path id="sharp_triangle11" data-name="sharp triangle11" class="cls-1" d="M81.13,45.82a27,27,0,0,1,3.94,5,25.68,25.68,0,0,1,1.43,2.69L104.21,23,73.41,40.46A26.25,26.25,0,0,1,81.13,45.82Z"/>
+          <path id="sharp_triangle12" data-name="sharp triangle12" class="cls-1" d="M45.83,81.13a26.68,26.68,0,0,1-3.95-5,25.68,25.68,0,0,1-1.43-2.69L22.74,104l30.8-17.49A26.2,26.2,0,0,1,45.83,81.13Z"/>
+          <path id="sharp_triangle13" data-name="sharp triangle13" class="cls-1" d="M81.13,81.13a27,27,0,0,1-5,3.94,25.68,25.68,0,0,1-2.69,1.43L104,104.21,86.49,73.41A26.25,26.25,0,0,1,81.13,81.13Z"/>
+          <path id="sharp_triangle14" data-name="sharp triangle14" class="cls-1" d="M45.82,45.83a26.68,26.68,0,0,1,5-3.95,25.68,25.68,0,0,1,2.69-1.43L23,22.74l17.49,30.8A26.2,26.2,0,0,1,45.82,45.83Z"/>
+        </g>
+        <g id="smooth_triangles" data-name="smooth triangles">
+          <path id="Smooth_triangle4" data-name="Smooth triangle4" class="cls-1" d="M63.47,36.11a24,24,0,0,1,6.27.83c.47.12.93.27,1.39.42-1.46-5.17-4.34-8.7-7.65-8.7s-6.2,3.53-7.66,8.71A24,24,0,0,1,63.47,36.11Z"/>
+          <path id="Smooth_triangle3" data-name="Smooth triangle3" class="cls-1" d="M36.11,63.48a24.07,24.07,0,0,1,.83-6.27c.12-.47.27-.93.42-1.39-5.17,1.46-8.7,4.34-8.7,7.66s3.53,6.19,8.71,7.65A24,24,0,0,1,36.11,63.48Z"/>
+          <path id="Smooth_triangle2" data-name="Smooth triangle2" class="cls-1" d="M63.48,90.84A24.07,24.07,0,0,1,57.21,90c-.47-.12-.93-.27-1.39-.42,1.46,5.17,4.34,8.7,7.66,8.7s6.19-3.53,7.65-8.7A24.24,24.24,0,0,1,63.48,90.84Z"/>
+          <path id="Smooth_triangle1" data-name="Smooth triangle1" class="cls-1" d="M90.84,63.47A24,24,0,0,1,90,69.74c-.12.47-.27.93-.42,1.39,5.17-1.46,8.7-4.34,8.7-7.65s-3.53-6.2-8.7-7.66A24.24,24.24,0,0,1,90.84,63.47Z"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -16,6 +16,7 @@ DLL_SOURCE = BUILD_DIR / "AutoMapper.dll"
 DLL_TARGET = DIST_DIR / "AutoMapper.dll"
 VERSION_FILE = Path("src") / "app" / "version.py"
 ENTRY_FILE = Path("src") / "app" / "main.py"
+ICON_FILE = Path("assets") / "logo.ico"
 STYLE_SOURCE = Path("src") / "app" / "ui" / "styles" / "dark_theme.qss"
 STYLE_TARGET = "ui/styles/dark_theme.qss"
 
@@ -88,6 +89,7 @@ def build_nuitka_command(version: str) -> list[str]:
         "--nofollow-import-to=pytest,unittest,test,scripts",
         "--include-package-data=app",
         f"--include-data-files={STYLE_SOURCE}={STYLE_TARGET}",
+        f"--windows-icon-from-ico={ICON_FILE}",
         "--company-name=Feiyang",
         "--product-name=AutoMapper",
         f"--file-version={version}",

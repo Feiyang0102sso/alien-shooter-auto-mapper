@@ -2,6 +2,7 @@
 PySide6 application entry point.
 """
 import sys
+import time
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QLabel, QRadioButton, QVBoxLayout
@@ -21,6 +22,7 @@ from app.logger import logger
 
 
 STYLE_FILE_NAME = "dark_theme.qss"
+APP_START_TIME = time.perf_counter()
 
 
 def get_style_path() -> Path:
@@ -53,6 +55,15 @@ def load_style(app: QApplication) -> None:
     style_text = style_path.read_text(encoding="utf-8")
     app.setStyleSheet(style_text)
     logger.debug(f"Loaded QSS style: {style_path}")
+
+
+def log_startup_elapsed_time(start_time: float) -> None:
+    """
+    Log elapsed time from app entry to main window display.
+    """
+    elapsed_seconds = time.perf_counter() - start_time
+    elapsed_ms = elapsed_seconds * 1000
+    logger.info(f"Startup to main window: {elapsed_ms:.1f} ms")
 
 
 def choose_initial_language() -> str:
@@ -111,6 +122,7 @@ def main() -> int:
     window = MainWindow()
     window.show()
 
+    log_startup_elapsed_time(APP_START_TIME)
     logger.info("PySide6 UI started")
     return app.exec()
 
