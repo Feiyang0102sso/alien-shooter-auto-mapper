@@ -61,3 +61,31 @@ TEST(SpriteDirectionRandomizerTest, RandomizesExpectedSprites) {
     std::string out_map_path = get_project_root() + "/random_direction_manual_test.map";
     ASSERT_TRUE(io::write_map(sprites, out_map_path, map_size_x, map_size_y));
 }
+
+TEST(SpriteDirectionRandomizerTest, GetsRandomDirectionFromAllowedDirections) {
+    std::vector<uint32_t> allowed_directions = {
+        18,
+        54,
+        91,
+        128
+    };
+
+    uint32_t direction = get_random_direction_from_list(allowed_directions, 0);
+    bool direction_is_allowed = false;
+
+    for (uint32_t allowed_direction : allowed_directions) {
+        if (direction == allowed_direction) {
+            direction_is_allowed = true;
+        }
+    }
+
+    EXPECT_TRUE(direction_is_allowed);
+}
+
+TEST(SpriteDirectionRandomizerTest, EmptyAllowedDirectionsReturnsFallback) {
+    std::vector<uint32_t> allowed_directions;
+
+    uint32_t direction = get_random_direction_from_list(allowed_directions, 91);
+
+    EXPECT_EQ(direction, 91u);
+}

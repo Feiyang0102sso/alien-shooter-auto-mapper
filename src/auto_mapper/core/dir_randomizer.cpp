@@ -84,4 +84,20 @@ void randomize_wall_and_floor_directions(std::vector<io::Sprite>& sprites) {
     }
 }
 
+uint32_t get_random_direction_from_list(
+    const std::vector<uint32_t>& allowed_directions,
+    uint32_t fallback_direction
+) {
+    if (allowed_directions.empty()) {
+        return fallback_direction;
+    }
+
+    static thread_local std::mt19937 random_engine(std::random_device{}());
+    int max_index = static_cast<int>(allowed_directions.size()) - 1;
+    std::uniform_int_distribution<int> distribution(0, max_index);
+    int selected_index = distribution(random_engine);
+
+    return allowed_directions[selected_index];
+}
+
 } // namespace auto_mapper::core

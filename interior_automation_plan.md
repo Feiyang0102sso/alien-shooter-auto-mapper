@@ -352,6 +352,171 @@ InteriorStampPlacer -> 内饰 sprites
 - 尸体和战斗痕迹组合
 - 纯杂物散布组合
 
+## Incubator 样板案例
+
+`_pre-demo/decoration/Incubator.json` 是第一个适合落地验证的内饰样板。它很简单，只有一个方向，而且物件足够大，间距可以调整。
+
+当前样板包含三类 sprite：
+
+```text
+443 培养箱本体 dir = 0
+631 空气墙 dir = 128
+135 大电脑 dir = 18 / 54 / 91 / 128
+```
+
+建模建议：
+
+```text
+IncubatorUnit
+- required: 443 培养箱本体
+- required: 631 空气墙
+- optional: 135 大电脑
+```
+
+其中 `443` 和 `631` 可以视为同一个逻辑单元。虽然样板里两者坐标有轻微差异，但从生成系统角度可以先允许直接放在同一个锚点上。这样规则更简单，也方便后续阵列化。
+
+`135` 大电脑不应该作为培养箱的必需部分。它更适合建模成 `side_attachment`：
+
+```text
+side_attachment: big_computer
+required: false
+placement_policy: all_or_none_per_row
+```
+
+原因是大电脑变体很多，如果逐个培养箱随机放，会很容易显得乱。更稳的策略是：
+
+```text
+这一排培养箱要么都配电脑
+方向熊几个备选中抽取 随机抽取但抽取的一个房间都得一样
+要么都不配电脑
+```
+
+如果要配，就尽量每个培养箱边上都配一个，让它形成明确的实验区节奏。
+
+这个样板不应该只保存成一个固定 stamp，而应该拆成两层：
+
+```text
+单元：IncubatorUnit
+阵列：IncubatorRow
+```
+
+`IncubatorRow` 负责：
+
+- 决定放几个培养箱。
+- 决定单元间距。
+- 决定是否启用大电脑附件。
+- 决定整排摆在墙边、角落附近，还是房间中心线附近。
+
+示例参数：
+
+```text
+count: 1-4
+spacing_x: 可调
+spacing_y: 可调
+computer_mode: none / all
+anchor_type: wall_edge / near_corner / center_line
+```
+
+这个案例也说明：同一个房间里不能只考虑一种内饰来源。墙角和墙边可能同时出现培养箱、大电脑、油桶、箱子等物件。因此房间内饰放置需要分成两个层次：
+
+```text
+角落位：corner slots
+墙边位：wall edge slots
+```
+
+推荐放置顺序：
+
+```text
+先放角落大件
+再放墙边阵列
+最后放小杂物
+```
+
+这样可以避免墙角和墙边互相抢位置。对于培养箱这种大型阵列，宁愿少放，也不要和角落电脑、油桶、箱子挤在一起。
+
+## 多方向电脑的朝向策略
+
+电脑、控制台、服务器柜这类物件不能简单依赖整体旋转。它们通常有很多视觉变体，同一个功能物件可能有不同朝向、不同外观、不同占用范围。
+
+因此系统不应该问：
+
+```text
+这个电脑要旋转多少度？
+```
+
+而应该问：
+
+```text
+当前位置需要一个正面朝哪里的电脑？
+从这个朝向的候选变体里挑哪一个？
+```
+
+建议把电脑类物件建成 `ComputerVariantGroup`：
+
+```text
+ComputerVariantGroup
+- id
+- category
+- variants
+
+ComputerVariant
+- vid
+- direction
+- facing
+- compatible_anchor
+- footprint_width
+- footprint_height
+- clearance
+- weight
+```
+
+关键字段：
+
+- `facing`: 电脑正面朝向，例如 `north`、`south`、`east`、`west`。
+- `compatible_anchor`: 适合的位置，例如 `wall_edge`、`corner`、`free_standing`、`incubator_side`。
+- `footprint`: 占用范围，用来避免和培养箱、油桶、尸体、箱子重叠。
+- `weight`: 随机权重，用来控制常见变体和稀有变体的出现概率。
+
+朝向由锚点决定，而不是由电脑自己决定：
+
+```text
+贴北侧墙：电脑正面朝南
+贴南侧墙：电脑正面朝北
+贴西侧墙：电脑正面朝东
+贴东侧墙：电脑正面朝西
+```
+
+角落位置要单独处理，不要简单随机：
+
+```text
+西北角：可朝东或朝南
+东北角：可朝西或朝南
+西南角：可朝东或朝北
+东南角：可朝西或朝北
+```
+
+选择时先看哪一侧空间更空，再从对应朝向的候选电脑里挑一个。这样墙角可以同时放电脑、油桶、箱子，但不会互相挤成一团。
+
+对于培养箱阵列旁边的大电脑，电脑朝向应该继承阵列语义：
+
+```text
+电脑不是自由物件
+电脑是 IncubatorRow 的 side_attachment
+电脑朝向由培养箱阵列所在边决定
+```
+
+处理流程：
+
+```text
+1. 先确定放置锚点：墙边、角落、培养箱侧边、自由区域
+2. 根据锚点推导需要的 facing
+3. 从 matching variants 中筛选 compatible_anchor 和 facing
+4. 过滤会穿墙、挡门、重叠的候选
+5. 按权重随机选择一个
+```
+
+如果找不到合适电脑，应该直接不放，而不是硬塞一个错误朝向的电脑。电脑这种物件一旦朝向别扭，会比少放一个更显眼。
+
 ## 最终原则
 
 内饰自动化的目标不是让程序完全替代人工审美，而是：
