@@ -13,8 +13,10 @@ namespace auto_mapper::core::indoor_decorations {
 inline constexpr int INCUBATOR_BODY_VID = 443;
 inline constexpr int INCUBATOR_AIR_WALL_VID = 631;
 inline constexpr int INCUBATOR_BIG_COMPUTER_VID = 135;
-inline constexpr float INCUBATOR_DEFAULT_SPACING_X = 150.0f;
-inline constexpr float INCUBATOR_DEFAULT_SPACING_Y = 130.0f;
+inline constexpr float INCUBATOR_DEFAULT_ROW_SPACING_X = 150.0f;
+inline constexpr float INCUBATOR_DEFAULT_ROW_SPACING_Y = -130.0f;
+inline constexpr float INCUBATOR_DEFAULT_COLUMN_SPACING_X = 150.0f;
+inline constexpr float INCUBATOR_DEFAULT_COLUMN_SPACING_Y = 130.0f;
 
 inline constexpr uint32_t INCUBATOR_BODY_DIRECTION = 0;
 inline constexpr uint32_t INCUBATOR_AIR_WALL_DIRECTION = 128;
@@ -25,31 +27,30 @@ inline const std::vector<uint32_t> INCUBATOR_BIG_COMPUTER_DIRECTIONS = {
     128
 };
 
-struct IncubatorUnit {
-    float pos_x;
-    float pos_y;
+struct IncubatorOptions {
     float pos_z = 0.0f;
     bool with_big_computer = false;
+    bool use_fixed_computer_direction = false;
+    uint32_t computer_direction = INCUBATOR_BIG_COMPUTER_DIRECTIONS[0];
     float computer_offset_x = 28.0f;
     float computer_offset_y = -7.0f;
 };
 
-enum IncubatorArrayDirection {
-    INCUBATOR_ARRAY_HORIZONTAL = 0,
-    INCUBATOR_ARRAY_VERTICAL = 1
+struct IncubatorUnit {
+    float pos_x;
+    float pos_y;
+    IncubatorOptions options = {};
 };
 
 struct IncubatorArray {
     float start_x;
     float start_y;
-    float pos_z = 0.0f;
-    int count = 1;
-    IncubatorArrayDirection direction = INCUBATOR_ARRAY_HORIZONTAL;
-    float spacing_x = INCUBATOR_DEFAULT_SPACING_X;
-    float spacing_y = INCUBATOR_DEFAULT_SPACING_Y;
-    bool with_big_computer = false;
-    float computer_offset_x = 28.0f;
-    float computer_offset_y = -7.0f;
+    float row_length = 0.0f;
+    float column_length = 0.0f;
+    float item_spacing_scale = 1.0f;
+    float row_spacing_scale = 1.0f;
+    bool randomize_big_computer = false;
+    IncubatorOptions options = {};
 };
 
 class IncubatorBuilder {
@@ -60,7 +61,7 @@ public:
     std::vector<io::Sprite> build(const IncubatorUnit& unit) const;
 
     /**
-     * @brief Generate sprites for a horizontal row or vertical column.
+     * @brief Generate sprites for an incubator area.
      */
     std::vector<io::Sprite> build_array(const IncubatorArray& array) const;
 };

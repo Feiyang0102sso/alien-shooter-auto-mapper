@@ -21,12 +21,37 @@ bool contains_direction(const std::vector<uint32_t>& directions, uint32_t direct
     return false;
 }
 
+bool computer_directions_are_uniform(const std::vector<io::Sprite>& sprites) {
+    uint32_t first_direction = 0;
+    bool has_first_direction = false;
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != INCUBATOR_BIG_COMPUTER_VID) {
+            continue;
+        }
+
+        if (!contains_direction(INCUBATOR_BIG_COMPUTER_DIRECTIONS, sprite.direction)) {
+            return false;
+        }
+
+        if (!has_first_direction) {
+            first_direction = sprite.direction;
+            has_first_direction = true;
+            continue;
+        }
+
+        if (sprite.direction != first_direction) {
+            return false;
+        }
+    }
+
+    return has_first_direction;
+}
+
 TEST(IncubatorBuilderTest, BuildsRequiredIncubatorSprites) {
     IncubatorUnit unit = {
         .pos_x = 180.0f,
-        .pos_y = 335.0f,
-        .pos_z = 0.0f,
-        .with_big_computer = false
+        .pos_y = 335.0f
     };
 
     IncubatorBuilder builder;
@@ -49,10 +74,12 @@ TEST(IncubatorBuilderTest, AddsOptionalBigComputer) {
     IncubatorUnit unit = {
         .pos_x = 180.0f,
         .pos_y = 335.0f,
-        .pos_z = 0.0f,
-        .with_big_computer = true,
-        .computer_offset_x = 23.0f,
-        .computer_offset_y = -14.0f
+        .options = {
+            .pos_z = 0.0f,
+            .with_big_computer = true,
+            .computer_offset_x = 23.0f,
+            .computer_offset_y = -14.0f
+        }
     };
 
     IncubatorBuilder builder;
@@ -66,16 +93,14 @@ TEST(IncubatorBuilderTest, AddsOptionalBigComputer) {
     EXPECT_TRUE(contains_direction(INCUBATOR_BIG_COMPUTER_DIRECTIONS, sprites[2].direction));
 }
 
-TEST(IncubatorBuilderTest, BuildsHorizontalArrayWithDefaultSpacing) {
+TEST(IncubatorBuilderTest, BuildsArrayAsSingleRowForFlatArea) {
     IncubatorArray array = {
-        .start_x = 180.0f,
-        .start_y = 220.0f,
-        .pos_z = 0.0f,
-        .count = 3,
-        .direction = INCUBATOR_ARRAY_HORIZONTAL,
-        .spacing_x = INCUBATOR_DEFAULT_SPACING_X,
-        .spacing_y = INCUBATOR_DEFAULT_SPACING_Y,
-        .with_big_computer = false
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 500.0f,
+        .column_length = 0.0f,
+        .item_spacing_scale = 1.0f,
+        .row_spacing_scale = 1.0f
     };
 
     IncubatorBuilder builder;
@@ -83,49 +108,195 @@ TEST(IncubatorBuilderTest, BuildsHorizontalArrayWithDefaultSpacing) {
 
     ASSERT_EQ(sprites.size(), 6u);
 
-    EXPECT_FLOAT_EQ(sprites[0].posX, 180.0f);
-    EXPECT_FLOAT_EQ(sprites[0].posY, 220.0f);
+    EXPECT_FLOAT_EQ(sprites[0].posX, 120.0f);
+    EXPECT_FLOAT_EQ(sprites[0].posY, 780.0f);
 
-    EXPECT_FLOAT_EQ(sprites[2].posX, 330.0f);
-    EXPECT_FLOAT_EQ(sprites[2].posY, 90.0f);
+    EXPECT_FLOAT_EQ(sprites[2].posX, 120.0f + INCUBATOR_DEFAULT_ROW_SPACING_X);
+    EXPECT_FLOAT_EQ(sprites[2].posY, 780.0f + INCUBATOR_DEFAULT_ROW_SPACING_Y);
 
-    EXPECT_FLOAT_EQ(sprites[4].posX, 480.0f);
-    EXPECT_FLOAT_EQ(sprites[4].posY, -40.0f);
+    EXPECT_FLOAT_EQ(sprites[4].posX, 120.0f + INCUBATOR_DEFAULT_ROW_SPACING_X * 2.0f);
+    EXPECT_FLOAT_EQ(sprites[4].posY, 780.0f + INCUBATOR_DEFAULT_ROW_SPACING_Y * 2.0f);
 }
 
-TEST(IncubatorBuilderTest, BuildsVerticalArrayWithCustomSpacing) {
+TEST(IncubatorBuilderTest, BuildsArraySecondRowWhenAreaGetsDeeper) {
     IncubatorArray array = {
-        .start_x = 180.0f,
-        .start_y = 220.0f,
-        .pos_z = 0.0f,
-        .count = 3,
-        .direction = INCUBATOR_ARRAY_VERTICAL,
-        .spacing_x = 150.0f,
-        .spacing_y = 160.0f,
-        .with_big_computer = false
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 500.0f,
+        .column_length = 250.0f,
+        .item_spacing_scale = 1.0f,
+        .row_spacing_scale = 1.0f
     };
 
     IncubatorBuilder builder;
     std::vector<io::Sprite> sprites = builder.build_array(array);
 
-    ASSERT_EQ(sprites.size(), 6u);
+    ASSERT_EQ(sprites.size(), 12u);
 
-    EXPECT_FLOAT_EQ(sprites[0].posX, 180.0f);
-    EXPECT_FLOAT_EQ(sprites[0].posY, 220.0f);
+    EXPECT_FLOAT_EQ(sprites[6].posX, 120.0f + INCUBATOR_DEFAULT_COLUMN_SPACING_X);
+    EXPECT_FLOAT_EQ(sprites[6].posY, 780.0f + INCUBATOR_DEFAULT_COLUMN_SPACING_Y);
+}
 
-    EXPECT_FLOAT_EQ(sprites[2].posX, 330.0f);
-    EXPECT_FLOAT_EQ(sprites[2].posY, 380.0f);
+TEST(IncubatorBuilderTest, LargerItemSpacingReducesItemsPerRow) {
+    IncubatorArray compact_array = {
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 500.0f,
+        .column_length = 0.0f,
+        .item_spacing_scale = 1.0f,
+        .row_spacing_scale = 1.0f
+    };
 
-    EXPECT_FLOAT_EQ(sprites[4].posX, 480.0f);
-    EXPECT_FLOAT_EQ(sprites[4].posY, 540.0f);
+    IncubatorArray wide_spacing_array = {
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 500.0f,
+        .column_length = 0.0f,
+        .item_spacing_scale = 2.0f,
+        .row_spacing_scale = 1.0f
+    };
+
+    IncubatorBuilder builder;
+    std::vector<io::Sprite> compact_sprites = builder.build_array(compact_array);
+    std::vector<io::Sprite> wide_spacing_sprites = builder.build_array(wide_spacing_array);
+
+    EXPECT_EQ(compact_sprites.size(), 6u);
+    EXPECT_EQ(wide_spacing_sprites.size(), 4u);
+}
+
+TEST(IncubatorBuilderTest, LargerRowSpacingReducesRows) {
+    IncubatorArray compact_array = {
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 100.0f,
+        .column_length = 500.0f,
+        .item_spacing_scale = 1.0f,
+        .row_spacing_scale = 1.0f
+    };
+
+    IncubatorArray wide_spacing_array = {
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 100.0f,
+        .column_length = 500.0f,
+        .item_spacing_scale = 1.0f,
+        .row_spacing_scale = 2.0f
+    };
+
+    IncubatorBuilder builder;
+    std::vector<io::Sprite> compact_sprites = builder.build_array(compact_array);
+    std::vector<io::Sprite> wide_spacing_sprites = builder.build_array(wide_spacing_array);
+
+    EXPECT_EQ(compact_sprites.size(), 6u);
+    EXPECT_EQ(wide_spacing_sprites.size(), 4u);
+}
+
+TEST(IncubatorBuilderTest, ArrayComputersUseSameDirection) {
+    IncubatorArray array = {
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 500.0f,
+        .column_length = 250.0f,
+        .item_spacing_scale = 1.0f,
+        .row_spacing_scale = 1.0f,
+        .options = {
+            .pos_z = 0.0f,
+            .with_big_computer = true,
+            .computer_offset_x = 23.0f,
+            .computer_offset_y = -14.0f
+        }
+    };
+
+    IncubatorBuilder builder;
+    std::vector<io::Sprite> sprites = builder.build_array(array);
+
+    ASSERT_EQ(sprites.size(), 18u);
+
+    uint32_t first_computer_direction = 0;
+    bool has_first_computer_direction = false;
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != INCUBATOR_BIG_COMPUTER_VID) {
+            continue;
+        }
+
+        EXPECT_TRUE(contains_direction(INCUBATOR_BIG_COMPUTER_DIRECTIONS, sprite.direction));
+
+        if (!has_first_computer_direction) {
+            first_computer_direction = sprite.direction;
+            has_first_computer_direction = true;
+            continue;
+        }
+
+        EXPECT_EQ(sprite.direction, first_computer_direction);
+    }
+
+    EXPECT_TRUE(has_first_computer_direction);
+}
+
+TEST(IncubatorBuilderTest, RandomizesComputerPresenceForWholeArray) {
+    IncubatorArray array = {
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 500.0f,
+        .column_length = 250.0f,
+        .item_spacing_scale = 1.0f,
+        .row_spacing_scale = 1.0f,
+        .randomize_big_computer = true,
+        .options = {
+            .pos_z = 0.0f,
+            .with_big_computer = false,
+            .computer_offset_x = 23.0f,
+            .computer_offset_y = -14.0f
+        }
+    };
+
+    IncubatorBuilder builder;
+    bool found_array_without_computers = false;
+    bool found_array_with_computers = false;
+
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        std::vector<io::Sprite> sprites = builder.build_array(array);
+
+        size_t computer_count = 0;
+        uint32_t first_computer_direction = 0;
+        bool has_first_computer_direction = false;
+
+        for (const io::Sprite& sprite : sprites) {
+            if (sprite.vid != INCUBATOR_BIG_COMPUTER_VID) {
+                continue;
+            }
+
+            ++computer_count;
+
+            if (!has_first_computer_direction) {
+                first_computer_direction = sprite.direction;
+                has_first_computer_direction = true;
+                continue;
+            }
+
+            EXPECT_EQ(sprite.direction, first_computer_direction);
+        }
+
+        if (computer_count == 0u) {
+            found_array_without_computers = true;
+        }
+
+        if (computer_count == 6u) {
+            found_array_with_computers = true;
+        }
+    }
+
+    EXPECT_TRUE(found_array_without_computers);
+    EXPECT_TRUE(found_array_with_computers);
 }
 
 TEST(IncubatorBuilderTest, EmptyArrayReturnsNoSprites) {
     IncubatorArray array = {
-        .start_x = 180.0f,
-        .start_y = 220.0f,
-        .pos_z = 0.0f,
-        .count = 0
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = -1.0f,
+        .column_length = 0.0f
     };
 
     IncubatorBuilder builder;
@@ -134,73 +305,49 @@ TEST(IncubatorBuilderTest, EmptyArrayReturnsNoSprites) {
     EXPECT_TRUE(sprites.empty());
 }
 
-TEST(IncubatorBuilderTest, ComputerDirectionsAreNotAlwaysSame) {
+TEST(IncubatorBuilderTest, WritesManualSpacingPreviewMap) {
     IncubatorBuilder builder;
-    std::vector<io::Sprite> review_sprites;
-    bool found_different_direction = false;
 
-    for (int attempt = 0; attempt < 5; ++attempt) {
-        uint32_t first_direction = 0;
-        bool has_first_direction = false;
-        IncubatorArray row_array = {
-            .start_x = 120.0f,
-            .start_y = 780.0f,
+    IncubatorArray compact_array = {
+        .start_x = 120.0f,
+        .start_y = 780.0f,
+        .row_length = 900.0f,
+        .column_length = 250.0f,
+        .item_spacing_scale = 1.0f,
+        .row_spacing_scale = 1.0f,
+        .options = {
             .pos_z = 0.0f,
-            .count = 5,
-            .direction = INCUBATOR_ARRAY_HORIZONTAL,
-            .spacing_x = INCUBATOR_DEFAULT_SPACING_X,
-            .spacing_y = INCUBATOR_DEFAULT_SPACING_Y,
             .with_big_computer = true,
             .computer_offset_x = 23.0f,
             .computer_offset_y = -14.0f
-        };
+        }
+    };
 
-        IncubatorArray second_row_array = {
-            .start_x = 270.0f,
-            .start_y = 910.0f,
+    IncubatorArray wide_spacing_array = {
+        .start_x = 120.0f,
+        .start_y = 1180.0f,
+        .row_length = 900.0f,
+        .column_length = 250.0f,
+        .item_spacing_scale = 2.0f,
+        .row_spacing_scale = 2.0f,
+        .options = {
             .pos_z = 0.0f,
-            .count = 5,
-            .direction = INCUBATOR_ARRAY_HORIZONTAL,
-            .spacing_x = INCUBATOR_DEFAULT_SPACING_X,
-            .spacing_y = INCUBATOR_DEFAULT_SPACING_Y,
             .with_big_computer = true,
             .computer_offset_x = 23.0f,
             .computer_offset_y = -14.0f
-        };
-
-        std::vector<io::Sprite> attempt_sprites = builder.build_array(row_array);
-        std::vector<io::Sprite> second_row_sprites = builder.build_array(second_row_array);
-        attempt_sprites.insert(attempt_sprites.end(), second_row_sprites.begin(), second_row_sprites.end());
-
-        ASSERT_EQ(attempt_sprites.size(), 30u);
-
-        for (size_t sprite_index = 0; sprite_index < attempt_sprites.size(); ++sprite_index) {
-            if (attempt_sprites[sprite_index].vid != INCUBATOR_BIG_COMPUTER_VID) {
-                continue;
-            }
-
-            EXPECT_TRUE(contains_direction(INCUBATOR_BIG_COMPUTER_DIRECTIONS, attempt_sprites[sprite_index].direction));
-
-            if (!has_first_direction) {
-                first_direction = attempt_sprites[sprite_index].direction;
-                has_first_direction = true;
-                continue;
-            }
-
-            if (attempt_sprites[sprite_index].direction != first_direction) {
-                found_different_direction = true;
-            }
         }
+    };
 
-        if (found_different_direction) {
-            review_sprites = attempt_sprites;
-            break;
-        }
-    }
+    std::vector<io::Sprite> compact_sprites = builder.build_array(compact_array);
+    std::vector<io::Sprite> wide_spacing_sprites = builder.build_array(wide_spacing_array);
 
-    EXPECT_TRUE(found_different_direction);
-    ASSERT_FALSE(review_sprites.empty());
+    ASSERT_EQ(compact_sprites.size(), 30u);
+    ASSERT_EQ(wide_spacing_sprites.size(), 9u);
+    EXPECT_TRUE(computer_directions_are_uniform(compact_sprites));
+    EXPECT_TRUE(computer_directions_are_uniform(wide_spacing_sprites));
+
+    compact_sprites.insert(compact_sprites.end(), wide_spacing_sprites.begin(), wide_spacing_sprites.end());
 
     std::string out_map_path = get_project_root() + "/incubator_builder_manual_test.map";
-    ASSERT_TRUE(io::write_map(review_sprites, out_map_path, 1200.0f, 1400.0f));
+    ASSERT_TRUE(io::write_map(compact_sprites, out_map_path, 1200.0f, 1400.0f));
 }
