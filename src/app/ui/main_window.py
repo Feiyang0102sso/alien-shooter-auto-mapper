@@ -286,7 +286,7 @@ class MainWindow(QMainWindow):
         Keep Inspector synchronized after drag edits.
         """
         self.inspector.set_decoration_selection(decoration)
-        logger.info("Decoration changed")
+        # logger.info("Decoration changed")
 
     def _on_drawing_cancelled(self) -> None:
         """

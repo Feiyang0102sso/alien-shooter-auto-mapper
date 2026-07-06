@@ -7,6 +7,7 @@ from PySide6.QtCore import QPointF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
 
+from app.binding import dll_registry
 from app.editor.drawable_parts import PART_WALL_BODY
 from app.editor.decorations import INCUBATOR_PLACEHOLDER_HEIGHT, INCUBATOR_PLACEHOLDER_WIDTH
 from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
@@ -575,13 +576,13 @@ class MapViewport(QWidget):
 
     def _draw_decorations(self, painter: QPainter) -> None:
         """
-        Draw incubator decoration areas and placeholder units.
+        Draw incubator decoration areas.
         """
         index = 0
         for decoration in self.decorations:
             corners = self._get_decoration_corners(decoration)
             self._draw_decoration_rect(painter, corners, index == self.selected_decoration_index)
-            self._draw_incubator_placeholders(painter, decoration)
+            self._draw_incubator_preview_points(painter, decoration)
             index += 1
 
     def _draw_decoration_rect(self, painter: QPainter, rect: tuple, selected: bool) -> None:
@@ -601,40 +602,19 @@ class MapViewport(QWidget):
         painter.setPen(pen)
         painter.drawPolygon(self._physical_polygon_to_screen(rect))
 
-    def _draw_incubator_placeholders(self, painter: QPainter, decoration: IncubatorDecoration) -> None:
+    def _draw_incubator_preview_points(self, painter: QPainter, decoration: IncubatorDecoration) -> None:
         """
-        Fill the decoration area with incubator placeholder rectangles.
+        Draw C++ generated incubator preview points.
         """
-        item_step = self._get_incubator_item_spacing() * decoration.item_spacing_scale
-        row_step = self._get_incubator_row_spacing() * decoration.row_spacing_scale
+        points = dll_registry.get_incubator_preview_points(decoration)
 
-        if item_step <= 0.0:
-            return
-        if row_step <= 0.0:
-            return
+        for point in points:
+            origin = QPointF(point[0], point[1])
+            self._draw_incubator_preview_unit(painter, origin)
 
-        row_count = int(decoration.column_length / row_step) + 1
-        item_count = int(decoration.row_length / item_step) + 1
-        axes = self._get_decoration_axes()
-        row_axis = axes[0]
-        column_axis = axes[1]
-
-        row_index = 0
-        while row_index < row_count:
-            item_index = 0
-            while item_index < item_count:
-                row_offset = item_index * item_step
-                column_offset = row_index * row_step
-                x = decoration.start_x + row_axis.x() * row_offset + column_axis.x() * column_offset
-                y = decoration.start_y + row_axis.y() * row_offset + column_axis.y() * column_offset
-                self._draw_incubator_placeholder(painter, QPointF(x, y))
-                item_index += 1
-
-            row_index += 1
-
-    def _draw_incubator_placeholder(self, painter: QPainter, origin: QPointF) -> None:
+    def _draw_incubator_preview_unit(self, painter: QPainter, origin: QPointF) -> None:
         """
-        Draw one incubator placeholder along the wall-set axes.
+        Draw one incubator preview unit marker.
         """
         corners = self._build_decoration_corners(
             origin,
@@ -1455,7 +1435,7 @@ class MapViewport(QWidget):
 
     def _get_decoration_axes(self) -> tuple:
         """
-        Return normalized row and column axes matching the active wall-set grid.
+        Return normalized axes for drawing the decoration area.
         """
         row_axis = QPointF(self.active_step_x, -self.active_step_y)
         column_axis = QPointF(self.active_step_x, self.active_step_y)
@@ -1538,18 +1518,6 @@ class MapViewport(QWidget):
         delta_x = point.x() - closest_x
         delta_y = point.y() - closest_y
         return math.sqrt(delta_x * delta_x + delta_y * delta_y)
-
-    def _get_incubator_item_spacing(self) -> float:
-        """
-        Return default physical item spacing used by the C++ incubator builder.
-        """
-        return math.sqrt(150.0 * 150.0 + 130.0 * 130.0)
-
-    def _get_incubator_row_spacing(self) -> float:
-        """
-        Return default physical row spacing used by the C++ incubator builder.
-        """
-        return math.sqrt(150.0 * 150.0 + 130.0 * 130.0)
 
     def _cancel_pending_decoration(self) -> bool:
         """

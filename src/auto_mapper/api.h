@@ -75,6 +75,41 @@ struct CIncubatorArray {
     float row_spacing_scale;
 };
 
+struct CIncubatorArrayProfile {
+    float row_axis_x;
+    float row_axis_y;
+    float column_axis_x;
+    float column_axis_y;
+};
+
+struct CIncubatorPreviewPoint {
+    float x;
+    float y;
+};
+
+/**
+ * @brief Read incubator array layout values used by the C++ builder.
+ */
+AUTO_MAPPER_API bool get_incubator_array_profile(
+    CIncubatorArrayProfile* profile
+);
+
+/**
+ * @brief Return preview unit count for one incubator array using C++ layout rules.
+ */
+AUTO_MAPPER_API int get_incubator_array_preview_point_count(
+    const CIncubatorArray* array
+);
+
+/**
+ * @brief Fill preview unit points for one incubator array using C++ layout rules.
+ */
+AUTO_MAPPER_API int get_incubator_array_preview_points(
+    const CIncubatorArray* array,
+    CIncubatorPreviewPoint* points,
+    int max_points
+);
+
 /**
  * @brief Build map from segments and doors, write to file.
  */

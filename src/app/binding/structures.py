@@ -50,6 +50,30 @@ class CIncubatorArray(ctypes.Structure):
     ]
 
 
+class CIncubatorArrayProfile(ctypes.Structure):
+    """
+    C-compatible incubator array layout values.
+    """
+
+    _fields_ = [
+        ("row_axis_x", ctypes.c_float),
+        ("row_axis_y", ctypes.c_float),
+        ("column_axis_x", ctypes.c_float),
+        ("column_axis_y", ctypes.c_float),
+    ]
+
+
+class CIncubatorPreviewPoint(ctypes.Structure):
+    """
+    C-compatible incubator preview point.
+    """
+
+    _fields_ = [
+        ("x", ctypes.c_float),
+        ("y", ctypes.c_float),
+    ]
+
+
 class CStandardDoorZConfig(ctypes.Structure):
     """
     C-compatible standard door z-offset configuration.

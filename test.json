@@ -1,0 +1,20 @@
+{
+  "map_size_x": 600.0,
+  "map_size_y": 600.0,
+  "segments": [],
+  "doors": [],
+  "decorations": [
+    {
+      "type": "incubator_array",
+      "start": {
+        "x": 149.99999999999977,
+        "y": 216.66666666666669
+      },
+      "row_length": 143.74672398909271,
+      "column_length": 246.0492853400037,
+      "item_spacing_scale": 1.0,
+      "row_spacing_scale": 1.0
+    }
+  ],
+  "is_door_open": false
+}

@@ -9,7 +9,7 @@
 
 extern "C" {
 
-static constexpr int AUTO_MAPPER_API_VERSION = 2;
+static constexpr int AUTO_MAPPER_API_VERSION = 4;
 
 AUTO_MAPPER_API int get_auto_mapper_api_version() {
     return AUTO_MAPPER_API_VERSION;
@@ -34,6 +34,94 @@ static constexpr int STANDARD_DOOR_SIZES[] = {
     auto_mapper::core::DOOR_STANDARD.small.span_steps,
     auto_mapper::core::DOOR_STANDARD.large.span_steps
 };
+
+AUTO_MAPPER_API bool get_incubator_array_profile(
+    CIncubatorArrayProfile* profile
+) {
+    if (profile == nullptr) {
+        return false;
+    }
+
+    profile->row_axis_x = auto_mapper::core::indoor_decorations::INCUBATOR_DEFAULT_ROW_SPACING_X;
+    profile->row_axis_y = auto_mapper::core::indoor_decorations::INCUBATOR_DEFAULT_ROW_SPACING_Y;
+    profile->column_axis_x = auto_mapper::core::indoor_decorations::INCUBATOR_DEFAULT_COLUMN_SPACING_X;
+    profile->column_axis_y = auto_mapper::core::indoor_decorations::INCUBATOR_DEFAULT_COLUMN_SPACING_Y;
+    return true;
+}
+
+static auto_mapper::core::indoor_decorations::IncubatorArray convert_incubator_array(
+    const CIncubatorArray& array
+) {
+    return {
+        .start_x = array.start_x,
+        .start_y = array.start_y,
+        .row_length = array.row_length,
+        .column_length = array.column_length,
+        .item_spacing_scale = array.item_spacing_scale,
+        .row_spacing_scale = array.row_spacing_scale
+    };
+}
+
+static std::vector<CIncubatorPreviewPoint> build_incubator_preview_points(
+    const CIncubatorArray& array
+) {
+    auto_mapper::core::indoor_decorations::IncubatorBuilder builder;
+    auto_mapper::core::indoor_decorations::IncubatorArray cpp_array = convert_incubator_array(array);
+    std::vector<auto_mapper::io::Sprite> sprites = builder.build_array(cpp_array);
+    std::vector<CIncubatorPreviewPoint> points;
+
+    for (const auto_mapper::io::Sprite& sprite : sprites) {
+        if (sprite.vid != auto_mapper::core::indoor_decorations::INCUBATOR_BODY_VID) {
+            continue;
+        }
+
+        points.push_back({
+            .x = sprite.posX,
+            .y = sprite.posY
+        });
+    }
+
+    return points;
+}
+
+AUTO_MAPPER_API int get_incubator_array_preview_point_count(
+    const CIncubatorArray* array
+) {
+    if (array == nullptr) {
+        return 0;
+    }
+
+    std::vector<CIncubatorPreviewPoint> points = build_incubator_preview_points(*array);
+    return static_cast<int>(points.size());
+}
+
+AUTO_MAPPER_API int get_incubator_array_preview_points(
+    const CIncubatorArray* array,
+    CIncubatorPreviewPoint* points,
+    int max_points
+) {
+    if (array == nullptr) {
+        return 0;
+    }
+
+    if (points == nullptr) {
+        return 0;
+    }
+
+    if (max_points <= 0) {
+        return 0;
+    }
+
+    std::vector<CIncubatorPreviewPoint> preview_points = build_incubator_preview_points(*array);
+    int copied_count = 0;
+
+    while (copied_count < max_points && copied_count < static_cast<int>(preview_points.size())) {
+        points[copied_count] = preview_points[copied_count];
+        copied_count += 1;
+    }
+
+    return copied_count;
+}
 
 static bool is_supported_wall_type(int wall_type) {
     for (int i = 0; i < auto_mapper::core::SUPPORTED_WALL_TYPE_COUNT; ++i) {

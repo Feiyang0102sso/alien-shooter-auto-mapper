@@ -8,6 +8,8 @@ from app.binding.structures import (
     CDoor,
     CDrawablePart,
     CIncubatorArray,
+    CIncubatorArrayProfile,
+    CIncubatorPreviewPoint,
     CSegment,
     CStandardDoorZConfig,
     CWallProfile,
@@ -17,7 +19,7 @@ from app.logger import logger
 from app.project.data import ProjectData
 
 
-REQUIRED_API_VERSION = 2
+REQUIRED_API_VERSION = 4
 
 
 class AutoMapperLibClient:
@@ -116,6 +118,23 @@ class AutoMapperLibClient:
             ctypes.POINTER(CDrawablePart),
         ]
         self.lib.get_wall_drawable_part_at.restype = ctypes.c_bool
+
+        self.lib.get_incubator_array_profile.argtypes = [
+            ctypes.POINTER(CIncubatorArrayProfile),
+        ]
+        self.lib.get_incubator_array_profile.restype = ctypes.c_bool
+
+        self.lib.get_incubator_array_preview_point_count.argtypes = [
+            ctypes.POINTER(CIncubatorArray),
+        ]
+        self.lib.get_incubator_array_preview_point_count.restype = ctypes.c_int
+
+        self.lib.get_incubator_array_preview_points.argtypes = [
+            ctypes.POINTER(CIncubatorArray),
+            ctypes.POINTER(CIncubatorPreviewPoint),
+            ctypes.c_int,
+        ]
+        self.lib.get_incubator_array_preview_points.restype = ctypes.c_int
 
     def _validate_api_version(self) -> None:
         """
@@ -222,6 +241,56 @@ class AutoMapperLibClient:
             raise RuntimeError(f"Failed to load jammed door z offset for size {size}.")
 
         return z_offset.value
+
+    def load_incubator_array_profile(self) -> dict:
+        """
+        Load incubator array layout values from the DLL.
+        """
+        if not self.load():
+            return {}
+
+        c_profile = CIncubatorArrayProfile()
+        success = self.lib.get_incubator_array_profile(ctypes.byref(c_profile))
+        if not success:
+            return {}
+
+        profile = {
+            "row_axis_x": float(c_profile.row_axis_x),
+            "row_axis_y": float(c_profile.row_axis_y),
+            "column_axis_x": float(c_profile.column_axis_x),
+            "column_axis_y": float(c_profile.column_axis_y),
+        }
+        logger.info(f"Loaded incubator array profile: {profile}")
+        return profile
+
+    def get_incubator_preview_points(self, decoration) -> list:
+        """
+        Load incubator preview unit points from the DLL.
+        """
+        if not self.load():
+            return []
+
+        c_array = self._build_single_incubator_array(decoration)
+        count = self.lib.get_incubator_array_preview_point_count(ctypes.byref(c_array))
+        if count <= 0:
+            return []
+
+        PreviewPointArray = CIncubatorPreviewPoint * count
+        c_points = PreviewPointArray()
+        copied_count = self.lib.get_incubator_array_preview_points(
+            ctypes.byref(c_array),
+            c_points,
+            count,
+        )
+        points = []
+
+        index = 0
+        while index < copied_count:
+            c_point = c_points[index]
+            points.append((float(c_point.x), float(c_point.y)))
+            index += 1
+
+        return points
 
     def generate_map(
         self,
@@ -339,14 +408,22 @@ class AutoMapperLibClient:
 
         index = 0
         for decoration in decorations:
-            incubator_array[index].start_x = float(decoration.start_x)
-            incubator_array[index].start_y = float(decoration.start_y)
-            incubator_array[index].row_length = float(decoration.row_length)
-            incubator_array[index].column_length = float(decoration.column_length)
-            incubator_array[index].item_spacing_scale = float(decoration.item_spacing_scale)
-            incubator_array[index].row_spacing_scale = float(decoration.row_spacing_scale)
+            incubator_array[index] = self._build_single_incubator_array(decoration)
             index += 1
 
+        return incubator_array
+
+    def _build_single_incubator_array(self, decoration) -> CIncubatorArray:
+        """
+        Convert one incubator decoration into a C struct.
+        """
+        incubator_array = CIncubatorArray()
+        incubator_array.start_x = float(decoration.start_x)
+        incubator_array.start_y = float(decoration.start_y)
+        incubator_array.row_length = float(decoration.row_length)
+        incubator_array.column_length = float(decoration.column_length)
+        incubator_array.item_spacing_scale = float(decoration.item_spacing_scale)
+        incubator_array.row_spacing_scale = float(decoration.row_spacing_scale)
         return incubator_array
 
     def _convert_wall_profile(self, c_profile: CWallProfile) -> dict:
