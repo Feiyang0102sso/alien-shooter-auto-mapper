@@ -35,6 +35,21 @@ class CDoor(ctypes.Structure):
     ]
 
 
+class CIncubatorArray(ctypes.Structure):
+    """
+    C-compatible incubator array decoration.
+    """
+
+    _fields_ = [
+        ("start_x", ctypes.c_float),
+        ("start_y", ctypes.c_float),
+        ("row_length", ctypes.c_float),
+        ("column_length", ctypes.c_float),
+        ("item_spacing_scale", ctypes.c_float),
+        ("row_spacing_scale", ctypes.c_float),
+    ]
+
+
 class CStandardDoorZConfig(ctypes.Structure):
     """
     C-compatible standard door z-offset configuration.

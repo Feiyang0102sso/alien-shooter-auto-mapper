@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from app.editor.wall_profiles import get_default_wall_type
-from app.project.data import ProjectData
+from app.project.data import DECORATION_TYPE_INCUBATOR_ARRAY, IncubatorDecoration, ProjectData
 
 
 def build_project_json_data(project_data: ProjectData) -> dict:
@@ -50,11 +50,31 @@ def build_project_json_data(project_data: ProjectData) -> dict:
         }
         door_items.append(door_item)
 
+    decoration_items = []
+
+    for decoration in project_data.decorations:
+        if decoration.decoration_type != DECORATION_TYPE_INCUBATOR_ARRAY:
+            continue
+
+        decoration_item = {
+            "type": decoration.decoration_type,
+            "start": {
+                "x": decoration.start_x,
+                "y": decoration.start_y,
+            },
+            "row_length": decoration.row_length,
+            "column_length": decoration.column_length,
+            "item_spacing_scale": decoration.item_spacing_scale,
+            "row_spacing_scale": decoration.row_spacing_scale,
+        }
+        decoration_items.append(decoration_item)
+
     data = {
         "map_size_x": project_data.map_size_x,
         "map_size_y": project_data.map_size_y,
         "segments": segment_items,
         "doors": door_items,
+        "decorations": decoration_items,
         "is_door_open": project_data.is_door_open,
     }
     return data
@@ -90,12 +110,14 @@ def parse_project_data(data: dict) -> ProjectData:
     is_door_open = bool(data.get("is_door_open", False))
     segments = parse_segments(data)
     doors = parse_doors(data)
+    decorations = parse_decorations(data)
 
     project_data = ProjectData(
         map_size_x=map_size_x,
         map_size_y=map_size_y,
         segments=segments,
         doors=doors,
+        decorations=decorations,
         is_door_open=is_door_open,
     )
     return project_data
@@ -175,3 +197,44 @@ def parse_doors(data: dict) -> list:
         doors.append(door)
 
     return doors
+
+
+def parse_decorations(data: dict) -> list:
+    """
+    Parse decoration entries from the optional top-level JSON section.
+    """
+    if not isinstance(data, dict):
+        raise ValueError("Project JSON root must be an object.")
+
+    decorations = []
+    json_decorations = data.get("decorations", [])
+
+    if json_decorations is None:
+        return decorations
+
+    if not isinstance(json_decorations, list):
+        raise ValueError("Project JSON 'decorations' must be a list.")
+
+    for json_decoration in json_decorations:
+        if not isinstance(json_decoration, dict):
+            raise ValueError("Each decoration must be an object.")
+
+        decoration_type = str(json_decoration.get("type", ""))
+        if decoration_type != DECORATION_TYPE_INCUBATOR_ARRAY:
+            continue
+
+        start = json_decoration.get("start", {})
+        if not isinstance(start, dict):
+            raise ValueError("Decoration start must be an object.")
+
+        decoration = IncubatorDecoration(
+            start_x=float(start.get("x", 0.0)),
+            start_y=float(start.get("y", 0.0)),
+            row_length=float(json_decoration.get("row_length", 0.0)),
+            column_length=float(json_decoration.get("column_length", 0.0)),
+            item_spacing_scale=float(json_decoration.get("item_spacing_scale", 1.0)),
+            row_spacing_scale=float(json_decoration.get("row_spacing_scale", 1.0)),
+        )
+        decorations.append(decoration)
+
+    return decorations

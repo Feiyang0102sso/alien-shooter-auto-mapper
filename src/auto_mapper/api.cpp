@@ -2,11 +2,18 @@
 #include "auto_mapper/core/wall_builder.h"
 #include "auto_mapper/core/door_builder.h"
 #include "auto_mapper/core/dir_randomizer.h"
+#include "auto_mapper/core/indoor_decorations/incubator_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include <vector>
 #include <string>
 
 extern "C" {
+
+static constexpr int AUTO_MAPPER_API_VERSION = 2;
+
+AUTO_MAPPER_API int get_auto_mapper_api_version() {
+    return AUTO_MAPPER_API_VERSION;
+}
 
 static constexpr CDrawablePart STANDARD_DRAWABLE_PARTS[] = {
     {"wall_body"},
@@ -216,6 +223,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_segments,
     const CDoor* doors,
     int num_doors,
+    const CIncubatorArray* incubator_arrays,
+    int num_incubator_arrays,
     float map_size_x,
     float map_size_y,
     bool gen_floor,
@@ -279,8 +288,27 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     auto_mapper::core::DoorBuilder door_builder(map_size_x, map_size_y);
     std::vector<auto_mapper::io::Sprite> door_sprites = door_builder.build(cpp_doors);
 
-    // 3. Merge sprites
+    // 3. Build indoor decorations
+    auto_mapper::core::indoor_decorations::IncubatorBuilder incubator_builder;
+    std::vector<auto_mapper::io::Sprite> decoration_sprites;
+
+    for (int i = 0; i < num_incubator_arrays; ++i) {
+        auto_mapper::core::indoor_decorations::IncubatorArray array = {
+            .start_x = incubator_arrays[i].start_x,
+            .start_y = incubator_arrays[i].start_y,
+            .row_length = incubator_arrays[i].row_length,
+            .column_length = incubator_arrays[i].column_length,
+            .item_spacing_scale = incubator_arrays[i].item_spacing_scale,
+            .row_spacing_scale = incubator_arrays[i].row_spacing_scale
+        };
+
+        std::vector<auto_mapper::io::Sprite> array_sprites = incubator_builder.build_array(array);
+        decoration_sprites.insert(decoration_sprites.end(), array_sprites.begin(), array_sprites.end());
+    }
+
+    // 4. Merge sprites
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
+    sprites.insert(sprites.end(), decoration_sprites.begin(), decoration_sprites.end());
 
     if (auto_mapper::io::write_map(sprites, out_path, map_size_x, map_size_y)) {
         return true;

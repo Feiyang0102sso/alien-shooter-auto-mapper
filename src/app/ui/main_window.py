@@ -176,6 +176,7 @@ class MainWindow(QMainWindow):
         Connect first-pass panel interactions.
         """
         self.theme_shelf.wall_set_selected.connect(self._on_wall_set_selected)
+        self.theme_shelf.decoration_selected.connect(self._on_decoration_tool_selected)
         self.drawing_toolbar.drawing_mode_changed.connect(self._on_drawing_mode_changed)
         self.viewport.grid_point_selected.connect(self._on_grid_point_selected)
         self.viewport.cursor_grid_changed.connect(self._on_cursor_grid_changed)
@@ -183,19 +184,36 @@ class MainWindow(QMainWindow):
         self.viewport.segment_started.connect(self._on_segment_started)
         self.viewport.segment_created.connect(self._on_segment_created)
         self.viewport.door_created.connect(self._on_door_created)
+        self.viewport.decoration_created.connect(self._on_decoration_created)
+        self.viewport.decoration_selected.connect(self._on_decoration_selected)
+        self.viewport.decoration_changed.connect(self._on_decoration_changed)
         self.viewport.drawing_cancelled.connect(self._on_drawing_cancelled)
         self.inspector.map_size_applied.connect(self._on_map_size_applied)
         self.inspector.drawable_part_changed.connect(self._on_drawable_part_changed)
         self.inspector.eraser_size_changed.connect(self._on_eraser_size_changed)
+        self.inspector.decoration_spacing_changed.connect(self._on_decoration_spacing_changed)
 
     def _on_wall_set_selected(self, wall_type: int, wall_name: str) -> None:
         """
         React to wall set card selection.
         """
         self.viewport.set_wall_type(wall_type)
+        self.viewport.set_drawing_mode(DrawingMode.POLYLINE)
+        self.drawing_toolbar.set_mode(DrawingMode.POLYLINE)
         self.inspector.set_wall_set(wall_type, wall_name)
+        self.inspector.clear_decoration_selection()
         self.statusBar().showMessage(tr(TextKey.STATUS_WALL_SET_SELECTED, wall_name=wall_name))
         logger.info(f"Wall set selected: {wall_type}")
+
+    def _on_decoration_tool_selected(self, decoration_type: str, decoration_name: str) -> None:
+        """
+        React to decoration card selection.
+        """
+        self.viewport.set_active_decoration(decoration_type)
+        self.viewport.set_drawing_mode(DrawingMode.RECTANGLE)
+        self.drawing_toolbar.set_mode(DrawingMode.RECTANGLE)
+        self.statusBar().showMessage(f"Decoration selected: {decoration_name}. Draw a rectangle.")
+        logger.info(f"Decoration selected: {decoration_type}")
 
     def _on_drawing_mode_changed(self, drawing_mode: DrawingMode) -> None:
         """
@@ -248,6 +266,27 @@ class MainWindow(QMainWindow):
         message = tr(TextKey.STATUS_DOOR, count=count, grid_x=grid_x, grid_y=grid_y)
         self.statusBar().showMessage(message)
         logger.info(f"Door #{count}: ({grid_x}, {grid_y})")
+
+    def _on_decoration_created(self, count: int) -> None:
+        """
+        Show the committed decoration.
+        """
+        self.statusBar().showMessage(f"Decoration #{count} created")
+        logger.info(f"Decoration #{count} created")
+
+    def _on_decoration_selected(self, decoration) -> None:
+        """
+        Show selected decoration properties.
+        """
+        self.inspector.set_decoration_selection(decoration)
+        self.statusBar().showMessage("Decoration selected")
+
+    def _on_decoration_changed(self, decoration) -> None:
+        """
+        Keep Inspector synchronized after drag edits.
+        """
+        self.inspector.set_decoration_selection(decoration)
+        logger.info("Decoration changed")
 
     def _on_drawing_cancelled(self) -> None:
         """
@@ -341,6 +380,7 @@ class MainWindow(QMainWindow):
         self.viewport.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
         profile = get_wall_profile(self.viewport.active_wall_type)
         self.inspector.set_wall_set(self.viewport.active_wall_type, profile["short_label"])
+        self.inspector.clear_decoration_selection()
         self.statusBar().showMessage(tr(TextKey.STATUS_CANVAS_CLEARED))
         logger.info("Canvas cleared")
 
@@ -349,7 +389,7 @@ class MainWindow(QMainWindow):
         Export current wall segments as old UI compatible JSON.
         """
         project_data = self._collect_project_data()
-        if not project_data.segments and not project_data.doors:
+        if not project_data.segments and not project_data.doors and not project_data.decorations:
             QMessageBox.warning(self, tr(TextKey.DIALOG_EXPORT_JSON), tr(TextKey.ERROR_EXPORT_EMPTY))
             return
 
@@ -431,10 +471,12 @@ class MainWindow(QMainWindow):
 
         self.viewport.set_segments(project_data.segments)
         self.viewport.set_doors(project_data.doors)
+        self.viewport.set_decorations(project_data.decorations)
         self.is_door_open_check.setChecked(project_data.is_door_open)
         self.viewport.set_is_door_open(project_data.is_door_open)
         self.inspector.set_map_size(project_data.map_size_x, project_data.map_size_y)
         self.viewport.set_map_size(project_data.map_size_x, project_data.map_size_y)
+        self.inspector.clear_decoration_selection()
 
         message = tr(
             TextKey.STATUS_IMPORTED_PROJECT,
@@ -453,7 +495,7 @@ class MainWindow(QMainWindow):
         Generate a .map file through the C++ DLL.
         """
         project_data = self._collect_project_data()
-        if not project_data.segments and not project_data.doors:
+        if not project_data.segments and not project_data.doors and not project_data.decorations:
             QMessageBox.warning(self, tr(TextKey.DIALOG_GENERATE_MAP), tr(TextKey.ERROR_GENERATE_EMPTY))
             return
 
@@ -524,6 +566,7 @@ class MainWindow(QMainWindow):
             map_size_y=map_size[1],
             segments=self.viewport.get_segments(),
             doors=self.viewport.get_doors(),
+            decorations=self.viewport.get_decorations(),
             is_door_open=self.is_door_open_check.isChecked(),
         )
         return project_data
@@ -545,3 +588,13 @@ class MainWindow(QMainWindow):
         """Update the viewport open door state and redraw."""
         self.viewport.set_is_door_open(checked)
         logger.info(f"Global is_door_open changed: {checked}")
+
+    def _on_decoration_spacing_changed(self, item_spacing_scale: float, row_spacing_scale: float) -> None:
+        """Sync decoration spacing from the inspector to the viewport."""
+        self.viewport.update_selected_decoration_spacing(item_spacing_scale, row_spacing_scale)
+        self.statusBar().showMessage(
+            f"Decoration spacing: item={item_spacing_scale:.2f}, column={row_spacing_scale:.2f}"
+        )
+        logger.info(
+            f"Decoration spacing changed: item={item_spacing_scale:.2f}, column={row_spacing_scale:.2f}"
+        )

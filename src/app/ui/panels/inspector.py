@@ -34,6 +34,7 @@ class InspectorPanel(QWidget):
     map_size_applied = Signal(float, float)
     drawable_part_changed = Signal(str)
     eraser_size_changed = Signal(int)
+    decoration_spacing_changed = Signal(float, float)
 
     def __init__(self) -> None:
         super().__init__()
@@ -113,6 +114,40 @@ class InspectorPanel(QWidget):
 
         layout.addWidget(component_group)
 
+        decoration_group = QGroupBox("Decoration")
+        decoration_group.setObjectName("decorationPropertiesGroup")
+        decoration_layout = QVBoxLayout(decoration_group)
+        decoration_layout.setContentsMargins(10, 12, 10, 10)
+        decoration_layout.setSpacing(8)
+
+        self.decoration_label = QLabel("Incubator")
+        self.decoration_label.setObjectName("activeThemeLabel")
+        decoration_layout.addWidget(self.decoration_label)
+
+        decoration_form = QFormLayout()
+        decoration_form.setSpacing(8)
+
+        self.item_spacing_input = QDoubleSpinBox()
+        self.item_spacing_input.setRange(0.1, 10.0)
+        self.item_spacing_input.setDecimals(2)
+        self.item_spacing_input.setSingleStep(0.1)
+        self.item_spacing_input.setValue(1.0)
+        self.item_spacing_input.valueChanged.connect(self._emit_decoration_spacing_changed)
+
+        self.row_spacing_input = QDoubleSpinBox()
+        self.row_spacing_input.setRange(0.1, 10.0)
+        self.row_spacing_input.setDecimals(2)
+        self.row_spacing_input.setSingleStep(0.1)
+        self.row_spacing_input.setValue(1.0)
+        self.row_spacing_input.valueChanged.connect(self._emit_decoration_spacing_changed)
+
+        decoration_form.addRow("Item spacing", self.item_spacing_input)
+        decoration_form.addRow("Column spacing", self.row_spacing_input)
+        decoration_layout.addLayout(decoration_form)
+
+        self.decoration_properties_group = decoration_group
+        layout.addWidget(self.decoration_properties_group)
+
         self.eraser_properties = EraserPropertiesWidget()
         self.eraser_properties.size_changed.connect(self.eraser_size_changed)
         layout.addWidget(self.eraser_properties)
@@ -121,6 +156,7 @@ class InspectorPanel(QWidget):
 
         # Set initial wall choices after widgets are initialized
         self.set_wall_set(default_wall_type, default_profile["short_label"])
+        self.clear_decoration_selection()
 
     def set_theme(self, theme_name: str) -> None:
         """
@@ -178,6 +214,24 @@ class InspectorPanel(QWidget):
         """
         self.eraser_properties.setVisible(drawing_mode == DrawingMode.ERASER)
 
+    def set_decoration_selection(self, decoration) -> None:
+        """
+        Show properties for the selected decoration.
+        """
+        self.item_spacing_input.blockSignals(True)
+        self.row_spacing_input.blockSignals(True)
+        self.item_spacing_input.setValue(decoration.item_spacing_scale)
+        self.row_spacing_input.setValue(decoration.row_spacing_scale)
+        self.item_spacing_input.blockSignals(False)
+        self.row_spacing_input.blockSignals(False)
+        self.decoration_properties_group.setVisible(True)
+
+    def clear_decoration_selection(self) -> None:
+        """
+        Hide decoration properties when no decoration is selected.
+        """
+        self.decoration_properties_group.setVisible(False)
+
     def _emit_map_size_applied(self) -> None:
         """
         Notify the main window that map size should update the canvas.
@@ -197,6 +251,14 @@ class InspectorPanel(QWidget):
         part_id = self._drawable_part_ids[index]
         self._update_preview(self.current_wall_type, part_id)
         self.drawable_part_changed.emit(part_id)
+
+    def _emit_decoration_spacing_changed(self) -> None:
+        """
+        Notify listeners that selected decoration spacing changed.
+        """
+        item_spacing = self.item_spacing_input.value()
+        row_spacing = self.row_spacing_input.value()
+        self.decoration_spacing_changed.emit(item_spacing, row_spacing)
 
     def _update_preview(self, wall_type: int, part_id: str) -> None:
         """

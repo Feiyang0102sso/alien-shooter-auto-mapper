@@ -4,10 +4,20 @@ Thin client for the Auto Mapper C++ DLL.
 import ctypes
 from pathlib import Path
 
-from app.binding.structures import CDoor, CDrawablePart, CSegment, CStandardDoorZConfig, CWallProfile
+from app.binding.structures import (
+    CDoor,
+    CDrawablePart,
+    CIncubatorArray,
+    CSegment,
+    CStandardDoorZConfig,
+    CWallProfile,
+)
 from app.config import DLL_PATH
 from app.logger import logger
 from app.project.data import ProjectData
+
+
+REQUIRED_API_VERSION = 2
 
 
 class AutoMapperLibClient:
@@ -31,6 +41,7 @@ class AutoMapperLibClient:
             return False
 
         self.lib = ctypes.CDLL(str(self.dll_path))
+        self._validate_api_version()
         self._configure_functions()
         logger.info(f"Loaded DLL: {self.dll_path}")
         return True
@@ -47,6 +58,8 @@ class AutoMapperLibClient:
             ctypes.POINTER(CSegment),
             ctypes.c_int,
             ctypes.POINTER(CDoor),
+            ctypes.c_int,
+            ctypes.POINTER(CIncubatorArray),
             ctypes.c_int,
             ctypes.c_float,
             ctypes.c_float,
@@ -103,6 +116,30 @@ class AutoMapperLibClient:
             ctypes.POINTER(CDrawablePart),
         ]
         self.lib.get_wall_drawable_part_at.restype = ctypes.c_bool
+
+    def _validate_api_version(self) -> None:
+        """
+        Ensure the loaded DLL matches this Python binding.
+        """
+        if self.lib is None:
+            return
+
+        try:
+            version_function = self.lib.get_auto_mapper_api_version
+        except AttributeError as error:
+            raise RuntimeError(
+                f"Loaded DLL is too old and has no API version: {self.dll_path}"
+            ) from error
+
+        version_function.argtypes = []
+        version_function.restype = ctypes.c_int
+        actual_version = version_function()
+
+        if actual_version != REQUIRED_API_VERSION:
+            raise RuntimeError(
+                f"DLL API version mismatch: expected {REQUIRED_API_VERSION}, "
+                f"got {actual_version}. DLL path: {self.dll_path}"
+            )
 
     def load_standard_door_z_config(self, sizes: list = None) -> dict:
         """
@@ -202,6 +239,7 @@ class AutoMapperLibClient:
 
         segment_array = self._build_segment_array(project_data.segments)
         door_array = self._build_door_array(project_data.doors, project_data.is_door_open)
+        incubator_array = self._build_incubator_array(project_data.decorations)
         output_path_bytes = str(output_path).encode("utf-8")
 
         success = self.lib.generate_map_from_segments(
@@ -210,6 +248,8 @@ class AutoMapperLibClient:
             len(project_data.segments),
             door_array,
             len(project_data.doors),
+            incubator_array,
+            len(project_data.decorations),
             float(project_data.map_size_x),
             float(project_data.map_size_y),
             generate_floor,
@@ -289,6 +329,25 @@ class AutoMapperLibClient:
             index += 1
 
         return door_array
+
+    def _build_incubator_array(self, decorations: list):
+        """
+        Convert incubator decorations into a C array.
+        """
+        IncubatorArray = CIncubatorArray * len(decorations)
+        incubator_array = IncubatorArray()
+
+        index = 0
+        for decoration in decorations:
+            incubator_array[index].start_x = float(decoration.start_x)
+            incubator_array[index].start_y = float(decoration.start_y)
+            incubator_array[index].row_length = float(decoration.row_length)
+            incubator_array[index].column_length = float(decoration.column_length)
+            incubator_array[index].item_spacing_scale = float(decoration.item_spacing_scale)
+            incubator_array[index].row_spacing_scale = float(decoration.row_spacing_scale)
+            index += 1
+
+        return incubator_array
 
     def _convert_wall_profile(self, c_profile: CWallProfile) -> dict:
         """

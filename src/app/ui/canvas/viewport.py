@@ -4,14 +4,15 @@ Interactive isometric viewport.
 import math
 
 from PySide6.QtCore import QPointF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPen
+from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
 
 from app.editor.drawable_parts import PART_WALL_BODY
+from app.editor.decorations import INCUBATOR_PLACEHOLDER_HEIGHT, INCUBATOR_PLACEHOLDER_WIDTH
 from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
-from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.project.data import DECORATION_TYPE_INCUBATOR_ARRAY, DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, IncubatorDecoration
 from app.ui.colors import (
     CANVAS_BACKGROUND,
     CANVAS_BOUNDARY,
@@ -61,6 +62,9 @@ class MapViewport(QWidget):
     segment_started = Signal(int, int)
     segment_created = Signal(int, int, int, int, int)
     door_created = Signal(int, int, int)
+    decoration_created = Signal(int)
+    decoration_selected = Signal(object)
+    decoration_changed = Signal(object)
     drawing_cancelled = Signal()
 
     def __init__(self) -> None:
@@ -86,9 +90,17 @@ class MapViewport(QWidget):
         self.preview_end_point = None
         self.segments = []
         self.doors = []
+        self.decorations = []
         self.is_door_open = False
         self.drawing_tool = DrawingToolController(self)
         self.eraser_tool = EraserToolController(self)
+        self.active_decoration_type = None
+        self.selected_decoration_index = None
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
+        self.decoration_drag_mode = None
+        self.decoration_drag_start_physical = None
+        self.decoration_drag_original = None
         self.last_cursor_grid_point = None
         self.is_panning = False
         self.pan_start_position = QPointF(0.0, 0.0)
@@ -113,6 +125,7 @@ class MapViewport(QWidget):
         """
         Update the active wall profile and redraw the current grid.
         """
+        self.clear_active_decoration_tool()
         self.active_wall_type = wall_type
         profile = get_wall_profile(wall_type)
         self.theme_color = QColor(profile["color"])
@@ -125,13 +138,42 @@ class MapViewport(QWidget):
         Update the current drawable tool.
         """
         self.active_drawable_part = part_id
+        self.clear_active_decoration_tool()
         self.cancel_pending_segment()
+        self.update()
+
+    def clear_active_decoration_tool(self) -> None:
+        """
+        Exit decoration drawing and dragging state.
+        """
+        self.active_decoration_type = None
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
+        self.decoration_drag_mode = None
+        self.decoration_drag_start_physical = None
+        self.decoration_drag_original = None
+
+    def set_active_decoration(self, decoration_type: str) -> None:
+        """
+        Select a decoration drawing target.
+        """
+        self.active_decoration_type = decoration_type
+        self.active_drawable_part = ""
+        self.cancel_pending_segment()
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
         self.update()
 
     def set_drawing_mode(self, drawing_mode) -> None:
         """
         Update the active drawing tool mode.
         """
+        if drawing_mode != DrawingMode.RECTANGLE and self.active_decoration_type is not None:
+            self.active_decoration_type = None
+            self.active_drawable_part = PART_WALL_BODY
+            self.decoration_start_physical = None
+            self.decoration_preview_physical = None
+
         self.drawing_tool.set_mode(drawing_mode)
         self.pending_start_point = None
         self.preview_end_point = None
@@ -164,8 +206,10 @@ class MapViewport(QWidget):
 
         self._fill_background(painter)
         self._draw_grid(painter)
+        self._draw_decorations(painter)
         self._draw_segments(painter)
         self._draw_doors(painter)
+        self._draw_decoration_preview(painter)
         self._draw_preview_segment(painter)
         self._draw_selected_point(painter)
         self._draw_origin_marker(painter)
@@ -184,7 +228,21 @@ class MapViewport(QWidget):
             return
 
         if event.button() == Qt.LeftButton:
+            if self.decoration_drag_mode is not None:
+                event.accept()
+                return
+
             if self.eraser_tool.handle_left_press(event.position()):
+                event.accept()
+                return
+
+            if self.active_decoration_type is not None and self._try_start_decoration_drag(event.position()):
+                self.update()
+                event.accept()
+                return
+
+            if self._handle_decoration_left_click(event.position()):
+                self.update()
                 event.accept()
                 return
 
@@ -195,6 +253,11 @@ class MapViewport(QWidget):
             return
 
         if event.button() == Qt.RightButton:
+            if self._cancel_pending_decoration():
+                self.update()
+                event.accept()
+                return
+
             self.cancel_pending_segment()
             self.update()
             event.accept()
@@ -214,7 +277,14 @@ class MapViewport(QWidget):
             event.accept()
             return
 
+        if self.decoration_drag_mode is not None:
+            self._update_decoration_drag(event.position())
+            self.update()
+            event.accept()
+            return
+
         self.eraser_tool.handle_mouse_move(event.position())
+        self._update_decoration_cursor(event.position())
 
         grid_point = self.screen_to_grid(event.position())
         if grid_point is not None:
@@ -224,6 +294,11 @@ class MapViewport(QWidget):
 
             if self.pending_start_point is not None:
                 self.drawing_tool.update_preview(grid_point)
+                self.update()
+
+            if self.decoration_start_physical is not None:
+                physical_point = self.screen_to_physical(event.position())
+                self.decoration_preview_physical = self._clamp_physical_point(physical_point)
                 self.update()
 
         super().mouseMoveEvent(event)
@@ -242,6 +317,14 @@ class MapViewport(QWidget):
             event.accept()
             return
 
+        if event.button() == Qt.LeftButton and self.decoration_drag_mode is not None:
+            self.decoration_drag_mode = None
+            self.decoration_drag_start_physical = None
+            self.decoration_drag_original = None
+            self.setCursor(QCursor(Qt.CrossCursor))
+            event.accept()
+            return
+
         super().mouseReleaseEvent(event)
 
     def leaveEvent(self, event) -> None:
@@ -250,6 +333,8 @@ class MapViewport(QWidget):
         """
         self.last_cursor_grid_point = None
         self.eraser_tool.clear_hover()
+        if self.decoration_drag_mode is None:
+            self.setCursor(QCursor(Qt.CrossCursor))
         super().leaveEvent(event)
 
     def wheelEvent(self, event) -> None:
@@ -488,6 +573,104 @@ class MapViewport(QWidget):
 
             painter.drawEllipse(QPointF(mid_x, mid_y), radius, radius)
 
+    def _draw_decorations(self, painter: QPainter) -> None:
+        """
+        Draw incubator decoration areas and placeholder units.
+        """
+        index = 0
+        for decoration in self.decorations:
+            corners = self._get_decoration_corners(decoration)
+            self._draw_decoration_rect(painter, corners, index == self.selected_decoration_index)
+            self._draw_incubator_placeholders(painter, decoration)
+            index += 1
+
+    def _draw_decoration_rect(self, painter: QPainter, rect: tuple, selected: bool) -> None:
+        """
+        Draw one decoration parallelogram in physical map coordinates.
+        """
+        fill_color = QColor("#244338")
+        fill_color.setAlpha(70)
+        border_color = QColor("#45c797")
+        if selected:
+            border_color = QColor("#f0ad4e")
+
+        painter.setBrush(QBrush(fill_color))
+        pen = QPen(border_color)
+        pen.setWidth(2)
+        pen.setCosmetic(True)
+        painter.setPen(pen)
+        painter.drawPolygon(self._physical_polygon_to_screen(rect))
+
+    def _draw_incubator_placeholders(self, painter: QPainter, decoration: IncubatorDecoration) -> None:
+        """
+        Fill the decoration area with incubator placeholder rectangles.
+        """
+        item_step = self._get_incubator_item_spacing() * decoration.item_spacing_scale
+        row_step = self._get_incubator_row_spacing() * decoration.row_spacing_scale
+
+        if item_step <= 0.0:
+            return
+        if row_step <= 0.0:
+            return
+
+        row_count = int(decoration.column_length / row_step) + 1
+        item_count = int(decoration.row_length / item_step) + 1
+        axes = self._get_decoration_axes()
+        row_axis = axes[0]
+        column_axis = axes[1]
+
+        row_index = 0
+        while row_index < row_count:
+            item_index = 0
+            while item_index < item_count:
+                row_offset = item_index * item_step
+                column_offset = row_index * row_step
+                x = decoration.start_x + row_axis.x() * row_offset + column_axis.x() * column_offset
+                y = decoration.start_y + row_axis.y() * row_offset + column_axis.y() * column_offset
+                self._draw_incubator_placeholder(painter, QPointF(x, y))
+                item_index += 1
+
+            row_index += 1
+
+    def _draw_incubator_placeholder(self, painter: QPainter, origin: QPointF) -> None:
+        """
+        Draw one incubator placeholder along the wall-set axes.
+        """
+        corners = self._build_decoration_corners(
+            origin,
+            INCUBATOR_PLACEHOLDER_WIDTH,
+            INCUBATOR_PLACEHOLDER_HEIGHT,
+        )
+
+        pen = QPen(QColor("#69f0ae"))
+        pen.setWidth(1)
+        pen.setCosmetic(True)
+        painter.setPen(pen)
+        painter.setBrush(QBrush(QColor(20, 80, 70, 120)))
+        painter.drawPolygon(self._physical_polygon_to_screen(corners))
+
+    def _draw_decoration_preview(self, painter: QPainter) -> None:
+        """
+        Draw a pending decoration rectangle preview.
+        """
+        if self.decoration_start_physical is None:
+            return
+        if self.decoration_preview_physical is None:
+            return
+
+        preview = self._build_decoration_from_points(
+            self.decoration_start_physical,
+            self.decoration_preview_physical,
+        )
+        corners = self._get_decoration_corners(preview)
+        pen = QPen(QColor("#f0ad4e"))
+        pen.setWidth(2)
+        pen.setCosmetic(True)
+        pen.setStyle(Qt.DashLine)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawPolygon(self._physical_polygon_to_screen(corners))
+
     def _draw_origin_marker(self, painter: QPainter) -> None:
         label_pen = QPen(QColor(CANVAS_LABEL_TEXT))
         painter.setPen(label_pen)
@@ -537,14 +720,173 @@ class MapViewport(QWidget):
 
         self.pending_start_point = self.drawing_tool.get_start_point()
 
+    def _handle_decoration_left_click(self, screen_point: QPointF) -> bool:
+        """
+        Start or finish an incubator decoration rectangle.
+        """
+        if self.active_decoration_type != DECORATION_TYPE_INCUBATOR_ARRAY:
+            return False
+        if self.drawing_tool.mode != DrawingMode.RECTANGLE:
+            return False
+
+        physical_point = self.screen_to_physical(screen_point)
+        physical_point = self._clamp_physical_point(physical_point)
+
+        if self.decoration_start_physical is None:
+            self.decoration_start_physical = physical_point
+            self.decoration_preview_physical = physical_point
+            return True
+
+        decoration = self._build_decoration_from_points(self.decoration_start_physical, physical_point)
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
+
+        if decoration.row_length < INCUBATOR_PLACEHOLDER_WIDTH:
+            decoration.row_length = INCUBATOR_PLACEHOLDER_WIDTH
+        if decoration.column_length < INCUBATOR_PLACEHOLDER_HEIGHT:
+            decoration.column_length = INCUBATOR_PLACEHOLDER_HEIGHT
+
+        self.decorations.append(decoration)
+        self.selected_decoration_index = len(self.decorations) - 1
+        self.decoration_created.emit(len(self.decorations))
+        self.decoration_selected.emit(decoration)
+        return True
+
+    def _try_start_decoration_drag(self, screen_point: QPointF) -> bool:
+        """
+        Select a decoration and start edge/body dragging when hit.
+        """
+        hit = self._hit_test_decoration(screen_point)
+        if hit is None:
+            self.selected_decoration_index = None
+            return False
+
+        self.selected_decoration_index = hit[0]
+        self.decoration_drag_mode = hit[1]
+        self.decoration_drag_start_physical = self.screen_to_physical(screen_point)
+        self.decoration_drag_original = self._copy_decoration(self.decorations[hit[0]])
+        self.decoration_selected.emit(self.decorations[hit[0]])
+        return True
+
+    def _update_decoration_drag(self, screen_point: QPointF) -> None:
+        """
+        Update the selected decoration while dragging an edge or the body.
+        """
+        if self.selected_decoration_index is None:
+            return
+        if self.decoration_drag_start_physical is None:
+            return
+        if self.decoration_drag_original is None:
+            return
+
+        current_physical = self.screen_to_physical(screen_point)
+        delta_x = current_physical.x() - self.decoration_drag_start_physical.x()
+        delta_y = current_physical.y() - self.decoration_drag_start_physical.y()
+
+        original = self.decoration_drag_original
+        axes = self._get_decoration_axes()
+        row_axis = axes[0]
+        column_axis = axes[1]
+        axis_delta = self._project_delta_to_decoration_axes(QPointF(delta_x, delta_y))
+        delta_row = axis_delta[0]
+        delta_column = axis_delta[1]
+        min_width = INCUBATOR_PLACEHOLDER_WIDTH
+        min_height = INCUBATOR_PLACEHOLDER_HEIGHT
+
+        start_x = original.start_x
+        start_y = original.start_y
+        row_length = original.row_length
+        column_length = original.column_length
+
+        if self.decoration_drag_mode == "move":
+            start_x += delta_x
+            start_y += delta_y
+        elif self.decoration_drag_mode == "left":
+            next_row_length = row_length - delta_row
+            if next_row_length >= min_width:
+                start_x += row_axis.x() * delta_row
+                start_y += row_axis.y() * delta_row
+                row_length = next_row_length
+        elif self.decoration_drag_mode == "right":
+            row_length += delta_row
+            if row_length < min_width:
+                row_length = min_width
+        elif self.decoration_drag_mode == "top":
+            next_column_length = column_length - delta_column
+            if next_column_length >= min_height:
+                start_x += column_axis.x() * delta_column
+                start_y += column_axis.y() * delta_column
+                column_length = next_column_length
+        elif self.decoration_drag_mode == "bottom":
+            column_length += delta_column
+            if column_length < min_height:
+                column_length = min_height
+
+        decoration = self.decorations[self.selected_decoration_index]
+        decoration.start_x = start_x
+        decoration.start_y = start_y
+        decoration.row_length = row_length
+        decoration.column_length = column_length
+        self.decoration_changed.emit(decoration)
+
+    def _update_decoration_cursor(self, screen_point: QPointF) -> None:
+        """
+        Show resize/move cursors when hovering a decoration.
+        """
+        hit = self._hit_test_decoration(screen_point)
+        if hit is None:
+            self.setCursor(QCursor(Qt.CrossCursor))
+            return
+
+        mode = hit[1]
+        if mode == "left" or mode == "right":
+            self.setCursor(QCursor(Qt.SizeHorCursor))
+            return
+        if mode == "top" or mode == "bottom":
+            self.setCursor(QCursor(Qt.SizeVerCursor))
+            return
+
+        self.setCursor(QCursor(Qt.SizeAllCursor))
+
+    def _hit_test_decoration(self, screen_point: QPointF):
+        """
+        Return the topmost hit decoration index and drag mode.
+        """
+        physical_point = self.screen_to_physical(screen_point)
+        margin = 8.0 / self.zoom_factor
+
+        index = len(self.decorations) - 1
+        while index >= 0:
+            decoration = self.decorations[index]
+            corners = self._get_decoration_corners(decoration)
+
+            if self._point_to_segment_distance(physical_point, corners[0], corners[3]) <= margin:
+                return index, "left"
+            if self._point_to_segment_distance(physical_point, corners[1], corners[2]) <= margin:
+                return index, "right"
+            if self._point_to_segment_distance(physical_point, corners[0], corners[1]) <= margin:
+                return index, "top"
+            if self._point_to_segment_distance(physical_point, corners[3], corners[2]) <= margin:
+                return index, "bottom"
+            if self._physical_polygon_contains(corners, physical_point):
+                return index, "move"
+
+            index -= 1
+
+        return None
+
     def clear_segments(self) -> None:
         """
         Clear all in-memory wall segments and pending drawing state.
         """
         self.segments.clear()
         self.doors.clear()
+        self.decorations.clear()
         self.pending_start_point = None
         self.preview_end_point = None
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
+        self.selected_decoration_index = None
         self.drawing_tool.cancel()
         self.selected_grid_point = None
         self.update()
@@ -595,6 +937,48 @@ class MapViewport(QWidget):
             doors.append(copied_door)
 
         return doors
+
+    def set_decorations(self, decorations: list) -> None:
+        """
+        Replace current decoration instances.
+        """
+        self.decorations = []
+
+        for decoration in decorations:
+            copied_decoration = self._copy_decoration(decoration)
+            self.decorations.append(copied_decoration)
+
+        self.selected_decoration_index = None
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
+        self.decoration_drag_mode = None
+        self.update()
+
+    def get_decorations(self) -> list:
+        """
+        Return a copy of current decorations.
+        """
+        decorations = []
+
+        for decoration in self.decorations:
+            decorations.append(self._copy_decoration(decoration))
+
+        return decorations
+
+    def update_selected_decoration_spacing(self, item_spacing_scale: float, row_spacing_scale: float) -> None:
+        """
+        Update spacing on the selected decoration.
+        """
+        if self.selected_decoration_index is None:
+            return
+        if self.selected_decoration_index >= len(self.decorations):
+            return
+
+        decoration = self.decorations[self.selected_decoration_index]
+        decoration.item_spacing_scale = item_spacing_scale
+        decoration.row_spacing_scale = row_spacing_scale
+        self.decoration_changed.emit(decoration)
+        self.update()
 
     def set_segments(self, segments: list) -> None:
         """
@@ -1016,3 +1400,178 @@ class MapViewport(QWidget):
         screen_x = physical_point.x() * self.zoom_factor + self.pan_offset.x()
         screen_y = physical_point.y() * self.zoom_factor + self.pan_offset.y()
         return QPointF(screen_x, screen_y)
+
+    def _get_decoration_corners(self, decoration: IncubatorDecoration) -> list:
+        """
+        Return decoration corners along the active wall-set axes.
+        """
+        origin = QPointF(decoration.start_x, decoration.start_y)
+        return self._build_decoration_corners(origin, decoration.row_length, decoration.column_length)
+
+    def _build_decoration_corners(self, origin: QPointF, row_length: float, column_length: float) -> list:
+        """
+        Build a physical parallelogram from row and column lengths.
+        """
+        axes = self._get_decoration_axes()
+        row_axis = axes[0]
+        column_axis = axes[1]
+
+        row_vector = QPointF(row_axis.x() * row_length, row_axis.y() * row_length)
+        column_vector = QPointF(column_axis.x() * column_length, column_axis.y() * column_length)
+
+        first = QPointF(origin)
+        second = first + row_vector
+        third = second + column_vector
+        fourth = first + column_vector
+        return [first, second, third, fourth]
+
+    def _build_decoration_from_points(self, start_point: QPointF, end_point: QPointF) -> IncubatorDecoration:
+        """
+        Build a positive-length decoration by projecting onto wall-set axes.
+        """
+        axes = self._get_decoration_axes()
+        row_axis = axes[0]
+        column_axis = axes[1]
+        delta_x = end_point.x() - start_point.x()
+        delta_y = end_point.y() - start_point.y()
+        axis_delta = self._project_delta_to_decoration_axes(QPointF(delta_x, delta_y))
+        row_length = axis_delta[0]
+        column_length = axis_delta[1]
+
+        origin = QPointF(start_point)
+        if row_length < 0.0:
+            origin = origin + QPointF(row_axis.x() * row_length, row_axis.y() * row_length)
+            row_length = -row_length
+        if column_length < 0.0:
+            origin = origin + QPointF(column_axis.x() * column_length, column_axis.y() * column_length)
+            column_length = -column_length
+
+        return IncubatorDecoration(
+            start_x=origin.x(),
+            start_y=origin.y(),
+            row_length=row_length,
+            column_length=column_length,
+        )
+
+    def _get_decoration_axes(self) -> tuple:
+        """
+        Return normalized row and column axes matching the active wall-set grid.
+        """
+        row_axis = QPointF(self.active_step_x, -self.active_step_y)
+        column_axis = QPointF(self.active_step_x, self.active_step_y)
+        return self._normalize_vector(row_axis), self._normalize_vector(column_axis)
+
+    def _normalize_vector(self, vector: QPointF) -> QPointF:
+        """
+        Return a unit vector. Falls back to horizontal on invalid length.
+        """
+        length = math.sqrt(vector.x() * vector.x() + vector.y() * vector.y())
+        if length <= 0.0:
+            return QPointF(1.0, 0.0)
+
+        return QPointF(vector.x() / length, vector.y() / length)
+
+    def _project_delta_to_decoration_axes(self, delta: QPointF) -> tuple:
+        """
+        Solve a physical delta into row and column axis distances.
+        """
+        axes = self._get_decoration_axes()
+        row_axis = axes[0]
+        column_axis = axes[1]
+        determinant = row_axis.x() * column_axis.y() - row_axis.y() * column_axis.x()
+
+        if abs(determinant) <= 0.000001:
+            return 0.0, 0.0
+
+        row_distance = (delta.x() * column_axis.y() - delta.y() * column_axis.x()) / determinant
+        column_distance = (row_axis.x() * delta.y() - row_axis.y() * delta.x()) / determinant
+        return row_distance, column_distance
+
+    def _physical_polygon_to_screen(self, points: list) -> QPolygonF:
+        """
+        Convert a physical polygon to screen coordinates.
+        """
+        polygon = QPolygonF()
+        for point in points:
+            polygon.append(self._physical_to_screen(point))
+
+        return polygon
+
+    def _physical_polygon_contains(self, corners: list, point: QPointF) -> bool:
+        """
+        Return whether a physical point is inside a decoration polygon.
+        """
+        path = QPainterPath()
+        path.moveTo(corners[0])
+
+        index = 1
+        while index < len(corners):
+            path.lineTo(corners[index])
+            index += 1
+
+        path.closeSubpath()
+        return path.contains(point)
+
+    def _point_to_segment_distance(self, point: QPointF, start: QPointF, end: QPointF) -> float:
+        """
+        Return physical distance from a point to a line segment.
+        """
+        segment_x = end.x() - start.x()
+        segment_y = end.y() - start.y()
+        length_squared = segment_x * segment_x + segment_y * segment_y
+
+        if length_squared <= 0.0:
+            delta_x = point.x() - start.x()
+            delta_y = point.y() - start.y()
+            return math.sqrt(delta_x * delta_x + delta_y * delta_y)
+
+        point_x = point.x() - start.x()
+        point_y = point.y() - start.y()
+        projection = (point_x * segment_x + point_y * segment_y) / length_squared
+        if projection < 0.0:
+            projection = 0.0
+        if projection > 1.0:
+            projection = 1.0
+
+        closest_x = start.x() + segment_x * projection
+        closest_y = start.y() + segment_y * projection
+        delta_x = point.x() - closest_x
+        delta_y = point.y() - closest_y
+        return math.sqrt(delta_x * delta_x + delta_y * delta_y)
+
+    def _get_incubator_item_spacing(self) -> float:
+        """
+        Return default physical item spacing used by the C++ incubator builder.
+        """
+        return math.sqrt(150.0 * 150.0 + 130.0 * 130.0)
+
+    def _get_incubator_row_spacing(self) -> float:
+        """
+        Return default physical row spacing used by the C++ incubator builder.
+        """
+        return math.sqrt(150.0 * 150.0 + 130.0 * 130.0)
+
+    def _cancel_pending_decoration(self) -> bool:
+        """
+        Cancel an unfinished decoration rectangle.
+        """
+        if self.decoration_start_physical is None and self.decoration_preview_physical is None:
+            return False
+
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
+        self.drawing_cancelled.emit()
+        return True
+
+    def _copy_decoration(self, decoration: IncubatorDecoration) -> IncubatorDecoration:
+        """
+        Return a copied incubator decoration.
+        """
+        return IncubatorDecoration(
+            start_x=decoration.start_x,
+            start_y=decoration.start_y,
+            row_length=decoration.row_length,
+            column_length=decoration.column_length,
+            item_spacing_scale=decoration.item_spacing_scale,
+            row_spacing_scale=decoration.row_spacing_scale,
+        )

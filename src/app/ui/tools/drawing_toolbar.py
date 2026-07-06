@@ -29,6 +29,7 @@ class DrawingToolbar(QToolBar):
         self.action_group = QActionGroup(self)
         self.action_group.setExclusive(True)
         self._actions = {}
+        self._suppress_emit = False
 
         self._add_mode_action(DrawingMode.POLYLINE, tr(TextKey.DRAWING_POLYLINE))
         self._add_mode_action(DrawingMode.STRAIGHT_LINE, tr(TextKey.DRAWING_LINE))
@@ -38,6 +39,18 @@ class DrawingToolbar(QToolBar):
 
         default_action = self._actions[DrawingMode.POLYLINE]
         default_action.setChecked(True)
+
+    def set_mode(self, mode: DrawingMode) -> None:
+        """
+        Check the matching toolbar action without emitting a duplicate signal.
+        """
+        action = self._actions.get(mode)
+        if action is None:
+            return
+
+        self._suppress_emit = True
+        action.setChecked(True)
+        self._suppress_emit = False
 
     def _add_mode_action(self, mode: DrawingMode, text: str) -> None:
         """Create a checkable action for one drawing mode."""
@@ -52,4 +65,7 @@ class DrawingToolbar(QToolBar):
 
     def _emit_mode(self, mode: DrawingMode) -> None:
         """Emit the selected mode when its action becomes active."""
+        if self._suppress_emit:
+            return
+
         self.drawing_mode_changed.emit(mode)

@@ -13,6 +13,11 @@
 extern "C" {
 
 /**
+ * @brief Return C API version expected by the Python binding.
+ */
+AUTO_MAPPER_API int get_auto_mapper_api_version();
+
+/**
  * @brief Represents a single coordinate segment with its wall type.
  */
 struct CSegment {
@@ -61,6 +66,15 @@ struct CDrawablePart {
     const char* part_id;
 };
 
+struct CIncubatorArray {
+    float start_x;
+    float start_y;
+    float row_length;
+    float column_length;
+    float item_spacing_scale;
+    float row_spacing_scale;
+};
+
 /**
  * @brief Build map from segments and doors, write to file.
  */
@@ -70,6 +84,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_segments,
     const CDoor* doors,
     int num_doors,
+    const CIncubatorArray* incubator_arrays,
+    int num_incubator_arrays,
     float map_size_x,
     float map_size_y,
     bool gen_floor,

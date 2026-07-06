@@ -8,6 +8,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from app.config import APP_RESOURCE_DIR
+from app.editor.decorations import get_decoration_items
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profiles
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
@@ -34,6 +35,7 @@ class ThemeShelfPanel(QWidget):
     """
 
     wall_set_selected = Signal(int, str)
+    decoration_selected = Signal(str, str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -73,6 +75,18 @@ class ThemeShelfPanel(QWidget):
                 profile["short_label"],
                 profile["description"],
                 image_path,
+            )
+
+        decoration_title = QLabel("Decorations")
+        decoration_title.setObjectName("panelTitle")
+        content_layout.addWidget(decoration_title)
+
+        for decoration in get_decoration_items():
+            self._add_decoration_card(
+                content_layout,
+                decoration["decoration_type"],
+                decoration["label"],
+                decoration["description"],
             )
 
         content_layout.addStretch(1)
@@ -116,6 +130,45 @@ class ThemeShelfPanel(QWidget):
 
         layout.addWidget(card)
 
+    def _add_decoration_card(
+        self,
+        layout: QVBoxLayout,
+        decoration_type: str,
+        title_text: str,
+        detail_text: str,
+    ) -> None:
+        """
+        Add one decoration selector card.
+        """
+        card = QFrame()
+        card.setObjectName("themeCard")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(10, 10, 10, 10)
+        card_layout.setSpacing(8)
+
+        preview = QLabel()
+        preview.setObjectName("decorationPreview")
+        preview.setAlignment(Qt.AlignCenter)
+        preview.setFixedHeight(118)
+        preview.setText("80 x 42\nplaceholder")
+        card_layout.addWidget(preview)
+
+        title = QLabel(title_text)
+        title.setObjectName("cardTitle")
+        title.setWordWrap(True)
+        card_layout.addWidget(title)
+
+        detail = QLabel(detail_text)
+        detail.setObjectName("cardDetail")
+        detail.setWordWrap(True)
+        card_layout.addWidget(detail)
+
+        button = QPushButton(tr(TextKey.BUTTON_SELECT))
+        button.clicked.connect(lambda checked=False: self._select_decoration(decoration_type, title_text))
+        card_layout.addWidget(button)
+
+        layout.addWidget(card)
+
     def _load_preview(self, image: QLabel, image_path: Path | None) -> None:
         if image_path is not None and image_path.exists():
             pixmap = QPixmap(str(image_path))
@@ -127,3 +180,9 @@ class ThemeShelfPanel(QWidget):
     def _select_wall_set(self, wall_type: int, wall_name: str) -> None:
         self.selected_wall_type = wall_type
         self.wall_set_selected.emit(wall_type, wall_name)
+
+    def _select_decoration(self, decoration_type: str, decoration_name: str) -> None:
+        """
+        Notify listeners that a decoration tool is active.
+        """
+        self.decoration_selected.emit(decoration_type, decoration_name)

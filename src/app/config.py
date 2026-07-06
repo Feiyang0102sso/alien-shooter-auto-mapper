@@ -135,11 +135,9 @@ def get_dll_path() -> Path:
     - Dev mode: build/mingw-release / libauto_mapper.dll
     """
     if is_packaged_app():
-        dll_path = ROOT_DIR / DLL_NAME_EXE
-    else:
-        dll_path = DLL_DEV_BUILD_DIR / DLL_NAME_DEV
+        return ROOT_DIR / DLL_NAME_EXE
 
-    return dll_path
+    return DLL_DEV_BUILD_DIR / DLL_NAME_DEV
 
 
 DLL_PATH = get_dll_path()
