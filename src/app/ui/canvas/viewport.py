@@ -9,7 +9,6 @@ from PySide6.QtWidgets import QWidget
 
 from app.binding import dll_registry
 from app.editor.drawable_parts import PART_WALL_BODY
-from app.editor.decorations import INCUBATOR_PLACEHOLDER_HEIGHT, INCUBATOR_PLACEHOLDER_WIDTH
 from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
@@ -616,10 +615,25 @@ class MapViewport(QWidget):
         """
         Draw one incubator preview unit marker.
         """
+        # fix-fix preview unit mismatch, 
+        # which is caused by treating the center point as the top-left origin when rendering.
+        axes = self._get_decoration_axes()
+        row_axis = axes[0]
+        column_axis = axes[1]
+
+        half_w = self.incubator_footprint_width / 2.0
+        half_h = self.incubator_footprint_height / 2.0
+
+        unit_origin = (
+            origin
+            - QPointF(row_axis.x() * half_w, row_axis.y() * half_w)
+            - QPointF(column_axis.x() * half_h, column_axis.y() * half_h)
+        )
+
         corners = self._build_decoration_corners(
-            origin,
-            INCUBATOR_PLACEHOLDER_WIDTH,
-            INCUBATOR_PLACEHOLDER_HEIGHT,
+            unit_origin,
+            self.incubator_footprint_width,
+            self.incubator_footprint_height,
         )
 
         pen = QPen(QColor("#69f0ae"))
@@ -721,10 +735,10 @@ class MapViewport(QWidget):
         self.decoration_start_physical = None
         self.decoration_preview_physical = None
 
-        if decoration.row_length < INCUBATOR_PLACEHOLDER_WIDTH:
-            decoration.row_length = INCUBATOR_PLACEHOLDER_WIDTH
-        if decoration.column_length < INCUBATOR_PLACEHOLDER_HEIGHT:
-            decoration.column_length = INCUBATOR_PLACEHOLDER_HEIGHT
+        if decoration.row_length < self.incubator_footprint_width:
+            decoration.row_length = self.incubator_footprint_width
+        if decoration.column_length < self.incubator_footprint_height:
+            decoration.column_length = self.incubator_footprint_height
 
         self.decorations.append(decoration)
         self.selected_decoration_index = len(self.decorations) - 1
@@ -770,8 +784,8 @@ class MapViewport(QWidget):
         axis_delta = self._project_delta_to_decoration_axes(QPointF(delta_x, delta_y))
         delta_row = axis_delta[0]
         delta_column = axis_delta[1]
-        min_width = INCUBATOR_PLACEHOLDER_WIDTH
-        min_height = INCUBATOR_PLACEHOLDER_HEIGHT
+        min_width = self.incubator_footprint_width
+        min_height = self.incubator_footprint_height
 
         start_x = original.start_x
         start_y = original.start_y
@@ -1146,6 +1160,20 @@ class MapViewport(QWidget):
         profile = get_wall_profile(self.active_wall_type)
         return profile["step_y"]
 
+    @property
+    def incubator_footprint_width(self) -> float:
+        """
+        Return the physical footprint width of a single incubator unit.
+        """
+        return dll_registry.get_incubator_array_profile()["footprint_width"]
+
+    @property
+    def incubator_footprint_height(self) -> float:
+        """
+        Return the physical footprint height of a single incubator unit.
+        """
+        return dll_registry.get_incubator_array_profile()["footprint_height"]
+
     def grid_to_screen(self, grid_x: int, grid_y: int, wall_type: int = None) -> QPointF:
         """
         Convert logical grid coordinates into widget coordinates.
@@ -1436,9 +1464,13 @@ class MapViewport(QWidget):
     def _get_decoration_axes(self) -> tuple:
         """
         Return normalized axes for drawing the decoration area.
+        Uses the incubator profile axes from C++, not the current wall step,
+        so the frame and placed decorations share the same coordinate system.
         """
-        row_axis = QPointF(self.active_step_x, -self.active_step_y)
-        column_axis = QPointF(self.active_step_x, self.active_step_y)
+        # fix-fix layout frame alignment problem, which is caused by the layout axes depending on the active wall steps rather than fixed incubator profiles.
+        profile = dll_registry.get_incubator_array_profile()
+        row_axis = QPointF(profile["row_axis_x"], profile["row_axis_y"])
+        column_axis = QPointF(profile["column_axis_x"], profile["column_axis_y"])
         return self._normalize_vector(row_axis), self._normalize_vector(column_axis)
 
     def _normalize_vector(self, vector: QPointF) -> QPointF:

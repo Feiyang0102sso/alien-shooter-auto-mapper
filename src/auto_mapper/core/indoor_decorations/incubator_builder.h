@@ -14,9 +14,11 @@ inline constexpr int INCUBATOR_BODY_VID = 443;
 inline constexpr int INCUBATOR_AIR_WALL_VID = 631;
 inline constexpr int INCUBATOR_BIG_COMPUTER_VID = 135;
 inline constexpr float INCUBATOR_DEFAULT_ROW_SPACING_X = 150.0f;
-inline constexpr float INCUBATOR_DEFAULT_ROW_SPACING_Y = -130.0f;
+inline constexpr float INCUBATOR_DEFAULT_ROW_SPACING_Y = -107.0f;
 inline constexpr float INCUBATOR_DEFAULT_COLUMN_SPACING_X = 150.0f;
-inline constexpr float INCUBATOR_DEFAULT_COLUMN_SPACING_Y = 130.0f;
+inline constexpr float INCUBATOR_DEFAULT_COLUMN_SPACING_Y = 107.0f;
+inline constexpr float INCUBATOR_FOOTPRINT_ROW_LENGTH = 60.0f;
+inline constexpr float INCUBATOR_FOOTPRINT_COLUMN_LENGTH = 90.0f;
 
 inline constexpr uint32_t INCUBATOR_BODY_DIRECTION = 0;
 inline constexpr uint32_t INCUBATOR_AIR_WALL_DIRECTION = 128;

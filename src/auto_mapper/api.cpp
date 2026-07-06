@@ -46,6 +46,8 @@ AUTO_MAPPER_API bool get_incubator_array_profile(
     profile->row_axis_y = auto_mapper::core::indoor_decorations::INCUBATOR_DEFAULT_ROW_SPACING_Y;
     profile->column_axis_x = auto_mapper::core::indoor_decorations::INCUBATOR_DEFAULT_COLUMN_SPACING_X;
     profile->column_axis_y = auto_mapper::core::indoor_decorations::INCUBATOR_DEFAULT_COLUMN_SPACING_Y;
+    profile->footprint_width = auto_mapper::core::indoor_decorations::INCUBATOR_FOOTPRINT_ROW_LENGTH;
+    profile->footprint_height = auto_mapper::core::indoor_decorations::INCUBATOR_FOOTPRINT_COLUMN_LENGTH;
     return true;
 }
 

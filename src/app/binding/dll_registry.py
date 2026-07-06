@@ -177,6 +177,8 @@ def get_incubator_array_profile() -> dict:
         "row_axis_y",
         "column_axis_x",
         "column_axis_y",
+        "footprint_width",
+        "footprint_height",
     ]
 
     for key in required_keys:

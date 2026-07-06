@@ -80,6 +80,8 @@ struct CIncubatorArrayProfile {
     float row_axis_y;
     float column_axis_x;
     float column_axis_y;
+    float footprint_width;
+    float footprint_height;
 };
 
 struct CIncubatorPreviewPoint {

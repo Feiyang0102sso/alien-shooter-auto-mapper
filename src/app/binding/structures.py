@@ -60,6 +60,8 @@ class CIncubatorArrayProfile(ctypes.Structure):
         ("row_axis_y", ctypes.c_float),
         ("column_axis_x", ctypes.c_float),
         ("column_axis_y", ctypes.c_float),
+        ("footprint_width", ctypes.c_float),
+        ("footprint_height", ctypes.c_float),
     ]
 
 

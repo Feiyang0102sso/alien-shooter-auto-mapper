@@ -259,6 +259,8 @@ class AutoMapperLibClient:
             "row_axis_y": float(c_profile.row_axis_y),
             "column_axis_x": float(c_profile.column_axis_x),
             "column_axis_y": float(c_profile.column_axis_y),
+            "footprint_width": float(c_profile.footprint_width),
+            "footprint_height": float(c_profile.footprint_height),
         }
         logger.info(f"Loaded incubator array profile: {profile}")
         return profile
