@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSizePolicy,
+    QTabWidget,
     QToolBar,
     QWidget,
 )
@@ -27,6 +28,7 @@ from app.logger import logger
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, ProjectData
 from app.project.io import load_project_json, save_project_json
 from app.ui.canvas.viewport import MapViewport
+from app.ui.panels.decoration_shelf import DecorationShelfPanel
 from app.ui.panels.inspector import InspectorPanel
 from app.ui.panels.theme_shelf import ThemeShelfPanel
 from app.ui.tools.drawing_modes import DRAWING_MODE_LABELS, DrawingMode
@@ -55,6 +57,8 @@ class MainWindow(QMainWindow):
         self.viewport = MapViewport()
         self.drawing_toolbar = DrawingToolbar(self)
         self.theme_shelf = ThemeShelfPanel()
+        self.decoration_shelf = DecorationShelfPanel()
+        self.left_shelf_tabs = QTabWidget()
         self.inspector = InspectorPanel()
 
         self.setCentralWidget(self.viewport)
@@ -158,7 +162,10 @@ class MainWindow(QMainWindow):
         left_dock = QDockWidget(self)
         left_dock.setObjectName("themeShelfDock")
         left_dock.setTitleBarWidget(QWidget())  # hide docker title bar
-        left_dock.setWidget(self.theme_shelf)
+        self.left_shelf_tabs.setObjectName("leftShelfTabs")
+        self.left_shelf_tabs.addTab(self.theme_shelf, tr(TextKey.PANEL_WALL_SETS))
+        self.left_shelf_tabs.addTab(self.decoration_shelf, tr(TextKey.PANEL_DECORATIONS))
+        left_dock.setWidget(self.left_shelf_tabs)
         left_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
         left_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.addDockWidget(Qt.LeftDockWidgetArea, left_dock)
@@ -176,7 +183,7 @@ class MainWindow(QMainWindow):
         Connect first-pass panel interactions.
         """
         self.theme_shelf.wall_set_selected.connect(self._on_wall_set_selected)
-        self.theme_shelf.decoration_selected.connect(self._on_decoration_tool_selected)
+        self.decoration_shelf.decoration_selected.connect(self._on_decoration_tool_selected)
         self.drawing_toolbar.drawing_mode_changed.connect(self._on_drawing_mode_changed)
         self.viewport.grid_point_selected.connect(self._on_grid_point_selected)
         self.viewport.cursor_grid_changed.connect(self._on_cursor_grid_changed)
@@ -192,6 +199,7 @@ class MainWindow(QMainWindow):
         self.inspector.drawable_part_changed.connect(self._on_drawable_part_changed)
         self.inspector.eraser_size_changed.connect(self._on_eraser_size_changed)
         self.inspector.decoration_spacing_changed.connect(self._on_decoration_spacing_changed)
+        self.inspector.decoration_delete_requested.connect(self._on_decoration_delete_requested)
 
     def _on_wall_set_selected(self, wall_type: int, wall_name: str) -> None:
         """
@@ -212,7 +220,8 @@ class MainWindow(QMainWindow):
         self.viewport.set_active_decoration(decoration_type)
         self.viewport.set_drawing_mode(DrawingMode.RECTANGLE)
         self.drawing_toolbar.set_mode(DrawingMode.RECTANGLE)
-        self.statusBar().showMessage(f"Decoration selected: {decoration_name}. Draw a rectangle.")
+        self.inspector.set_decoration_tool(decoration_type, decoration_name)
+        self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_TOOL_SELECTED, decoration_name=decoration_name))
         logger.info(f"Decoration selected: {decoration_type}")
 
     def _on_drawing_mode_changed(self, drawing_mode: DrawingMode) -> None:
@@ -271,7 +280,7 @@ class MainWindow(QMainWindow):
         """
         Show the committed decoration.
         """
-        self.statusBar().showMessage(f"Decoration #{count} created")
+        self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_CREATED, count=count))
         logger.info(f"Decoration #{count} created")
 
     def _on_decoration_selected(self, decoration) -> None:
@@ -279,7 +288,7 @@ class MainWindow(QMainWindow):
         Show selected decoration properties.
         """
         self.inspector.set_decoration_selection(decoration)
-        self.statusBar().showMessage("Decoration selected")
+        self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_SELECTED))
 
     def _on_decoration_changed(self, decoration) -> None:
         """
@@ -287,6 +296,18 @@ class MainWindow(QMainWindow):
         """
         self.inspector.set_decoration_selection(decoration)
         # logger.info("Decoration changed")
+
+    def _on_decoration_delete_requested(self) -> None:
+        """
+        Delete the currently selected decoration frame.
+        """
+        deleted = self.viewport.delete_selected_decoration()
+        if not deleted:
+            return
+
+        self.inspector.clear_decoration_selection()
+        self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_DELETED))
+        logger.info("Decoration deleted")
 
     def _on_drawing_cancelled(self) -> None:
         """
@@ -593,7 +614,11 @@ class MainWindow(QMainWindow):
         """Sync decoration spacing from the inspector to the viewport."""
         self.viewport.update_selected_decoration_spacing(item_spacing_scale, row_spacing_scale)
         self.statusBar().showMessage(
-            f"Decoration spacing: item={item_spacing_scale:.2f}, column={row_spacing_scale:.2f}"
+            tr(
+                TextKey.STATUS_DECORATION_SPACING,
+                item_spacing_scale=item_spacing_scale,
+                row_spacing_scale=row_spacing_scale,
+            )
         )
         logger.info(
             f"Decoration spacing changed: item={item_spacing_scale:.2f}, column={row_spacing_scale:.2f}"

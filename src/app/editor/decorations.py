@@ -3,6 +3,8 @@ Decoration metadata used by the editor UI.
 """
 
 from app.project.data import DECORATION_TYPE_INCUBATOR_ARRAY
+from app.i18n.locale import tr
+from app.i18n.text_keys import TextKey
 
 
 INCUBATOR_DEFAULT_ITEM_SPACING = 1.0
@@ -16,8 +18,9 @@ def get_decoration_items() -> list:
     items = [
         {
             "decoration_type": DECORATION_TYPE_INCUBATOR_ARRAY,
-            "label": "Incubator",
-            "description": "Draw an incubator array area, then tune row and column spacing.",
+            "label": tr(TextKey.DECORATION_INCUBATOR_LABEL),
+            "description": tr(TextKey.DECORATION_INCUBATOR_DESCRIPTION),
+            "preview_path": "",
         }
     ]
     return items

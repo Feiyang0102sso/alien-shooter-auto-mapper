@@ -29,14 +29,17 @@ class TextKey:
     DOCK_INSPECTOR = "dock.inspector"
 
     PANEL_WALL_SETS = "panel.wall_sets"
+    PANEL_DECORATIONS = "panel.decorations"
     PANEL_INSPECTOR = "panel.inspector"
     PANEL_TOOLS = "panel.tools"
 
     BUTTON_SELECT = "button.select"
     BUTTON_APPLY_MAP_SIZE = "button.apply_map_size"
+    BUTTON_DELETE_DECORATION = "button.delete_decoration"
 
     GROUP_MAP_SIZE = "group.map_size"
     GROUP_TOOL_PROPERTIES = "group.tool_properties"
+    GROUP_DECORATION_PROPERTY = "group.decoration_property"
 
     LABEL_MAP_SIZE_X = "label.map_size_x"
     LABEL_MAP_SIZE_Y = "label.map_size_y"
@@ -48,6 +51,11 @@ class TextKey:
     LABEL_PENDING = "label.pending"
     LABEL_ERASER_SIZE = "label.eraser_size"
     LABEL_PREVIEW_MISSING = "label.preview_missing"
+    LABEL_ITEM_SPACING = "label.item_spacing"
+    LABEL_COLUMN_SPACING = "label.column_spacing"
+
+    DECORATION_INCUBATOR_LABEL = "decoration.incubator.label"
+    DECORATION_INCUBATOR_DESCRIPTION = "decoration.incubator.description"
 
     CANVAS_TITLE = "canvas.title"
     CANVAS_INFO = "canvas.info"
@@ -109,6 +117,11 @@ class TextKey:
     STATUS_WALL_START = "status.wall_start"
     STATUS_WALL_SEGMENT = "status.wall_segment"
     STATUS_DOOR = "status.door"
+    STATUS_DECORATION_TOOL_SELECTED = "status.decoration_tool_selected"
+    STATUS_DECORATION_CREATED = "status.decoration_created"
+    STATUS_DECORATION_DELETED = "status.decoration_deleted"
+    STATUS_DECORATION_SELECTED = "status.decoration_selected"
+    STATUS_DECORATION_SPACING = "status.decoration_spacing"
     STATUS_WALL_DRAWING_CANCELLED = "status.wall_drawing_cancelled"
     STATUS_MAP_SIZE_APPLIED = "status.map_size_applied"
     STATUS_CEILING_DISABLED = "status.ceiling_disabled"

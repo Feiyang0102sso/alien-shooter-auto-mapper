@@ -46,6 +46,19 @@ DOOR_LAB_DECO_LINE = "#90a4ae"          # Cool Slate Gray
 DOOR_LAB_DECO_DOT = "#cfd8dc"           # Light Slate
 
 
+# Decoration area colors.
+DECORATION_AREA_FILL = "#244338"        # Filled area inside a placed decoration frame.
+DECORATION_AREA_FILL_ALPHA = 70         # Keep the decoration frame translucent over the grid.
+DECORATION_AREA_BORDER = "#45c797"      # Default decoration frame border.
+DECORATION_AREA_SELECTED_BORDER = "#f0ad4e"  # Highlight border for the selected decoration.
+DECORATION_AREA_PREVIEW_BORDER = "#f0ad4e"   # Dashed border while drawing a new decoration.
+
+# Incubator preview unit colors.
+INCUBATOR_PREVIEW_BORDER = "#69f0ae"    # Border for each generated incubator footprint.
+INCUBATOR_PREVIEW_FILL = "#145046"      # Fill for each generated incubator footprint.
+INCUBATOR_PREVIEW_FILL_ALPHA = 120      # Make footprint markers visible without hiding the grid.
+
+
 # Eraser preview colors.
 ERASER_PREVIEW_COLOR = "#ff6b6b"
 ERASER_PREVIEW_ALPHA = 80

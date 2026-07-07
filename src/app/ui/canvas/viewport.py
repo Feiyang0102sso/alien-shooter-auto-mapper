@@ -20,6 +20,11 @@ from app.ui.colors import (
     CANVAS_MARKER_OUTLINE,
     CANVAS_PREVIEW_SEGMENT,
     CANVAS_SEGMENT_DEFAULT,
+    DECORATION_AREA_BORDER,
+    DECORATION_AREA_FILL,
+    DECORATION_AREA_FILL_ALPHA,
+    DECORATION_AREA_PREVIEW_BORDER,
+    DECORATION_AREA_SELECTED_BORDER,
     DOOR_STD_ACTIVE_LINE,
     DOOR_STD_ACTIVE_DOT_OPEN,
     DOOR_STD_ACTIVE_DOT_CLOSED,
@@ -35,6 +40,9 @@ from app.ui.colors import (
     DOOR_LAB_LASER_WITHOUT_DOT,
     DOOR_LAB_DECO_LINE,
     DOOR_LAB_DECO_DOT,
+    INCUBATOR_PREVIEW_BORDER,
+    INCUBATOR_PREVIEW_FILL,
+    INCUBATOR_PREVIEW_FILL_ALPHA,
 )
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.drawing_tool import DrawingToolController
@@ -588,11 +596,11 @@ class MapViewport(QWidget):
         """
         Draw one decoration parallelogram in physical map coordinates.
         """
-        fill_color = QColor("#244338")
-        fill_color.setAlpha(70)
-        border_color = QColor("#45c797")
+        fill_color = QColor(DECORATION_AREA_FILL)
+        fill_color.setAlpha(DECORATION_AREA_FILL_ALPHA)
+        border_color = QColor(DECORATION_AREA_BORDER)
         if selected:
-            border_color = QColor("#f0ad4e")
+            border_color = QColor(DECORATION_AREA_SELECTED_BORDER)
 
         painter.setBrush(QBrush(fill_color))
         pen = QPen(border_color)
@@ -636,11 +644,13 @@ class MapViewport(QWidget):
             self.incubator_footprint_height,
         )
 
-        pen = QPen(QColor("#69f0ae"))
+        pen = QPen(QColor(INCUBATOR_PREVIEW_BORDER))
         pen.setWidth(1)
         pen.setCosmetic(True)
         painter.setPen(pen)
-        painter.setBrush(QBrush(QColor(20, 80, 70, 120)))
+        fill_color = QColor(INCUBATOR_PREVIEW_FILL)
+        fill_color.setAlpha(INCUBATOR_PREVIEW_FILL_ALPHA)
+        painter.setBrush(QBrush(fill_color))
         painter.drawPolygon(self._physical_polygon_to_screen(corners))
 
     def _draw_decoration_preview(self, painter: QPainter) -> None:
@@ -657,7 +667,7 @@ class MapViewport(QWidget):
             self.decoration_preview_physical,
         )
         corners = self._get_decoration_corners(preview)
-        pen = QPen(QColor("#f0ad4e"))
+        pen = QPen(QColor(DECORATION_AREA_PREVIEW_BORDER))
         pen.setWidth(2)
         pen.setCosmetic(True)
         pen.setStyle(Qt.DashLine)
@@ -973,6 +983,26 @@ class MapViewport(QWidget):
         decoration.row_spacing_scale = row_spacing_scale
         self.decoration_changed.emit(decoration)
         self.update()
+
+    def delete_selected_decoration(self) -> bool:
+        """
+        Delete the currently selected decoration frame.
+        """
+        if self.selected_decoration_index is None:
+            return False
+        if self.selected_decoration_index >= len(self.decorations):
+            self.selected_decoration_index = None
+            return False
+
+        self.decorations.pop(self.selected_decoration_index)
+        self.selected_decoration_index = None
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
+        self.decoration_drag_mode = None
+        self.decoration_drag_start_physical = None
+        self.decoration_drag_original = None
+        self.update()
+        return True
 
     def set_segments(self, segments: list) -> None:
         """

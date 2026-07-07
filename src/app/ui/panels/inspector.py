@@ -35,6 +35,7 @@ class InspectorPanel(QWidget):
     drawable_part_changed = Signal(str)
     eraser_size_changed = Signal(int)
     decoration_spacing_changed = Signal(float, float)
+    decoration_delete_requested = Signal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -114,15 +115,11 @@ class InspectorPanel(QWidget):
 
         layout.addWidget(component_group)
 
-        decoration_group = QGroupBox("Decoration")
+        decoration_group = QGroupBox(tr(TextKey.GROUP_DECORATION_PROPERTY))
         decoration_group.setObjectName("decorationPropertiesGroup")
         decoration_layout = QVBoxLayout(decoration_group)
         decoration_layout.setContentsMargins(10, 12, 10, 10)
         decoration_layout.setSpacing(8)
-
-        self.decoration_label = QLabel("Incubator")
-        self.decoration_label.setObjectName("activeThemeLabel")
-        decoration_layout.addWidget(self.decoration_label)
 
         decoration_form = QFormLayout()
         decoration_form.setSpacing(8)
@@ -141,9 +138,13 @@ class InspectorPanel(QWidget):
         self.row_spacing_input.setValue(1.0)
         self.row_spacing_input.valueChanged.connect(self._emit_decoration_spacing_changed)
 
-        decoration_form.addRow("Item spacing", self.item_spacing_input)
-        decoration_form.addRow("Column spacing", self.row_spacing_input)
+        decoration_form.addRow(tr(TextKey.LABEL_ITEM_SPACING), self.item_spacing_input)
+        decoration_form.addRow(tr(TextKey.LABEL_COLUMN_SPACING), self.row_spacing_input)
         decoration_layout.addLayout(decoration_form)
+
+        self.delete_decoration_button = QPushButton(tr(TextKey.BUTTON_DELETE_DECORATION))
+        self.delete_decoration_button.clicked.connect(self.decoration_delete_requested)
+        decoration_layout.addWidget(self.delete_decoration_button)
 
         self.decoration_properties_group = decoration_group
         layout.addWidget(self.decoration_properties_group)
@@ -170,6 +171,8 @@ class InspectorPanel(QWidget):
         """
         self.current_wall_type = wall_type
         self.theme_label.setText(wall_name)
+        self.component_combo.setVisible(True)
+        self.nvid_label.setVisible(True)
 
         self.component_combo.blockSignals(True)
         self.component_combo.clear()
@@ -186,6 +189,15 @@ class InspectorPanel(QWidget):
             first_part_id = self._drawable_part_ids[0]
             self._update_preview(wall_type, first_part_id)
             self.drawable_part_changed.emit(first_part_id)
+
+    def set_decoration_tool(self, decoration_type: str, decoration_name: str) -> None:
+        """
+        Show the active decoration tool in the component preview area.
+        """
+        self.theme_label.setText(decoration_name)
+        self.component_combo.setVisible(False)
+        self.nvid_label.setVisible(False)
+        self._update_decoration_preview(decoration_type)
 
     def set_map_size(self, map_size_x: float, map_size_y: float) -> None:
         """
@@ -259,6 +271,12 @@ class InspectorPanel(QWidget):
         item_spacing = self.item_spacing_input.value()
         row_spacing = self.row_spacing_input.value()
         self.decoration_spacing_changed.emit(item_spacing, row_spacing)
+
+    def _update_decoration_preview(self, decoration_type: str) -> None:
+        """
+        Update component preview for the active decoration tool.
+        """
+        self.preview.clear()
 
     def _update_preview(self, wall_type: int, part_id: str) -> None:
         """

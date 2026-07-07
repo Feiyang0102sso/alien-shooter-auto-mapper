@@ -96,5 +96,17 @@
   "status.imported_project": "已导入 {segment_count} 条墙体线段和 {door_count} 个门：{file_path}",
   "status.generated_map": "已生成地图：{output_path}",
   "status.command_placeholder": "命令占位：功能尚未实现",
-  "status.eraser_size": "橡皮擦尺寸：{size}"
+  "status.eraser_size": "橡皮擦尺寸：{size}",
+  "panel.decorations": "装饰",
+  "group.decoration_property": "装饰属性",
+  "label.item_spacing": "物件间距",
+  "label.column_spacing": "列间距",
+  "decoration.incubator.label": "培养舱",
+  "decoration.incubator.description": "绘制培养舱阵列区域，然后调整行列间距。",
+  "status.decoration_tool_selected": "已选择装饰：{decoration_name}。请绘制矩形区域。",
+  "status.decoration_created": "已创建装饰 #{count}",
+  "status.decoration_selected": "已选择装饰",
+  "status.decoration_spacing": "装饰间距：物件={item_spacing_scale:.2f}，列={row_spacing_scale:.2f}",
+  "button.delete_decoration": "删除装饰",
+  "status.decoration_deleted": "已删除装饰"
 }

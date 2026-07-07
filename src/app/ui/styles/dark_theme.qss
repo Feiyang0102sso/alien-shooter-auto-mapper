@@ -90,10 +90,40 @@ QDockWidget::title {
 }
 
 #themeShelfPanel,
+#decorationShelfPanel,
 #inspectorPanel {
     background: #121b20;
     border-left: 1px solid #263740;
     border-right: 1px solid #263740;
+}
+
+#leftShelfTabs {
+    background: #121b20;
+    border-left: 1px solid #263740;
+    border-right: 1px solid #263740;
+}
+
+#leftShelfTabs::pane {
+    border: 0;
+    top: -1px;
+}
+
+#leftShelfTabs QTabBar::tab {
+    background: #172126;
+    border: 1px solid #263740;
+    color: #9fb4ad;
+    padding: 8px 14px;
+    min-width: 92px;
+}
+
+#leftShelfTabs QTabBar::tab:selected {
+    background: #223039;
+    border-bottom-color: #223039;
+    color: #f1f6f3;
+}
+
+#leftShelfTabs QTabBar::tab:hover {
+    color: #f1f6f3;
 }
 
 #panelTitle {
