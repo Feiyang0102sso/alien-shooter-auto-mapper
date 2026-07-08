@@ -8,6 +8,7 @@
 
 #include "auto_mapper/core/wall_builder.h"
 #include "auto_mapper/core/door_builder.h"
+#include "auto_mapper/core/indoor_decorations/incubator_builder.h"
 #include <string>
 #include <vector>
 #include <fstream>
@@ -123,6 +124,7 @@ struct TestScene {
     float map_size_y = 600.0f;
     std::vector<core::Segment> segments;
     std::vector<core::DoorInstance> doors;
+    std::vector<core::indoor_decorations::IncubatorArray> decorations;
 };
 
 enum class TokenType {
@@ -391,6 +393,109 @@ inline TestScene parse_test_scene(const std::vector<Token>& tokens) {
                                 i++;
                             }
                             scene.doors.push_back(door);
+                        } else {
+                            i++;
+                        }
+                    }
+                    if (i < tokens.size() && tokens[i].type == TokenType::RBracket) {
+                        i++;
+                    }
+                } else {
+                    i++;
+                }
+            } else if (key == "decorations") {
+                if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::LBracket) {
+                    i += 3;
+                    while (i < tokens.size() && tokens[i].type != TokenType::RBracket && tokens[i].type != TokenType::EndOfFile) {
+                        if (tokens[i].type == TokenType::LBrace) {
+                            i++;
+                            core::indoor_decorations::IncubatorArray dec;
+                            dec.start_x = 0.0f;
+                            dec.start_y = 0.0f;
+                            dec.row_length = 0.0f;
+                            dec.column_length = 0.0f;
+                            dec.item_spacing_scale = 1.0f;
+                            dec.row_spacing_scale = 1.0f;
+                            std::string type;
+
+                            while (i < tokens.size() && tokens[i].type != TokenType::RBrace && tokens[i].type != TokenType::EndOfFile) {
+                                if (tokens[i].type == TokenType::String) {
+                                    std::string d_key = tokens[i].value;
+                                    if (d_key == "type") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::String) {
+                                            type = tokens[i+2].value;
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "start") {
+                                        if (i + 3 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::LBrace) {
+                                            i += 3;
+                                            while (i < tokens.size() && tokens[i].type != TokenType::RBrace) {
+                                                if (tokens[i].type == TokenType::String) {
+                                                    std::string coord_key = tokens[i].value;
+                                                    if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                                        float val = std::stof(tokens[i+2].value);
+                                                        if (coord_key == "x") {
+                                                            dec.start_x = val;
+                                                        } else if (coord_key == "y") {
+                                                            dec.start_y = val;
+                                                        }
+                                                        i += 3;
+                                                    } else {
+                                                        i++;
+                                                    }
+                                                } else {
+                                                    i++;
+                                                }
+                                            }
+                                            if (i < tokens.size() && tokens[i].type == TokenType::RBrace) {
+                                                i++;
+                                            }
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "row_length") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            dec.row_length = std::stof(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "column_length") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            dec.column_length = std::stof(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "item_spacing_scale") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            dec.item_spacing_scale = std::stof(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else if (d_key == "row_spacing_scale") {
+                                        if (i + 2 < tokens.size() && tokens[i+1].type == TokenType::Colon && tokens[i+2].type == TokenType::Number) {
+                                            dec.row_spacing_scale = std::stof(tokens[i+2].value);
+                                            i += 3;
+                                        } else {
+                                            i++;
+                                        }
+                                    } else {
+                                        i++;
+                                    }
+                                } else {
+                                    i++;
+                                }
+                            }
+                            if (i < tokens.size() && tokens[i].type == TokenType::RBrace) {
+                                i++;
+                            }
+                            if (type == "incubator_array") {
+                                scene.decorations.push_back(dec);
+                            }
                         } else {
                             i++;
                         }

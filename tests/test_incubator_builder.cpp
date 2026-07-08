@@ -514,3 +514,37 @@ TEST(IncubatorBuilderTest, WritesManualSpacingPreviewMap) {
     std::string out_map_path = get_project_root() + "/incubator_builder_manual_test.map";
     ASSERT_TRUE(io::write_map(compact_sprites, out_map_path, 1200.0f, 1400.0f));
 }
+
+TEST(IncubatorBuilderTest, IncubatorSceneGolden) {
+    const std::string json_path = resolve_test_path("tests/golden/incubator_builder_gold.json");
+    TestScene scene = load_test_scene(json_path);
+
+    ASSERT_GT(scene.segments.size(), 0u);
+    ASSERT_GT(scene.decorations.size(), 0u);
+
+    // 1. Build walls and floors (Floor builder style: gen_floor=false, gen_ceiling=false)
+    core::WallBuilder wall_builder(scene.map_size_x, scene.map_size_y);
+    std::vector<io::Sprite> sprites = wall_builder.build(scene.segments, false, false);
+
+    // 2. Build incubator arrays
+    IncubatorBuilder incubator_builder;
+    for (const auto& dec : scene.decorations) {
+        std::vector<io::Sprite> incubator_sprites = incubator_builder.build_array(dec);
+        sprites.insert(sprites.end(), incubator_sprites.begin(), incubator_sprites.end());
+    }
+
+    const std::string temp_output_path = "current_incubator_builder.map";
+    TempFileCleaner cleaner(temp_output_path);
+
+    // manual verify
+    // const std::string temp_output_path = get_project_root() + "/current_incubator_builder.map";
+    // TempFileCleaner cleaner(temp_output_path);
+
+    bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);
+    ASSERT_TRUE(write_success);
+
+    const std::string golden_map_path = resolve_test_path("tests/golden/incubator_builder_gold.map");
+    bool files_match = compare_binary_files(temp_output_path, golden_map_path);
+
+    EXPECT_TRUE(files_match);
+}

@@ -1,0 +1,224 @@
+{
+  "map_size_x": 1500.0,
+  "map_size_y": 1500.0,
+  "segments": [
+    {
+      "start": {
+        "x": -2,
+        "y": 7
+      },
+      "end": {
+        "x": 12,
+        "y": 7
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 12,
+        "y": 7
+      },
+      "end": {
+        "x": 12,
+        "y": 17
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 12,
+        "y": 17
+      },
+      "end": {
+        "x": -2,
+        "y": 17
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": -2,
+        "y": 17
+      },
+      "end": {
+        "x": -2,
+        "y": 7
+      },
+      "wall_type": 0,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 7,
+        "y": 4
+      },
+      "end": {
+        "x": 13,
+        "y": 4
+      },
+      "wall_type": 1,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 13,
+        "y": 4
+      },
+      "end": {
+        "x": 13,
+        "y": 9
+      },
+      "wall_type": 1,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 13,
+        "y": 9
+      },
+      "end": {
+        "x": 7,
+        "y": 9
+      },
+      "wall_type": 1,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 7,
+        "y": 9
+      },
+      "end": {
+        "x": 7,
+        "y": 4
+      },
+      "wall_type": 1,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 2,
+        "y": 16
+      },
+      "end": {
+        "x": 2,
+        "y": 9
+      },
+      "wall_type": 2,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 8,
+        "y": 16
+      },
+      "end": {
+        "x": 8,
+        "y": 9
+      },
+      "wall_type": 2,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 1,
+        "y": 10
+      },
+      "end": {
+        "x": 9,
+        "y": 10
+      },
+      "wall_type": 2,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 1,
+        "y": 15
+      },
+      "end": {
+        "x": 9,
+        "y": 15
+      },
+      "wall_type": 2,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 19,
+        "y": 13
+      },
+      "end": {
+        "x": 28,
+        "y": 13
+      },
+      "wall_type": 2,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 19,
+        "y": 18
+      },
+      "end": {
+        "x": 28,
+        "y": 18
+      },
+      "wall_type": 2,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 21,
+        "y": 12
+      },
+      "end": {
+        "x": 21,
+        "y": 19
+      },
+      "wall_type": 2,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 26,
+        "y": 12
+      },
+      "end": {
+        "x": 26,
+        "y": 19
+      },
+      "wall_type": 2,
+      "floor_type": 0
+    }
+  ],
+  "doors": [],
+  "decorations": [
+    {
+      "type": "incubator_array",
+      "start": {
+        "x": 163.68878476689622,
+        "y": 496.20159635623776
+      },
+      "row_length": 283.64823193495107,
+      "column_length": 398.4371653036848,
+      "item_spacing_scale": 1.0,
+      "row_spacing_scale": 1.1
+    },
+    {
+      "type": "incubator_array",
+      "start": {
+        "x": 812.2964707593908,
+        "y": 1109.6735623730385
+      },
+      "row_length": 264.5677769669071,
+      "column_length": 345.22491820454053,
+      "item_spacing_scale": 1.0,
+      "row_spacing_scale": 0.84
+    }
+  ],
+  "is_door_open": false
+}
