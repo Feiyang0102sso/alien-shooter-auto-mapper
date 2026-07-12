@@ -67,14 +67,14 @@ bool is_random_direction_sprite(int vid) {
     return false;
 }
 
+} // namespace
+
 uint32_t get_random_direction() {
     static thread_local std::mt19937 random_engine(std::random_device{}());
     std::uniform_int_distribution<uint32_t> distribution(MIN_DIRECTION, MAX_DIRECTION);
 
     return distribution(random_engine);
 }
-
-} // namespace
 
 void randomize_wall_and_floor_directions(std::vector<io::Sprite>& sprites) {
     for (auto& sprite : sprites) {
@@ -98,6 +98,22 @@ uint32_t get_random_direction_from_list(
     int selected_index = distribution(random_engine);
 
     return allowed_directions[selected_index];
+}
+
+int get_random_int_from_list(
+    const std::vector<int>& allowed_values,
+    int fallback_value
+) {
+    if (allowed_values.empty()) {
+        return fallback_value;
+    }
+
+    static thread_local std::mt19937 random_engine(std::random_device{}());
+    int max_index = static_cast<int>(allowed_values.size()) - 1;
+    std::uniform_int_distribution<int> distribution(0, max_index);
+    int selected_index = distribution(random_engine);
+
+    return allowed_values[selected_index];
 }
 
 } // namespace auto_mapper::core

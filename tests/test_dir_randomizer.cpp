@@ -82,6 +82,40 @@ TEST(SpriteDirectionRandomizerTest, GetsRandomDirectionFromAllowedDirections) {
     EXPECT_TRUE(direction_is_allowed);
 }
 
+TEST(SpriteDirectionRandomizerTest, GetsFullRandomDirection) {
+    for (int iteration = 0; iteration < 50; ++iteration) {
+        uint32_t direction = get_random_direction();
+
+        EXPECT_LE(direction, 255u);
+    }
+}
+
+TEST(SpriteDirectionRandomizerTest, GetsRandomIntFromAllowedValues) {
+    std::vector<int> allowed_values = {
+        410,
+        411,
+    };
+
+    int selected_value = get_random_int_from_list(allowed_values, 410);
+    bool value_is_allowed = false;
+
+    for (int allowed_value : allowed_values) {
+        if (selected_value == allowed_value) {
+            value_is_allowed = true;
+        }
+    }
+
+    EXPECT_TRUE(value_is_allowed);
+}
+
+TEST(SpriteDirectionRandomizerTest, EmptyAllowedIntValuesReturnsFallback) {
+    std::vector<int> allowed_values;
+
+    int selected_value = get_random_int_from_list(allowed_values, 407);
+
+    EXPECT_EQ(selected_value, 407);
+}
+
 TEST(SpriteDirectionRandomizerTest, EmptyAllowedDirectionsReturnsFallback) {
     std::vector<uint32_t> allowed_directions;
 
