@@ -4,26 +4,19 @@
  */
 
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
-#include "auto_mapper/core/dir_randomizer.h"
-
-#include <random>
+#include "auto_mapper/core/randomizer.h"
 
 namespace auto_mapper::core::indoor_decorations {
 
 namespace {
 
-float get_random_float(float min_value, float max_value) {
-    static thread_local std::mt19937 random_engine(std::random_device{}());
-    std::uniform_real_distribution<float> distribution(min_value, max_value);
-
-    return distribution(random_engine);
-}
-
 uint32_t pick_body_direction(const DeskTemplate& desk_template) {
-    return auto_mapper::core::get_random_direction_from_list(
-        desk_template.body_directions,
-        0
-    );
+    if (desk_template.body_directions.empty()) {
+        return 0;
+    }
+
+    int direction = auto_mapper::core::Random::get(desk_template.body_directions);
+    return static_cast<uint32_t>(direction);
 }
 
 } // namespace
@@ -35,10 +28,10 @@ const DeskTemplate& get_default_desk_template() {
         .computer_vids = DESK_COMPUTER_VIDS,
         .computer_directions = DESK_COMPUTER_DIRECTIONS,
         .computer_offset_range = {
-            .min_x = -13.0f,
+            .min_x = -6.0f,
             .max_x = -3.0f,
             .min_y = 0.0f,
-            .max_y = 4.0f,
+            .max_y = 2.0f,
         },
         .chair_offset_range = {
             .min_x = 25.0f,
@@ -77,46 +70,48 @@ std::vector<io::Sprite> DeskBuilder::build_with_preset(
         body_direction
     ));
 
-    int computer_vid = auto_mapper::core::get_random_int_from_list(
-        desk_template.computer_vids,
-        DESK_ENABLED_COMPUTER_VID
+    int computer_vid = DESK_ENABLED_COMPUTER_VID;
+    if (!desk_template.computer_vids.empty()) {
+        computer_vid = auto_mapper::core::Random::get(desk_template.computer_vids);
+    }
+
+    int computer_offset_x = auto_mapper::core::Random::get(
+        static_cast<int>(desk_template.computer_offset_range.min_x),
+        static_cast<int>(desk_template.computer_offset_range.max_x)
     );
-    float computer_offset_x = get_random_float(
-        desk_template.computer_offset_range.min_x,
-        desk_template.computer_offset_range.max_x
+    int computer_offset_y = auto_mapper::core::Random::get(
+        static_cast<int>(desk_template.computer_offset_range.min_y),
+        static_cast<int>(desk_template.computer_offset_range.max_y)
     );
-    float computer_offset_y = get_random_float(
-        desk_template.computer_offset_range.min_y,
-        desk_template.computer_offset_range.max_y
-    );
-    uint32_t computer_direction = auto_mapper::core::get_random_direction_from_list(
-        desk_template.computer_directions,
-        0
-    );
+    uint32_t computer_direction = 0;
+    if (!desk_template.computer_directions.empty()) {
+        int direction = auto_mapper::core::Random::get(desk_template.computer_directions);
+        computer_direction = static_cast<uint32_t>(direction);
+    }
 
     sprites.push_back(io::Sprite(
         computer_vid,
-        unit.pos_x + computer_offset_x,
-        unit.pos_y + computer_offset_y,
+        unit.pos_x + static_cast<float>(computer_offset_x),
+        unit.pos_y + static_cast<float>(computer_offset_y),
         DESK_COMPUTER_POS_Z,
         computer_direction
     ));
 
-    float chair_offset_x = get_random_float(
-        desk_template.chair_offset_range.min_x,
-        desk_template.chair_offset_range.max_x
+    int chair_offset_x = auto_mapper::core::Random::get(
+        static_cast<int>(desk_template.chair_offset_range.min_x),
+        static_cast<int>(desk_template.chair_offset_range.max_x)
     );
-    float chair_offset_y = get_random_float(
-        desk_template.chair_offset_range.min_y,
-        desk_template.chair_offset_range.max_y
+    int chair_offset_y = auto_mapper::core::Random::get(
+        static_cast<int>(desk_template.chair_offset_range.min_y),
+        static_cast<int>(desk_template.chair_offset_range.max_y)
     );
 
     sprites.push_back(io::Sprite(
         DESK_CHAIR_VID,
-        unit.pos_x + chair_offset_x,
-        unit.pos_y + chair_offset_y,
+        unit.pos_x + static_cast<float>(chair_offset_x),
+        unit.pos_y + static_cast<float>(chair_offset_y),
         DESK_CHAIR_POS_Z,
-        auto_mapper::core::get_random_direction()
+        static_cast<uint32_t>(auto_mapper::core::Random::get(0, 255))
     ));
 
     return sprites;

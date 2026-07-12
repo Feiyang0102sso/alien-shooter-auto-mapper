@@ -144,9 +144,9 @@ float get_expected_first_item_y(const IncubatorArray& array, int items_per_row, 
     return expected_y;
 }
 
-bool contains_direction(const std::vector<uint32_t>& directions, uint32_t direction) {
-    for (uint32_t allowed_direction : directions) {
-        if (allowed_direction == direction) {
+bool contains_direction(const std::vector<int>& directions, uint32_t direction) {
+    for (int allowed_direction : directions) {
+        if (static_cast<uint32_t>(allowed_direction) == direction) {
             return true;
         }
     }

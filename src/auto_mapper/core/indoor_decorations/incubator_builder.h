@@ -22,7 +22,7 @@ inline constexpr float INCUBATOR_FOOTPRINT_COLUMN_LENGTH = 90.0f;
 
 inline constexpr uint32_t INCUBATOR_BODY_DIRECTION = 0;
 inline constexpr uint32_t INCUBATOR_AIR_WALL_DIRECTION = 128;
-inline const std::vector<uint32_t> INCUBATOR_BIG_COMPUTER_DIRECTIONS = {
+inline const std::vector<int> INCUBATOR_BIG_COMPUTER_DIRECTIONS = {
     18,
     54,
     91,

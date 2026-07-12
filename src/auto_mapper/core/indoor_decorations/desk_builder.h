@@ -7,7 +7,6 @@
 
 #include "auto_mapper/io/map_writer.h"
 
-#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -23,11 +22,11 @@ inline const std::vector<int> DESK_COMPUTER_VIDS = {
     DESK_BROKEN_COMPUTER_VID,
     DESK_ENABLED_COMPUTER_VID,
 };
-inline const std::vector<uint32_t> DESK_COMPUTER_DIRECTIONS = {
+inline const std::vector<int> DESK_COMPUTER_DIRECTIONS = {
     0,
     128,
 };
-inline const std::vector<uint32_t> DESK_BODY_DIRECTIONS = {
+inline const std::vector<int> DESK_BODY_DIRECTIONS = {
     0,
     85,
     170,
@@ -42,16 +41,16 @@ struct DeskOffsetRange {
 
 struct DeskTemplate {
     int body_vid = DESK_BODY_VID;
-    std::vector<uint32_t> body_directions = DESK_BODY_DIRECTIONS;
+    std::vector<int> body_directions = DESK_BODY_DIRECTIONS;
     std::vector<int> computer_vids = DESK_COMPUTER_VIDS;
-    std::vector<uint32_t> computer_directions = DESK_COMPUTER_DIRECTIONS;
+    std::vector<int> computer_directions = DESK_COMPUTER_DIRECTIONS;
     DeskOffsetRange computer_offset_range;
     DeskOffsetRange chair_offset_range;
 };
 
 struct DeskUnit {
-    float pos_x;
-    float pos_y;
+    float pos_x = 0.0f;
+    float pos_y = 0.0f;
     float pos_z = 0.0f;
     bool use_fixed_body_direction = false;
     uint32_t body_direction = 0;

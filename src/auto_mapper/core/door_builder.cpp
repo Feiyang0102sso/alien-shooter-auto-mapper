@@ -4,9 +4,8 @@
  */
 
 #include "auto_mapper/core/door_builder.h"
+#include "auto_mapper/core/randomizer.h"
 #include "auto_mapper/core/wall_builder.h"
-#include <cmath>
-#include <random>
 
 namespace auto_mapper::core {
 
@@ -66,13 +65,11 @@ const StandardDoorSizeVariant& get_standard_door_variant(int size) {
 
 float get_random_standard_jam_z_offset(int size) {
     const StandardDoorSizeVariant& variant = get_standard_door_variant(size);
-    static thread_local std::mt19937 random_engine(std::random_device{}());
-    std::uniform_real_distribution<float> distribution(
-        variant.jam_z_range.min_z,
-        variant.jam_z_range.max_z
-    );
+    int min_z = static_cast<int>(variant.jam_z_range.min_z);
+    int max_z = static_cast<int>(variant.jam_z_range.max_z);
+    int z_offset = Random::get(min_z, max_z);
 
-    return distribution(random_engine);
+    return static_cast<float>(z_offset);
 }
 
 static int get_standard_panel_id(const StandardDoorSizeVariant& variant, const DoorInstance& door) {

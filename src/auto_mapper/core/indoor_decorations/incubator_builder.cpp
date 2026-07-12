@@ -4,9 +4,8 @@
  */
 
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
-#include "auto_mapper/core/dir_randomizer.h"
+#include "auto_mapper/core/randomizer.h"
 #include <cmath>
-#include <random>
 
 namespace auto_mapper::core::indoor_decorations {
 
@@ -72,9 +71,7 @@ float get_axis_offset_y(float axis_x, float axis_y, float distance) {
 }
 
 bool get_random_bool() {
-    static thread_local std::mt19937 random_engine(std::random_device{}());
-    std::uniform_int_distribution<int> distribution(0, 1);
-    int selected_value = distribution(random_engine);
+    int selected_value = auto_mapper::core::Random::get(0, 1);
 
     return selected_value == 1;
 }
@@ -104,10 +101,8 @@ std::vector<io::Sprite> IncubatorBuilder::build(const IncubatorUnit& unit) const
         uint32_t computer_direction = unit.options.computer_direction;
 
         if (!unit.options.use_fixed_computer_direction) {
-            computer_direction = auto_mapper::core::get_random_direction_from_list(
-                INCUBATOR_BIG_COMPUTER_DIRECTIONS,
-                INCUBATOR_BIG_COMPUTER_DIRECTIONS[0]
-            );
+            int direction = auto_mapper::core::Random::get(INCUBATOR_BIG_COMPUTER_DIRECTIONS);
+            computer_direction = static_cast<uint32_t>(direction);
         }
 
         sprites.push_back(io::Sprite(
@@ -204,10 +199,8 @@ std::vector<io::Sprite> IncubatorBuilder::build_array(const IncubatorArray& arra
 
     if (array_options.with_big_computer) {
         array_options.use_fixed_computer_direction = true;
-        array_options.computer_direction = auto_mapper::core::get_random_direction_from_list(
-            INCUBATOR_BIG_COMPUTER_DIRECTIONS,
-            INCUBATOR_BIG_COMPUTER_DIRECTIONS[0]
-        );
+        int direction = auto_mapper::core::Random::get(INCUBATOR_BIG_COMPUTER_DIRECTIONS);
+        array_options.computer_direction = static_cast<uint32_t>(direction);
     }
 
     // fix-fix incubator layout alignment problem, 
