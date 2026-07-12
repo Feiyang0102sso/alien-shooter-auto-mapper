@@ -6,9 +6,81 @@
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/randomizer.h"
 
+#include <cmath>
+
 namespace auto_mapper::core::indoor_decorations {
 
 namespace {
+
+float get_step_length(float step_x, float step_y, float spacing_scale) {
+    return std::sqrt(step_x * step_x + step_y * step_y) * spacing_scale;
+}
+
+// Count anchors whose full footprint can fit in the selected area.
+int get_slot_count(
+    float area_length,
+    float step_x,
+    float step_y,
+    float spacing_scale,
+    float footprint_length
+) {
+    if (area_length < 0.0f) {
+        return 0;
+    }
+
+    if (spacing_scale <= 0.0f) {
+        return 0;
+    }
+
+    float step_length = get_step_length(step_x, step_y, spacing_scale);
+    if (step_length <= 0.0f) {
+        return 0;
+    }
+
+    if (area_length <= footprint_length) {
+        return 1;
+    }
+
+    float anchor_area_length = area_length - footprint_length;
+    return static_cast<int>(std::floor(anchor_area_length / step_length)) + 1;
+}
+
+float get_center_offset_distance(
+    float area_length,
+    int slot_count,
+    float step_length,
+    float footprint_length
+) {
+    if (slot_count <= 0) {
+        return 0.0f;
+    }
+
+    float occupied_length = footprint_length + static_cast<float>(slot_count - 1) * step_length;
+    float remaining_length = area_length - occupied_length;
+    if (remaining_length <= 0.0f) {
+        return 0.0f;
+    }
+
+    return remaining_length / 2.0f;
+}
+
+float get_axis_offset_x(float axis_x, float axis_y, float distance) {
+    float axis_length = std::sqrt(axis_x * axis_x + axis_y * axis_y);
+    if (axis_length <= 0.0f) {
+        return 0.0f;
+    }
+
+    return axis_x / axis_length * distance;
+}
+
+float get_axis_offset_y(float axis_x, float axis_y, float distance) {
+    float axis_length = std::sqrt(axis_x * axis_x + axis_y * axis_y);
+    if (axis_length <= 0.0f) {
+        return 0.0f;
+    }
+
+    return axis_y / axis_length * distance;
+}
 
 uint32_t pick_body_direction(const DeskTemplate& desk_template) {
     if (desk_template.body_directions.empty()) {
@@ -19,49 +91,12 @@ uint32_t pick_body_direction(const DeskTemplate& desk_template) {
     return static_cast<uint32_t>(direction);
 }
 
-} // namespace
-
-const DeskTemplate& get_default_desk_template() {
-    static const DeskTemplate desk_template = {
-        .body_vid = DESK_BODY_VID,
-        .body_directions = DESK_BODY_DIRECTIONS,
-        .computer_vids = DESK_COMPUTER_VIDS,
-        .computer_directions = DESK_COMPUTER_DIRECTIONS,
-        .computer_offset_range = {
-            .min_x = -6.0f,
-            .max_x = -3.0f,
-            .min_y = 0.0f,
-            .max_y = 2.0f,
-        },
-        .chair_offset_range = {
-            .min_x = 25.0f,
-            .max_x = 39.0f,
-            .min_y = 28.0f,
-            .max_y = 42.0f,
-        },
-    };
-
-    return desk_template;
-}
-
-std::vector<io::Sprite> DeskBuilder::build(const DeskUnit& unit) const {
-    return build_with_preset(unit, 0);
-}
-
-std::vector<io::Sprite> DeskBuilder::build_with_preset(
+void append_desk_sprites(
+    std::vector<io::Sprite>& sprites,
+    const DeskTemplate& desk_template,
     const DeskUnit& unit,
-    std::size_t preset_index
-) const {
-    (void)preset_index;
-
-    const DeskTemplate& desk_template = get_default_desk_template();
-    std::vector<io::Sprite> sprites;
-
-    uint32_t body_direction = pick_body_direction(desk_template);
-    if (unit.use_fixed_body_direction) {
-        body_direction = unit.body_direction;
-    }
-
+    uint32_t body_direction
+) {
     sprites.push_back(io::Sprite(
         desk_template.body_vid,
         unit.pos_x,
@@ -105,29 +140,173 @@ std::vector<io::Sprite> DeskBuilder::build_with_preset(
         static_cast<int>(desk_template.chair_offset_range.min_y),
         static_cast<int>(desk_template.chair_offset_range.max_y)
     );
+    uint32_t chair_direction = 0;
+    if (!desk_template.chair_directions.empty()) {
+        int direction = auto_mapper::core::Random::get(desk_template.chair_directions);
+        chair_direction = static_cast<uint32_t>(direction);
+    }
 
     sprites.push_back(io::Sprite(
         DESK_CHAIR_VID,
         unit.pos_x + static_cast<float>(chair_offset_x),
         unit.pos_y + static_cast<float>(chair_offset_y),
         DESK_CHAIR_POS_Z,
-        static_cast<uint32_t>(auto_mapper::core::Random::get(0, 255))
+        chair_direction
     ));
+}
+
+} // namespace
+
+const DeskTemplate& get_default_desk_template() {
+    static const DeskTemplate desk_template = {
+        .body_vid = DESK_BODY_VID,
+        .body_directions = DESK_BODY_DIRECTIONS,
+        .computer_vids = DESK_COMPUTER_VIDS,
+        .computer_directions = DESK_COMPUTER_DIRECTIONS,
+        .chair_directions = DESK_CHAIR_DIRECTIONS,
+        .computer_offset_range = DESK_COMPUTER_OFFSET_RANGE,
+        .chair_offset_range = DESK_CHAIR_OFFSET_RANGE,
+    };
+
+    return desk_template;
+}
+
+std::vector<io::Sprite> DeskBuilder::build(const DeskUnit& unit) const {
+    const DeskTemplate& desk_template = get_default_desk_template();
+    std::vector<io::Sprite> sprites;
+
+    uint32_t body_direction = pick_body_direction(desk_template);
+    append_desk_sprites(sprites, desk_template, unit, body_direction);
 
     return sprites;
 }
 
-std::vector<io::Sprite> DeskBuilder::build_batch(const std::vector<DeskUnit>& units) const {
-    const DeskTemplate& desk_template = get_default_desk_template();
-    uint32_t batch_body_direction = pick_body_direction(desk_template);
+std::vector<io::Sprite> DeskBuilder::build_array(const DeskArray& array) const {
     std::vector<io::Sprite> sprites;
 
-    for (DeskUnit unit : units) {
-        unit.use_fixed_body_direction = true;
-        unit.body_direction = batch_body_direction;
+    float item_step_x = DESK_DEFAULT_ROW_SPACING_X * array.item_spacing_scale;
+    float item_step_y = DESK_DEFAULT_ROW_SPACING_Y * array.item_spacing_scale;
+    float row_step_x = DESK_DEFAULT_COLUMN_SPACING_X * array.row_spacing_scale;
+    float row_step_y = DESK_DEFAULT_COLUMN_SPACING_Y * array.row_spacing_scale;
+    float item_step_length = get_step_length(
+        DESK_DEFAULT_ROW_SPACING_X,
+        DESK_DEFAULT_ROW_SPACING_Y,
+        array.item_spacing_scale
+    );
+    float row_step_length = get_step_length(
+        DESK_DEFAULT_COLUMN_SPACING_X,
+        DESK_DEFAULT_COLUMN_SPACING_Y,
+        array.row_spacing_scale
+    );
 
-        std::vector<io::Sprite> desk_sprites = build(unit);
-        sprites.insert(sprites.end(), desk_sprites.begin(), desk_sprites.end());
+    int items_per_row = get_slot_count(
+        array.row_length,
+        DESK_DEFAULT_ROW_SPACING_X,
+        DESK_DEFAULT_ROW_SPACING_Y,
+        array.item_spacing_scale,
+        DESK_FOOTPRINT_ROW_LENGTH
+    );
+
+    int row_count = get_slot_count(
+        array.column_length,
+        DESK_DEFAULT_COLUMN_SPACING_X,
+        DESK_DEFAULT_COLUMN_SPACING_Y,
+        array.row_spacing_scale,
+        DESK_FOOTPRINT_COLUMN_LENGTH
+    );
+
+    if (items_per_row <= 0) {
+        return sprites;
+    }
+
+    if (row_count <= 0) {
+        return sprites;
+    }
+
+    float item_center_distance = get_center_offset_distance(
+        array.row_length,
+        items_per_row,
+        item_step_length,
+        DESK_FOOTPRINT_ROW_LENGTH
+    );
+    float row_center_distance = get_center_offset_distance(
+        array.column_length,
+        row_count,
+        row_step_length,
+        DESK_FOOTPRINT_COLUMN_LENGTH
+    );
+    float item_center_offset_x = get_axis_offset_x(
+        DESK_DEFAULT_ROW_SPACING_X,
+        DESK_DEFAULT_ROW_SPACING_Y,
+        item_center_distance
+    );
+    float item_center_offset_y = get_axis_offset_y(
+        DESK_DEFAULT_ROW_SPACING_X,
+        DESK_DEFAULT_ROW_SPACING_Y,
+        item_center_distance
+    );
+    float row_center_offset_x = get_axis_offset_x(
+        DESK_DEFAULT_COLUMN_SPACING_X,
+        DESK_DEFAULT_COLUMN_SPACING_Y,
+        row_center_distance
+    );
+    float row_center_offset_y = get_axis_offset_y(
+        DESK_DEFAULT_COLUMN_SPACING_X,
+        DESK_DEFAULT_COLUMN_SPACING_Y,
+        row_center_distance
+    );
+
+    float footprint_offset_row_x = get_axis_offset_x(
+        DESK_DEFAULT_ROW_SPACING_X,
+        DESK_DEFAULT_ROW_SPACING_Y,
+        DESK_FOOTPRINT_ROW_LENGTH / 2.0f
+    );
+    float footprint_offset_row_y = get_axis_offset_y(
+        DESK_DEFAULT_ROW_SPACING_X,
+        DESK_DEFAULT_ROW_SPACING_Y,
+        DESK_FOOTPRINT_ROW_LENGTH / 2.0f
+    );
+    float footprint_offset_col_x = get_axis_offset_x(
+        DESK_DEFAULT_COLUMN_SPACING_X,
+        DESK_DEFAULT_COLUMN_SPACING_Y,
+        DESK_FOOTPRINT_COLUMN_LENGTH / 2.0f
+    );
+    float footprint_offset_col_y = get_axis_offset_y(
+        DESK_DEFAULT_COLUMN_SPACING_X,
+        DESK_DEFAULT_COLUMN_SPACING_Y,
+        DESK_FOOTPRINT_COLUMN_LENGTH / 2.0f
+    );
+
+    const DeskTemplate& desk_template = get_default_desk_template();
+    uint32_t array_body_direction = pick_body_direction(desk_template);
+
+    for (int row_index = 0; row_index < row_count; ++row_index) {
+        float row_start_x = array.start_x;
+        row_start_x += item_center_offset_x;
+        row_start_x += row_center_offset_x;
+        row_start_x += footprint_offset_row_x;
+        row_start_x += footprint_offset_col_x;
+
+        float row_start_y = array.start_y;
+        row_start_y += item_center_offset_y;
+        row_start_y += row_center_offset_y;
+        row_start_y += footprint_offset_row_y;
+        row_start_y += footprint_offset_col_y;
+
+        row_start_x += static_cast<float>(row_index) * row_step_x;
+        row_start_y += static_cast<float>(row_index) * row_step_y;
+
+        for (int item_index = 0; item_index < items_per_row; ++item_index) {
+            DeskUnit unit = {
+                .pos_x = row_start_x,
+                .pos_y = row_start_y,
+                .pos_z = array.pos_z
+            };
+
+            unit.pos_x += static_cast<float>(item_index) * item_step_x;
+            unit.pos_y += static_cast<float>(item_index) * item_step_y;
+            append_desk_sprites(sprites, desk_template, unit, array_body_direction);
+        }
     }
 
     return sprites;
