@@ -1,0 +1,678 @@
+{
+  "sourceFile": "desks_computer_↙.map",
+  "totalBytes": 1416,
+  "fileHeader": {
+    "RES_Magic": "RES ",
+    "mapSize": 1408,
+    "MAP_Magic": "MAP "
+  },
+  "GRPH": {
+    "GRPH_Magic": "GRPH",
+    "graphSize": 36,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "envSize": 20,
+    "isShadow": 0,
+    "gammaDarker": "0x000000",
+    "gammaLighter": "0x000000",
+    "windDirection": 200,
+    "windSpeed": 0.02500000037252903
+  },
+  "HEAD": {
+    "HEAD_Magic": "HEAD",
+    "headSize": 40,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "mapInfoSize": 24,
+    "mapSizeX": 800.0,
+    "mapSizeY": 800.0,
+    "mapCameraX": -29.0,
+    "mapCameraY": -76.0,
+    "currentTime": 71335,
+    "version": "0x0C"
+  },
+  "SPR": {
+    "SPR_Magic": "SPR ",
+    "sprSize": 776,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "sprInfoSize": 760,
+    "spriteCount": 27,
+    "sprites": [
+      {
+        "objectId": 20908256,
+        "vid": 404,
+        "posX": 610.0,
+        "posY": 250.0,
+        "posZ": 0.0,
+        "direction": 192,
+        "army": 0
+      },
+      {
+        "objectId": 297302448,
+        "vid": 404,
+        "posX": 510.0,
+        "posY": 330.0,
+        "posZ": 0.0,
+        "direction": 192,
+        "army": 0
+      },
+      {
+        "objectId": 297302280,
+        "vid": 404,
+        "posX": 390.0,
+        "posY": 410.0,
+        "posZ": 0.0,
+        "direction": 192,
+        "army": 0
+      },
+      {
+        "objectId": 297302112,
+        "vid": 404,
+        "posX": 530.0,
+        "posY": 170.0,
+        "posZ": 0.0,
+        "direction": 106,
+        "army": 0
+      },
+      {
+        "objectId": 297301944,
+        "vid": 404,
+        "posX": 390.0,
+        "posY": 270.0,
+        "posZ": 0.0,
+        "direction": 106,
+        "army": 0
+      },
+      {
+        "objectId": 20909728,
+        "vid": 404,
+        "posX": 270.0,
+        "posY": 350.0,
+        "posZ": 0.0,
+        "direction": 106,
+        "army": 0
+      },
+      {
+        "objectId": 20909560,
+        "vid": 404,
+        "posX": 390.0,
+        "posY": 110.0,
+        "posZ": 0.0,
+        "direction": 21,
+        "army": 0
+      },
+      {
+        "objectId": 299980072,
+        "vid": 404,
+        "posX": 270.0,
+        "posY": 190.0,
+        "posZ": 0.0,
+        "direction": 21,
+        "army": 0
+      },
+      {
+        "objectId": 299979904,
+        "vid": 404,
+        "posX": 150.0,
+        "posY": 270.0,
+        "posZ": 0.0,
+        "direction": 21,
+        "army": 0
+      },
+      {
+        "objectId": 20906256,
+        "vid": 407,
+        "posX": 555.0,
+        "posY": 287.0,
+        "posZ": 0.0,
+        "direction": 42,
+        "army": 2
+      },
+      {
+        "objectId": 20909096,
+        "vid": 407,
+        "posX": 484.0,
+        "posY": 219.0,
+        "posZ": 0.0,
+        "direction": 128,
+        "army": 2
+      },
+      {
+        "objectId": 20908760,
+        "vid": 407,
+        "posX": 358.0,
+        "posY": 151.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 2
+      },
+      {
+        "objectId": 20908424,
+        "vid": 407,
+        "posX": 490.0,
+        "posY": 363.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 2
+      },
+      {
+        "objectId": 299943696,
+        "vid": 407,
+        "posX": 344.0,
+        "posY": 301.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 2
+      },
+      {
+        "objectId": 20912120,
+        "vid": 407,
+        "posX": 223.0,
+        "posY": 218.0,
+        "posZ": 0.0,
+        "direction": 0,
+        "army": 2
+      },
+      {
+        "objectId": 299944952,
+        "vid": 407,
+        "posX": 371.0,
+        "posY": 445.0,
+        "posZ": 0.0,
+        "direction": 85,
+        "army": 2
+      },
+      {
+        "objectId": 299944528,
+        "vid": 407,
+        "posX": 262.0,
+        "posY": 403.0,
+        "posZ": 0.0,
+        "direction": 85,
+        "army": 2
+      },
+      {
+        "objectId": 299944032,
+        "vid": 407,
+        "posX": 122.0,
+        "posY": 307.0,
+        "posZ": 0.0,
+        "direction": 85,
+        "army": 2
+      },
+      {
+        "objectId": 20911952,
+        "vid": 411,
+        "posX": 391.0,
+        "posY": 413.0,
+        "posZ": 32.0,
+        "direction": 32,
+        "army": 2
+      },
+      {
+        "objectId": 20911784,
+        "vid": 411,
+        "posX": 503.0,
+        "posY": 326.0,
+        "posZ": 32.0,
+        "direction": 160,
+        "army": 2
+      },
+      {
+        "objectId": 20911616,
+        "vid": 411,
+        "posX": 612.0,
+        "posY": 249.0,
+        "posZ": 32.0,
+        "direction": 32,
+        "army": 2
+      },
+      {
+        "objectId": 20911448,
+        "vid": 411,
+        "posX": 529.0,
+        "posY": 168.0,
+        "posZ": 32.0,
+        "direction": 160,
+        "army": 2
+      },
+      {
+        "objectId": 20911112,
+        "vid": 410,
+        "posX": 385.0,
+        "posY": 272.0,
+        "posZ": 32.0,
+        "direction": 32,
+        "army": 2
+      },
+      {
+        "objectId": 20910776,
+        "vid": 410,
+        "posX": 265.0,
+        "posY": 350.0,
+        "posZ": 32.0,
+        "direction": 160,
+        "army": 2
+      },
+      {
+        "objectId": 20910440,
+        "vid": 410,
+        "posX": 152.0,
+        "posY": 271.0,
+        "posZ": 32.0,
+        "direction": 32,
+        "army": 2
+      },
+      {
+        "objectId": 20907600,
+        "vid": 410,
+        "posX": 267.0,
+        "posY": 191.0,
+        "posZ": 32.0,
+        "direction": 160,
+        "army": 2
+      },
+      {
+        "objectId": 20907264,
+        "vid": 410,
+        "posX": 385.0,
+        "posY": 112.0,
+        "posZ": 32.0,
+        "direction": 32,
+        "army": 2
+      }
+    ],
+    "terminator": "0xFFFFFFFF"
+  },
+  "SPRD": {
+    "SPRD_Magic": "SPRD",
+    "sprdSize": 452,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 28,
+    "subs": [
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20908256,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297302448,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297302280,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297302112,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 297301944,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20909728,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20909560,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299980072,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299979904,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20906256,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20909096,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20908760,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20908424,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299943696,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20912120,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299944952,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299944528,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 299944032,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20911952,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20911784,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20911616,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20911448,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20911112,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20910776,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20910440,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20907600,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 12,
+        "isTerminator": false,
+        "objectId": 20907264,
+        "commandStack": {
+          "cmdCount": 0,
+          "commands": []
+        },
+        "dropList": {
+          "itemCount": 0,
+          "itemVids": []
+        }
+      },
+      {
+        "subSize": 4,
+        "isTerminator": true,
+        "terminator": "0xFFFFFFFF"
+      }
+    ]
+  },
+  "PLAY": {
+    "PLAY_Magic": "PLAY",
+    "playSize": 32,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "playInfoSize": 16,
+    "player1_ObjectId": 0,
+    "player2_ObjectId": 0,
+    "player3_ObjectId": 0,
+    "player4_ObjectId": 0
+  },
+  "GROU": {
+    "GROU_Magic": "GROU",
+    "groupSize": 20,
+    "options": "0x80000000",
+    "packedDiff": 0,
+    "subresourceCount": 1,
+    "groupInfoSize": 4,
+    "groups": [],
+    "globalTerminator": "0xFFFFFFFF"
+  }
+}
