@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
+#include "auto_mapper/core/indoor_decorations/array_layout.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include "utils/test_utils.h"
 
-#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -12,136 +12,26 @@ using namespace auto_mapper;
 using namespace auto_mapper::core::indoor_decorations;
 using namespace auto_mapper::test;
 
-float get_test_step_length(float step_x, float step_y, float spacing_scale) {
-    return std::sqrt(step_x * step_x + step_y * step_y) * spacing_scale;
-}
-
-float get_test_center_offset_distance(float area_length, int slot_count, float step_length, float footprint_length) {
-    if (slot_count <= 0) {
-        return 0.0f;
-    }
-
-    float occupied_length = footprint_length + static_cast<float>(slot_count - 1) * step_length;
-    float remaining_length = area_length - occupied_length;
-    if (remaining_length <= 0.0f) {
-        return 0.0f;
-    }
-
-    return remaining_length / 2.0f;
-}
-
-float get_test_axis_offset_x(float axis_x, float axis_y, float distance) {
-    float axis_length = std::sqrt(axis_x * axis_x + axis_y * axis_y);
-    if (axis_length <= 0.0f) {
-        return 0.0f;
-    }
-
-    return axis_x / axis_length * distance;
-}
-
-float get_test_axis_offset_y(float axis_x, float axis_y, float distance) {
-    float axis_length = std::sqrt(axis_x * axis_x + axis_y * axis_y);
-    if (axis_length <= 0.0f) {
-        return 0.0f;
-    }
-
-    return axis_y / axis_length * distance;
-}
-
-float get_expected_first_item_x(const IncubatorArray& array, int items_per_row, int row_count) {
-    float item_step_length = get_test_step_length(
-        INCUBATOR_DEFAULT_ROW_SPACING_X,
-        INCUBATOR_DEFAULT_ROW_SPACING_Y,
-        array.item_spacing_scale
-    );
-    float row_step_length = get_test_step_length(
-        INCUBATOR_DEFAULT_COLUMN_SPACING_X,
-        INCUBATOR_DEFAULT_COLUMN_SPACING_Y,
-        array.row_spacing_scale
-    );
-    float item_center_distance = get_test_center_offset_distance(
-        array.row_length,
-        items_per_row,
-        item_step_length,
-        INCUBATOR_FOOTPRINT_ROW_LENGTH
-    );
-    float row_center_distance = get_test_center_offset_distance(
-        array.column_length,
-        row_count,
-        row_step_length,
-        INCUBATOR_FOOTPRINT_COLUMN_LENGTH
-    );
-
-    float expected_x = array.start_x;
-    expected_x += get_test_axis_offset_x(
-        INCUBATOR_DEFAULT_ROW_SPACING_X,
-        INCUBATOR_DEFAULT_ROW_SPACING_Y,
-        item_center_distance
-    );
-    expected_x += get_test_axis_offset_x(
-        INCUBATOR_DEFAULT_COLUMN_SPACING_X,
-        INCUBATOR_DEFAULT_COLUMN_SPACING_Y,
-        row_center_distance
-    );
-    expected_x += get_test_axis_offset_x(
-        INCUBATOR_DEFAULT_ROW_SPACING_X,
-        INCUBATOR_DEFAULT_ROW_SPACING_Y,
-        INCUBATOR_FOOTPRINT_ROW_LENGTH / 2.0f
-    );
-    expected_x += get_test_axis_offset_x(
-        INCUBATOR_DEFAULT_COLUMN_SPACING_X,
-        INCUBATOR_DEFAULT_COLUMN_SPACING_Y,
-        INCUBATOR_FOOTPRINT_COLUMN_LENGTH / 2.0f
-    );
-    return expected_x;
-}
-
-float get_expected_first_item_y(const IncubatorArray& array, int items_per_row, int row_count) {
-    float item_step_length = get_test_step_length(
-        INCUBATOR_DEFAULT_ROW_SPACING_X,
-        INCUBATOR_DEFAULT_ROW_SPACING_Y,
-        array.item_spacing_scale
-    );
-    float row_step_length = get_test_step_length(
-        INCUBATOR_DEFAULT_COLUMN_SPACING_X,
-        INCUBATOR_DEFAULT_COLUMN_SPACING_Y,
-        array.row_spacing_scale
-    );
-    float item_center_distance = get_test_center_offset_distance(
-        array.row_length,
-        items_per_row,
-        item_step_length,
-        INCUBATOR_FOOTPRINT_ROW_LENGTH
-    );
-    float row_center_distance = get_test_center_offset_distance(
-        array.column_length,
-        row_count,
-        row_step_length,
-        INCUBATOR_FOOTPRINT_COLUMN_LENGTH
-    );
-
-    float expected_y = array.start_y;
-    expected_y += get_test_axis_offset_y(
-        INCUBATOR_DEFAULT_ROW_SPACING_X,
-        INCUBATOR_DEFAULT_ROW_SPACING_Y,
-        item_center_distance
-    );
-    expected_y += get_test_axis_offset_y(
-        INCUBATOR_DEFAULT_COLUMN_SPACING_X,
-        INCUBATOR_DEFAULT_COLUMN_SPACING_Y,
-        row_center_distance
-    );
-    expected_y += get_test_axis_offset_y(
-        INCUBATOR_DEFAULT_ROW_SPACING_X,
-        INCUBATOR_DEFAULT_ROW_SPACING_Y,
-        INCUBATOR_FOOTPRINT_ROW_LENGTH / 2.0f
-    );
-    expected_y += get_test_axis_offset_y(
-        INCUBATOR_DEFAULT_COLUMN_SPACING_X,
-        INCUBATOR_DEFAULT_COLUMN_SPACING_Y,
-        INCUBATOR_FOOTPRINT_COLUMN_LENGTH / 2.0f
-    );
-    return expected_y;
+std::vector<ArrayItemAnchor> get_incubator_anchors(const IncubatorArray& array) {
+    ArrayLayout layout = {
+        .start_x = array.start_x,
+        .start_y = array.start_y,
+        .row_length = array.row_length,
+        .column_length = array.column_length,
+        .item_axis = {
+            .step_x = INCUBATOR_DEFAULT_ITEM_STEP_X,
+            .step_y = INCUBATOR_DEFAULT_ITEM_STEP_Y,
+            .spacing_scale = array.item_spacing_scale,
+            .footprint_length = INCUBATOR_FOOTPRINT_ITEM_LENGTH,
+        },
+        .row_axis = {
+            .step_x = INCUBATOR_DEFAULT_ROW_STEP_X,
+            .step_y = INCUBATOR_DEFAULT_ROW_STEP_Y,
+            .spacing_scale = array.row_spacing_scale,
+            .footprint_length = INCUBATOR_FOOTPRINT_ROW_LENGTH,
+        },
+    };
+    return calculate_array_item_anchors(layout);
 }
 
 bool contains_direction(const std::vector<int>& directions, uint32_t direction) {
@@ -241,17 +131,13 @@ TEST(IncubatorBuilderTest, BuildsArrayAsSingleRowForFlatArea) {
 
     ASSERT_EQ(sprites.size(), 6u);
 
-    float expected_first_x = get_expected_first_item_x(array, 3, 1);
-    float expected_first_y = get_expected_first_item_y(array, 3, 1);
-
-    EXPECT_NEAR(sprites[0].posX, expected_first_x, 0.001f);
-    EXPECT_NEAR(sprites[0].posY, expected_first_y, 0.001f);
-
-    EXPECT_NEAR(sprites[2].posX, expected_first_x + INCUBATOR_DEFAULT_ROW_SPACING_X, 0.001f);
-    EXPECT_NEAR(sprites[2].posY, expected_first_y + INCUBATOR_DEFAULT_ROW_SPACING_Y, 0.001f);
-
-    EXPECT_NEAR(sprites[4].posX, expected_first_x + INCUBATOR_DEFAULT_ROW_SPACING_X * 2.0f, 0.001f);
-    EXPECT_NEAR(sprites[4].posY, expected_first_y + INCUBATOR_DEFAULT_ROW_SPACING_Y * 2.0f, 0.001f);
+    std::vector<ArrayItemAnchor> anchors = get_incubator_anchors(array);
+    ASSERT_EQ(anchors.size(), 3U);
+    for (std::size_t anchor_index = 0; anchor_index < anchors.size(); ++anchor_index) {
+        std::size_t sprite_index = anchor_index * 2;
+        EXPECT_NEAR(sprites[sprite_index].posX, anchors[anchor_index].pos_x, 0.001f);
+        EXPECT_NEAR(sprites[sprite_index].posY, anchors[anchor_index].pos_y, 0.001f);
+    }
 }
 
 TEST(IncubatorBuilderTest, BuildsArraySecondRowWhenAreaGetsDeeper) {
@@ -269,11 +155,13 @@ TEST(IncubatorBuilderTest, BuildsArraySecondRowWhenAreaGetsDeeper) {
 
     ASSERT_EQ(sprites.size(), 12u);
 
-    float expected_first_x = get_expected_first_item_x(array, 3, 2);
-    float expected_first_y = get_expected_first_item_y(array, 3, 2);
-
-    EXPECT_NEAR(sprites[6].posX, expected_first_x + INCUBATOR_DEFAULT_COLUMN_SPACING_X, 0.001f);
-    EXPECT_NEAR(sprites[6].posY, expected_first_y + INCUBATOR_DEFAULT_COLUMN_SPACING_Y, 0.001f);
+    std::vector<ArrayItemAnchor> anchors = get_incubator_anchors(array);
+    ASSERT_EQ(anchors.size(), 6U);
+    for (std::size_t anchor_index = 0; anchor_index < anchors.size(); ++anchor_index) {
+        std::size_t sprite_index = anchor_index * 2;
+        EXPECT_NEAR(sprites[sprite_index].posX, anchors[anchor_index].pos_x, 0.001f);
+        EXPECT_NEAR(sprites[sprite_index].posY, anchors[anchor_index].pos_y, 0.001f);
+    }
 }
 
 TEST(IncubatorBuilderTest, LargerItemSpacingReducesItemsPerRow) {
@@ -345,13 +233,12 @@ TEST(IncubatorBuilderTest, CentersArrayInsideSelectedArea) {
 
     ASSERT_EQ(sprites.size(), 18u);
 
-    float expected_first_x = get_expected_first_item_x(array, 3, 3);
-    float expected_first_y = get_expected_first_item_y(array, 3, 3);
-
-    EXPECT_GT(expected_first_x, array.start_x);
-    EXPECT_NE(expected_first_y, array.start_y);
-    EXPECT_NEAR(sprites[0].posX, expected_first_x, 0.001f);
-    EXPECT_NEAR(sprites[0].posY, expected_first_y, 0.001f);
+    std::vector<ArrayItemAnchor> anchors = get_incubator_anchors(array);
+    ASSERT_EQ(anchors.size(), 9U);
+    EXPECT_GT(anchors[0].pos_x, array.start_x);
+    EXPECT_NE(anchors[0].pos_y, array.start_y);
+    EXPECT_NEAR(sprites[0].posX, anchors[0].pos_x, 0.001f);
+    EXPECT_NEAR(sprites[0].posY, anchors[0].pos_y, 0.001f);
 }
 
 TEST(IncubatorBuilderTest, ArrayComputersUseSameDirection) {

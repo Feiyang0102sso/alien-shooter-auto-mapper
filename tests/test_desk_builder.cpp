@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "auto_mapper/core/indoor_decorations/array_layout.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include "utils/test_utils.h"
@@ -182,172 +183,6 @@ bool is_sideways_template_direction(uint32_t direction) {
     return false;
 }
 
-float get_test_step_length(float step_x, float step_y, float spacing_scale) {
-    return std::sqrt(step_x * step_x + step_y * step_y) * spacing_scale;
-}
-
-int get_test_slot_count(float area_length, float step_x, float step_y, float spacing_scale, float footprint_length) {
-    if (area_length < 0.0f) {
-        return 0;
-    }
-
-    if (spacing_scale <= 0.0f) {
-        return 0;
-    }
-
-    float step_length = get_test_step_length(step_x, step_y, spacing_scale);
-    if (step_length <= 0.0f) {
-        return 0;
-    }
-
-    if (area_length <= footprint_length) {
-        return 1;
-    }
-
-    float anchor_area_length = area_length - footprint_length;
-    return static_cast<int>(std::floor(anchor_area_length / step_length)) + 1;
-}
-
-float get_test_center_offset_distance(float area_length, int slot_count, float step_length, float footprint_length) {
-    if (slot_count <= 0) {
-        return 0.0f;
-    }
-
-    float occupied_length = footprint_length + static_cast<float>(slot_count - 1) * step_length;
-    float remaining_length = area_length - occupied_length;
-    if (remaining_length <= 0.0f) {
-        return 0.0f;
-    }
-
-    return remaining_length / 2.0f;
-}
-
-float get_test_axis_offset_x(float axis_x, float axis_y, float distance) {
-    float axis_length = std::sqrt(axis_x * axis_x + axis_y * axis_y);
-    if (axis_length <= 0.0f) {
-        return 0.0f;
-    }
-
-    return axis_x / axis_length * distance;
-}
-
-float get_test_axis_offset_y(float axis_x, float axis_y, float distance) {
-    float axis_length = std::sqrt(axis_x * axis_x + axis_y * axis_y);
-    if (axis_length <= 0.0f) {
-        return 0.0f;
-    }
-
-    return axis_y / axis_length * distance;
-}
-
-float get_expected_first_desk_x(
-    const DeskArray& array,
-    int items_per_row,
-    int row_count,
-    float footprint_row_length = DESK_FOOTPRINT_ROW_LENGTH,
-    float footprint_column_length = DESK_FOOTPRINT_COLUMN_LENGTH
-) {
-    float item_step_length = get_test_step_length(
-        DESK_DEFAULT_ROW_SPACING_X,
-        DESK_DEFAULT_ROW_SPACING_Y,
-        array.item_spacing_scale
-    );
-    float row_step_length = get_test_step_length(
-        DESK_DEFAULT_COLUMN_SPACING_X,
-        DESK_DEFAULT_COLUMN_SPACING_Y,
-        array.row_spacing_scale
-    );
-    float item_center_distance = get_test_center_offset_distance(
-        array.row_length,
-        items_per_row,
-        item_step_length,
-        footprint_row_length
-    );
-    float row_center_distance = get_test_center_offset_distance(
-        array.column_length,
-        row_count,
-        row_step_length,
-        footprint_column_length
-    );
-
-    float expected_x = array.start_x;
-    expected_x += get_test_axis_offset_x(
-        DESK_DEFAULT_ROW_SPACING_X,
-        DESK_DEFAULT_ROW_SPACING_Y,
-        item_center_distance
-    );
-    expected_x += get_test_axis_offset_x(
-        DESK_DEFAULT_COLUMN_SPACING_X,
-        DESK_DEFAULT_COLUMN_SPACING_Y,
-        row_center_distance
-    );
-    expected_x += get_test_axis_offset_x(
-        DESK_DEFAULT_ROW_SPACING_X,
-        DESK_DEFAULT_ROW_SPACING_Y,
-        footprint_row_length / 2.0f
-    );
-    expected_x += get_test_axis_offset_x(
-        DESK_DEFAULT_COLUMN_SPACING_X,
-        DESK_DEFAULT_COLUMN_SPACING_Y,
-        footprint_column_length / 2.0f
-    );
-    return expected_x;
-}
-
-float get_expected_first_desk_y(
-    const DeskArray& array,
-    int items_per_row,
-    int row_count,
-    float footprint_row_length = DESK_FOOTPRINT_ROW_LENGTH,
-    float footprint_column_length = DESK_FOOTPRINT_COLUMN_LENGTH
-) {
-    float item_step_length = get_test_step_length(
-        DESK_DEFAULT_ROW_SPACING_X,
-        DESK_DEFAULT_ROW_SPACING_Y,
-        array.item_spacing_scale
-    );
-    float row_step_length = get_test_step_length(
-        DESK_DEFAULT_COLUMN_SPACING_X,
-        DESK_DEFAULT_COLUMN_SPACING_Y,
-        array.row_spacing_scale
-    );
-    float item_center_distance = get_test_center_offset_distance(
-        array.row_length,
-        items_per_row,
-        item_step_length,
-        footprint_row_length
-    );
-    float row_center_distance = get_test_center_offset_distance(
-        array.column_length,
-        row_count,
-        row_step_length,
-        footprint_column_length
-    );
-
-    float expected_y = array.start_y;
-    expected_y += get_test_axis_offset_y(
-        DESK_DEFAULT_ROW_SPACING_X,
-        DESK_DEFAULT_ROW_SPACING_Y,
-        item_center_distance
-    );
-    expected_y += get_test_axis_offset_y(
-        DESK_DEFAULT_COLUMN_SPACING_X,
-        DESK_DEFAULT_COLUMN_SPACING_Y,
-        row_center_distance
-    );
-    expected_y += get_test_axis_offset_y(
-        DESK_DEFAULT_ROW_SPACING_X,
-        DESK_DEFAULT_ROW_SPACING_Y,
-        footprint_row_length / 2.0f
-    );
-    expected_y += get_test_axis_offset_y(
-        DESK_DEFAULT_COLUMN_SPACING_X,
-        DESK_DEFAULT_COLUMN_SPACING_Y,
-        footprint_column_length / 2.0f
-    );
-    return expected_y;
-}
-
 float get_template_footprint_row_length(uint32_t body_direction) {
     if (is_sideways_template_direction(body_direction)) {
         return DESK_SIDEWAYS_FOOTPRINT_ROW_LENGTH;
@@ -362,6 +197,32 @@ float get_template_footprint_column_length(uint32_t body_direction) {
     }
 
     return DESK_FOOTPRINT_COLUMN_LENGTH;
+}
+
+std::vector<ArrayItemAnchor> get_desk_anchors(
+    const DeskArray& array,
+    float footprint_row_length,
+    float footprint_column_length
+) {
+    ArrayLayout layout = {
+        .start_x = array.start_x,
+        .start_y = array.start_y,
+        .row_length = array.row_length,
+        .column_length = array.column_length,
+        .item_axis = {
+            .step_x = DESK_DEFAULT_ROW_SPACING_X,
+            .step_y = DESK_DEFAULT_ROW_SPACING_Y,
+            .spacing_scale = array.item_spacing_scale,
+            .footprint_length = footprint_row_length,
+        },
+        .row_axis = {
+            .step_x = DESK_DEFAULT_COLUMN_SPACING_X,
+            .step_y = DESK_DEFAULT_COLUMN_SPACING_Y,
+            .spacing_scale = array.row_spacing_scale,
+            .footprint_length = footprint_column_length,
+        },
+    };
+    return calculate_array_item_anchors(layout);
 }
 
 } // namespace
@@ -555,50 +416,19 @@ TEST(DeskBuilderTest, BuildsArrayAsSingleRowForFlatArea) {
     uint32_t array_body_direction = sprites[0].direction;
     float footprint_row_length = get_template_footprint_row_length(array_body_direction);
     float footprint_column_length = get_template_footprint_column_length(array_body_direction);
-    int items_per_row = get_test_slot_count(
-        array.row_length,
-        DESK_DEFAULT_ROW_SPACING_X,
-        DESK_DEFAULT_ROW_SPACING_Y,
-        array.item_spacing_scale,
-        footprint_row_length
-    );
-    int row_count = get_test_slot_count(
-        array.column_length,
-        DESK_DEFAULT_COLUMN_SPACING_X,
-        DESK_DEFAULT_COLUMN_SPACING_Y,
-        array.row_spacing_scale,
-        footprint_column_length
-    );
-
-    ASSERT_EQ(sprites.size(), static_cast<std::size_t>(items_per_row * row_count * 3));
-
-    float expected_first_x = get_expected_first_desk_x(
+    std::vector<ArrayItemAnchor> anchors = get_desk_anchors(
         array,
-        items_per_row,
-        row_count,
-        footprint_row_length,
-        footprint_column_length
-    );
-    float expected_first_y = get_expected_first_desk_y(
-        array,
-        items_per_row,
-        row_count,
         footprint_row_length,
         footprint_column_length
     );
 
-    EXPECT_NEAR(sprites[0].posX, expected_first_x, 0.001f);
-    EXPECT_NEAR(sprites[0].posY, expected_first_y, 0.001f);
-
-    ASSERT_GE(items_per_row, 2);
-
-    EXPECT_NEAR(sprites[3].posX, expected_first_x + DESK_DEFAULT_ROW_SPACING_X, 0.001f);
-    EXPECT_NEAR(sprites[3].posY, expected_first_y + DESK_DEFAULT_ROW_SPACING_Y, 0.001f);
-
-    int last_item_index = (items_per_row - 1) * 3;
-    float last_item_offset = static_cast<float>(items_per_row - 1);
-    EXPECT_NEAR(sprites[last_item_index].posX, expected_first_x + DESK_DEFAULT_ROW_SPACING_X * last_item_offset, 0.001f);
-    EXPECT_NEAR(sprites[last_item_index].posY, expected_first_y + DESK_DEFAULT_ROW_SPACING_Y * last_item_offset, 0.001f);
+    ASSERT_GE(anchors.size(), 2U);
+    ASSERT_EQ(sprites.size(), anchors.size() * 3);
+    for (std::size_t anchor_index = 0; anchor_index < anchors.size(); ++anchor_index) {
+        std::size_t sprite_index = anchor_index * 3;
+        EXPECT_NEAR(sprites[sprite_index].posX, anchors[anchor_index].pos_x, 0.001f);
+        EXPECT_NEAR(sprites[sprite_index].posY, anchors[anchor_index].pos_y, 0.001f);
+    }
 }
 
 TEST(DeskBuilderTest, BuildsArraySecondRowWhenAreaGetsDeeper) {
@@ -618,42 +448,28 @@ TEST(DeskBuilderTest, BuildsArraySecondRowWhenAreaGetsDeeper) {
     uint32_t array_body_direction = sprites[0].direction;
     float footprint_row_length = get_template_footprint_row_length(array_body_direction);
     float footprint_column_length = get_template_footprint_column_length(array_body_direction);
-    int items_per_row = get_test_slot_count(
-        array.row_length,
-        DESK_DEFAULT_ROW_SPACING_X,
-        DESK_DEFAULT_ROW_SPACING_Y,
-        array.item_spacing_scale,
-        footprint_row_length
-    );
-    int row_count = get_test_slot_count(
-        array.column_length,
-        DESK_DEFAULT_COLUMN_SPACING_X,
-        DESK_DEFAULT_COLUMN_SPACING_Y,
-        array.row_spacing_scale,
-        footprint_column_length
-    );
-
-    ASSERT_EQ(sprites.size(), static_cast<std::size_t>(items_per_row * row_count * 3));
-    ASSERT_GE(row_count, 2);
-
-    float expected_first_x = get_expected_first_desk_x(
+    std::vector<ArrayItemAnchor> anchors = get_desk_anchors(
         array,
-        items_per_row,
-        row_count,
-        footprint_row_length,
-        footprint_column_length
-    );
-    float expected_first_y = get_expected_first_desk_y(
-        array,
-        items_per_row,
-        row_count,
         footprint_row_length,
         footprint_column_length
     );
 
-    int second_row_first_index = items_per_row * 3;
-    EXPECT_NEAR(sprites[second_row_first_index].posX, expected_first_x + DESK_DEFAULT_COLUMN_SPACING_X, 0.001f);
-    EXPECT_NEAR(sprites[second_row_first_index].posY, expected_first_y + DESK_DEFAULT_COLUMN_SPACING_Y, 0.001f);
+    ASSERT_EQ(sprites.size(), anchors.size() * 3);
+    bool found_second_row = false;
+    for (std::size_t anchor_index = 0; anchor_index < anchors.size(); ++anchor_index) {
+        std::size_t sprite_index = anchor_index * 3;
+        EXPECT_NEAR(sprites[sprite_index].posX, anchors[anchor_index].pos_x, 0.001f);
+        EXPECT_NEAR(sprites[sprite_index].posY, anchors[anchor_index].pos_y, 0.001f);
+
+        float expected_second_row_x = anchors[0].pos_x + DESK_DEFAULT_COLUMN_SPACING_X;
+        float expected_second_row_y = anchors[0].pos_y + DESK_DEFAULT_COLUMN_SPACING_Y;
+        bool same_x = std::abs(anchors[anchor_index].pos_x - expected_second_row_x) < 0.001f;
+        bool same_y = std::abs(anchors[anchor_index].pos_y - expected_second_row_y) < 0.001f;
+        if (same_x && same_y) {
+            found_second_row = true;
+        }
+    }
+    EXPECT_TRUE(found_second_row);
 }
 
 TEST(DeskBuilderTest, LargerArraySpacingReducesDeskCount) {

@@ -48,6 +48,7 @@ set(CORE_SOURCES
     src/auto_mapper/core/wall_builder.cpp
     src/auto_mapper/core/door_builder.cpp
     src/auto_mapper/core/randomizer.cpp
+    src/auto_mapper/core/indoor_decorations/array_layout.cpp
     src/auto_mapper/core/indoor_decorations/desk_builder.cpp
     src/auto_mapper/core/indoor_decorations/incubator_builder.cpp
 )
