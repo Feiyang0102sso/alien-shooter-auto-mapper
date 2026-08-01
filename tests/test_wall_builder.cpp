@@ -30,7 +30,7 @@ TEST(WallBuilderTest, WallOnlyGolden) {
     std::vector<io::Sprite> sprites = builder.build(scene.segments, false, false);
     
     // write spirit into temp map
-    const std::string temp_output_path = "current_wall_builder.map";
+    const std::string temp_output_path = get_test_output_path("current_wall_builder.map");
     
     // add cleaner
     TempFileCleaner cleaner(temp_output_path);
@@ -147,7 +147,7 @@ TEST(WallBuilderTest, FloorCeilingManualGoldAlignment) {
     ASSERT_NE(ref_504.vid, -1) << "Ceiling reference not found!";
 
     // in case there need to be manually verified
-    std::string out_map_path = get_project_root() + "/floor_celling_alignment_test.map";
+    std::string out_map_path = get_test_output_path("floor_celling_alignment_test.map");
     io::write_map(generated_sprites, out_map_path, map_size_x, map_size_y);
 
     // 4. Assert grid alignment properties
@@ -231,7 +231,7 @@ TEST(FloorBuilderTest, FloorGoldenMap) {
     WallBuilder builder(scene.map_size_x, scene.map_size_y);
     std::vector<io::Sprite> sprites = builder.build(scene.segments, true, false);
 
-    const std::string temp_output_path = "current_floor_builder.map";
+    const std::string temp_output_path = get_test_output_path("current_floor_builder.map");
     TempFileCleaner cleaner(temp_output_path);
 
     bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);

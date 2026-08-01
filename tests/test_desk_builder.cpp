@@ -611,6 +611,6 @@ TEST(DeskBuilderTest, WritesRandomManualPreviewMap) {
 
     std::vector<io::Sprite> sprites = builder.build_array(array);
 
-    std::string output_path = get_project_root() + "/desk_builder_manual_test.map";
+    std::string output_path = get_test_output_path("desk_builder_manual_test.map");
     ASSERT_TRUE(io::write_map(sprites, output_path, 800.0f, 800.0f));
 }

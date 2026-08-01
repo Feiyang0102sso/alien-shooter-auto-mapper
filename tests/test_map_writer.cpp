@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 #include "auto_mapper/io/map_writer.h"
+#include "utils/test_utils.h"
 #include <vector>
 
 using namespace auto_mapper;
+using namespace auto_mapper::test;
 
 TEST(MapWriterTest, WriteMapSuccess) {
     std::vector<io::Sprite> sprites;
@@ -16,7 +18,7 @@ TEST(MapWriterTest, WriteMapSuccess) {
         sprites.push_back(spr);
     }
 
-    std::string output_file = "test_cpp_output.map";
+    std::string output_file = get_test_output_path("test_cpp_output.map");
     bool success = io::write_map(
         sprites, 
         output_file, 
