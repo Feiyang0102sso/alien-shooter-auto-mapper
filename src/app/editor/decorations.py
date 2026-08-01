@@ -2,7 +2,7 @@
 Decoration metadata used by the editor UI.
 """
 
-from app.project.data import DECORATION_TYPE_INCUBATOR_ARRAY
+from app.project.data import DECORATION_TYPE_DESK_ARRAY, DECORATION_TYPE_INCUBATOR_ARRAY
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 
@@ -20,6 +20,12 @@ def get_decoration_items() -> list:
             "decoration_type": DECORATION_TYPE_INCUBATOR_ARRAY,
             "label": tr(TextKey.DECORATION_INCUBATOR_LABEL),
             "description": tr(TextKey.DECORATION_INCUBATOR_DESCRIPTION),
+            "preview_path": "",
+        },
+        {
+            "decoration_type": DECORATION_TYPE_DESK_ARRAY,
+            "label": tr(TextKey.DECORATION_DESK_LABEL),
+            "description": tr(TextKey.DECORATION_DESK_DESCRIPTION),
             "preview_path": "",
         }
     ]

@@ -12,7 +12,14 @@ from app.editor.drawable_parts import PART_WALL_BODY
 from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
-from app.project.data import DECORATION_TYPE_INCUBATOR_ARRAY, DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, IncubatorDecoration
+from app.project.data import (
+    DECORATION_TYPE_DESK_ARRAY,
+    DECORATION_TYPE_INCUBATOR_ARRAY,
+    DEFAULT_MAP_SIZE_X,
+    DEFAULT_MAP_SIZE_Y,
+    DeskDecoration,
+    IncubatorDecoration,
+)
 from app.ui.colors import (
     CANVAS_BACKGROUND,
     CANVAS_BOUNDARY,
@@ -583,13 +590,14 @@ class MapViewport(QWidget):
 
     def _draw_decorations(self, painter: QPainter) -> None:
         """
-        Draw incubator decoration areas.
+        Draw decoration areas.
         """
         index = 0
         for decoration in self.decorations:
             corners = self._get_decoration_corners(decoration)
             self._draw_decoration_rect(painter, corners, index == self.selected_decoration_index)
-            self._draw_incubator_preview_points(painter, decoration)
+            if decoration.decoration_type == DECORATION_TYPE_INCUBATOR_ARRAY:
+                self._draw_incubator_preview_points(painter, decoration)
             index += 1
 
     def _draw_decoration_rect(self, painter: QPainter, rect: tuple, selected: bool) -> None:
@@ -625,7 +633,7 @@ class MapViewport(QWidget):
         """
         # fix-fix preview unit mismatch, 
         # which is caused by treating the center point as the top-left origin when rendering.
-        axes = self._get_decoration_axes()
+        axes = self._get_decoration_axes(DECORATION_TYPE_INCUBATOR_ARRAY)
         row_axis = axes[0]
         column_axis = axes[1]
 
@@ -726,9 +734,9 @@ class MapViewport(QWidget):
 
     def _handle_decoration_left_click(self, screen_point: QPointF) -> bool:
         """
-        Start or finish an incubator decoration rectangle.
+        Start or finish a decoration rectangle.
         """
-        if self.active_decoration_type != DECORATION_TYPE_INCUBATOR_ARRAY:
+        if not self._is_supported_decoration_type(self.active_decoration_type):
             return False
         if self.drawing_tool.mode != DrawingMode.RECTANGLE:
             return False
@@ -745,10 +753,12 @@ class MapViewport(QWidget):
         self.decoration_start_physical = None
         self.decoration_preview_physical = None
 
-        if decoration.row_length < self.incubator_footprint_width:
-            decoration.row_length = self.incubator_footprint_width
-        if decoration.column_length < self.incubator_footprint_height:
-            decoration.column_length = self.incubator_footprint_height
+        min_width = self._get_decoration_footprint_width(decoration.decoration_type)
+        min_height = self._get_decoration_footprint_height(decoration.decoration_type)
+        if decoration.row_length < min_width:
+            decoration.row_length = min_width
+        if decoration.column_length < min_height:
+            decoration.column_length = min_height
 
         self.decorations.append(decoration)
         self.selected_decoration_index = len(self.decorations) - 1
@@ -788,14 +798,14 @@ class MapViewport(QWidget):
         delta_y = current_physical.y() - self.decoration_drag_start_physical.y()
 
         original = self.decoration_drag_original
-        axes = self._get_decoration_axes()
+        axes = self._get_decoration_axes(original.decoration_type)
         row_axis = axes[0]
         column_axis = axes[1]
-        axis_delta = self._project_delta_to_decoration_axes(QPointF(delta_x, delta_y))
+        axis_delta = self._project_delta_to_decoration_axes(QPointF(delta_x, delta_y), original.decoration_type)
         delta_row = axis_delta[0]
         delta_column = axis_delta[1]
-        min_width = self.incubator_footprint_width
-        min_height = self.incubator_footprint_height
+        min_width = self._get_decoration_footprint_width(original.decoration_type)
+        min_height = self._get_decoration_footprint_height(original.decoration_type)
 
         start_x = original.start_x
         start_y = original.start_y
@@ -1204,6 +1214,29 @@ class MapViewport(QWidget):
         """
         return dll_registry.get_incubator_array_profile()["footprint_height"]
 
+    def _get_decoration_profile(self, decoration_type: str) -> dict:
+        """
+        Return the DLL-backed layout profile for one decoration type.
+        """
+        if decoration_type == DECORATION_TYPE_DESK_ARRAY:
+            return dll_registry.get_desk_array_profile()
+
+        return dll_registry.get_incubator_array_profile()
+
+    def _get_decoration_footprint_width(self, decoration_type: str) -> float:
+        """
+        Return the physical footprint width for one decoration type.
+        """
+        profile = self._get_decoration_profile(decoration_type)
+        return profile["footprint_width"]
+
+    def _get_decoration_footprint_height(self, decoration_type: str) -> float:
+        """
+        Return the physical footprint height for one decoration type.
+        """
+        profile = self._get_decoration_profile(decoration_type)
+        return profile["footprint_height"]
+
     def grid_to_screen(self, grid_x: int, grid_y: int, wall_type: int = None) -> QPointF:
         """
         Convert logical grid coordinates into widget coordinates.
@@ -1439,18 +1472,29 @@ class MapViewport(QWidget):
         screen_y = physical_point.y() * self.zoom_factor + self.pan_offset.y()
         return QPointF(screen_x, screen_y)
 
-    def _get_decoration_corners(self, decoration: IncubatorDecoration) -> list:
+    def _get_decoration_corners(self, decoration) -> list:
         """
-        Return decoration corners along the active wall-set axes.
+        Return decoration corners along its layout axes.
         """
         origin = QPointF(decoration.start_x, decoration.start_y)
-        return self._build_decoration_corners(origin, decoration.row_length, decoration.column_length)
+        return self._build_decoration_corners(
+            origin,
+            decoration.row_length,
+            decoration.column_length,
+            decoration.decoration_type,
+        )
 
-    def _build_decoration_corners(self, origin: QPointF, row_length: float, column_length: float) -> list:
+    def _build_decoration_corners(
+        self,
+        origin: QPointF,
+        row_length: float,
+        column_length: float,
+        decoration_type: str = DECORATION_TYPE_INCUBATOR_ARRAY,
+    ) -> list:
         """
         Build a physical parallelogram from row and column lengths.
         """
-        axes = self._get_decoration_axes()
+        axes = self._get_decoration_axes(decoration_type)
         row_axis = axes[0]
         column_axis = axes[1]
 
@@ -1463,16 +1507,17 @@ class MapViewport(QWidget):
         fourth = first + column_vector
         return [first, second, third, fourth]
 
-    def _build_decoration_from_points(self, start_point: QPointF, end_point: QPointF) -> IncubatorDecoration:
+    def _build_decoration_from_points(self, start_point: QPointF, end_point: QPointF):
         """
-        Build a positive-length decoration by projecting onto wall-set axes.
+        Build a positive-length decoration by projecting onto its layout axes.
         """
-        axes = self._get_decoration_axes()
+        decoration_type = self.active_decoration_type
+        axes = self._get_decoration_axes(decoration_type)
         row_axis = axes[0]
         column_axis = axes[1]
         delta_x = end_point.x() - start_point.x()
         delta_y = end_point.y() - start_point.y()
-        axis_delta = self._project_delta_to_decoration_axes(QPointF(delta_x, delta_y))
+        axis_delta = self._project_delta_to_decoration_axes(QPointF(delta_x, delta_y), decoration_type)
         row_length = axis_delta[0]
         column_length = axis_delta[1]
 
@@ -1484,21 +1529,19 @@ class MapViewport(QWidget):
             origin = origin + QPointF(column_axis.x() * column_length, column_axis.y() * column_length)
             column_length = -column_length
 
-        return IncubatorDecoration(
-            start_x=origin.x(),
-            start_y=origin.y(),
-            row_length=row_length,
-            column_length=column_length,
+        return self._create_decoration(
+            decoration_type,
+            origin.x(),
+            origin.y(),
+            row_length,
+            column_length,
         )
 
-    def _get_decoration_axes(self) -> tuple:
+    def _get_decoration_axes(self, decoration_type: str = DECORATION_TYPE_INCUBATOR_ARRAY) -> tuple:
         """
-        Return normalized axes for drawing the decoration area.
-        Uses the incubator profile axes from C++, not the current wall step,
-        so the frame and placed decorations share the same coordinate system.
+        Return normalized axes for drawing one decoration type.
         """
-        # fix-fix layout frame alignment problem, which is caused by the layout axes depending on the active wall steps rather than fixed incubator profiles.
-        profile = dll_registry.get_incubator_array_profile()
+        profile = self._get_decoration_profile(decoration_type)
         row_axis = QPointF(profile["row_axis_x"], profile["row_axis_y"])
         column_axis = QPointF(profile["column_axis_x"], profile["column_axis_y"])
         return self._normalize_vector(row_axis), self._normalize_vector(column_axis)
@@ -1513,11 +1556,15 @@ class MapViewport(QWidget):
 
         return QPointF(vector.x() / length, vector.y() / length)
 
-    def _project_delta_to_decoration_axes(self, delta: QPointF) -> tuple:
+    def _project_delta_to_decoration_axes(
+        self,
+        delta: QPointF,
+        decoration_type: str = DECORATION_TYPE_INCUBATOR_ARRAY,
+    ) -> tuple:
         """
         Solve a physical delta into row and column axis distances.
         """
-        axes = self._get_decoration_axes()
+        axes = self._get_decoration_axes(decoration_type)
         row_axis = axes[0]
         column_axis = axes[1]
         determinant = row_axis.x() * column_axis.y() - row_axis.y() * column_axis.x()
@@ -1593,15 +1640,60 @@ class MapViewport(QWidget):
         self.drawing_cancelled.emit()
         return True
 
-    def _copy_decoration(self, decoration: IncubatorDecoration) -> IncubatorDecoration:
+    def _copy_decoration(self, decoration):
         """
-        Return a copied incubator decoration.
+        Return a copied decoration.
         """
-        return IncubatorDecoration(
-            start_x=decoration.start_x,
-            start_y=decoration.start_y,
-            row_length=decoration.row_length,
-            column_length=decoration.column_length,
-            item_spacing_scale=decoration.item_spacing_scale,
-            row_spacing_scale=decoration.row_spacing_scale,
+        return self._create_decoration(
+            decoration.decoration_type,
+            decoration.start_x,
+            decoration.start_y,
+            decoration.row_length,
+            decoration.column_length,
+            decoration.item_spacing_scale,
+            decoration.row_spacing_scale,
         )
+
+    def _create_decoration(
+        self,
+        decoration_type: str,
+        start_x: float,
+        start_y: float,
+        row_length: float,
+        column_length: float,
+        item_spacing_scale: float = 1.0,
+        row_spacing_scale: float = 1.0,
+    ):
+        """
+        Create a project decoration with the correct concrete type.
+        """
+        if decoration_type == DECORATION_TYPE_DESK_ARRAY:
+            return DeskDecoration(
+                start_x=start_x,
+                start_y=start_y,
+                row_length=row_length,
+                column_length=column_length,
+                item_spacing_scale=item_spacing_scale,
+                row_spacing_scale=row_spacing_scale,
+            )
+
+        return IncubatorDecoration(
+            start_x=start_x,
+            start_y=start_y,
+            row_length=row_length,
+            column_length=column_length,
+            item_spacing_scale=item_spacing_scale,
+            row_spacing_scale=row_spacing_scale,
+        )
+
+    def _is_supported_decoration_type(self, decoration_type: str) -> bool:
+        """
+        Return whether the viewport can create this decoration type.
+        """
+        if decoration_type == DECORATION_TYPE_INCUBATOR_ARRAY:
+            return True
+
+        if decoration_type == DECORATION_TYPE_DESK_ARRAY:
+            return True
+
+        return False

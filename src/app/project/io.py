@@ -5,7 +5,13 @@ import json
 from pathlib import Path
 
 from app.editor.wall_profiles import get_default_wall_type
-from app.project.data import DECORATION_TYPE_INCUBATOR_ARRAY, IncubatorDecoration, ProjectData
+from app.project.data import (
+    DECORATION_TYPE_DESK_ARRAY,
+    DECORATION_TYPE_INCUBATOR_ARRAY,
+    DeskDecoration,
+    IncubatorDecoration,
+    ProjectData,
+)
 
 
 def build_project_json_data(project_data: ProjectData) -> dict:
@@ -53,7 +59,7 @@ def build_project_json_data(project_data: ProjectData) -> dict:
     decoration_items = []
 
     for decoration in project_data.decorations:
-        if decoration.decoration_type != DECORATION_TYPE_INCUBATOR_ARRAY:
+        if not is_supported_decoration_type(decoration.decoration_type):
             continue
 
         decoration_item = {
@@ -220,21 +226,58 @@ def parse_decorations(data: dict) -> list:
             raise ValueError("Each decoration must be an object.")
 
         decoration_type = str(json_decoration.get("type", ""))
-        if decoration_type != DECORATION_TYPE_INCUBATOR_ARRAY:
+        if not is_supported_decoration_type(decoration_type):
             continue
 
         start = json_decoration.get("start", {})
         if not isinstance(start, dict):
             raise ValueError("Decoration start must be an object.")
 
-        decoration = IncubatorDecoration(
-            start_x=float(start.get("x", 0.0)),
-            start_y=float(start.get("y", 0.0)),
-            row_length=float(json_decoration.get("row_length", 0.0)),
-            column_length=float(json_decoration.get("column_length", 0.0)),
-            item_spacing_scale=float(json_decoration.get("item_spacing_scale", 1.0)),
-            row_spacing_scale=float(json_decoration.get("row_spacing_scale", 1.0)),
-        )
+        decoration = build_decoration_from_json(decoration_type, json_decoration, start)
         decorations.append(decoration)
 
     return decorations
+
+
+def is_supported_decoration_type(decoration_type: str) -> bool:
+    """
+    Return whether a decoration type is supported by this editor.
+    """
+    if decoration_type == DECORATION_TYPE_INCUBATOR_ARRAY:
+        return True
+
+    if decoration_type == DECORATION_TYPE_DESK_ARRAY:
+        return True
+
+    return False
+
+
+def build_decoration_from_json(decoration_type: str, json_decoration: dict, start: dict):
+    """
+    Build one typed decoration from JSON fields.
+    """
+    start_x = float(start.get("x", 0.0))
+    start_y = float(start.get("y", 0.0))
+    row_length = float(json_decoration.get("row_length", 0.0))
+    column_length = float(json_decoration.get("column_length", 0.0))
+    item_spacing_scale = float(json_decoration.get("item_spacing_scale", 1.0))
+    row_spacing_scale = float(json_decoration.get("row_spacing_scale", 1.0))
+
+    if decoration_type == DECORATION_TYPE_DESK_ARRAY:
+        return DeskDecoration(
+            start_x=start_x,
+            start_y=start_y,
+            row_length=row_length,
+            column_length=column_length,
+            item_spacing_scale=item_spacing_scale,
+            row_spacing_scale=row_spacing_scale,
+        )
+
+    return IncubatorDecoration(
+        start_x=start_x,
+        start_y=start_y,
+        row_length=row_length,
+        column_length=column_length,
+        item_spacing_scale=item_spacing_scale,
+        row_spacing_scale=row_spacing_scale,
+    )

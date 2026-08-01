@@ -108,5 +108,7 @@
   "status.decoration_selected": "已选择装饰",
   "status.decoration_spacing": "装饰间距：物件={item_spacing_scale:.2f}，列={row_spacing_scale:.2f}",
   "button.delete_decoration": "删除装饰",
-  "status.decoration_deleted": "已删除装饰"
+  "status.decoration_deleted": "已删除装饰",
+  "decoration.desk.label": "桌子",
+  "decoration.desk.description": "绘制桌子阵列区域。预览图暂时留空。"
 }

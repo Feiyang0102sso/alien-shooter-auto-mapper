@@ -2,6 +2,7 @@
 #include "auto_mapper/core/wall_builder.h"
 #include "auto_mapper/core/door_builder.h"
 #include "auto_mapper/core/randomizer.h"
+#include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include <vector>
@@ -9,7 +10,7 @@
 
 extern "C" {
 
-static constexpr int AUTO_MAPPER_API_VERSION = 4;
+static constexpr int AUTO_MAPPER_API_VERSION = 5;
 static constexpr int MIN_SPRITE_DIRECTION = 0;
 static constexpr int MAX_SPRITE_DIRECTION = 255;
 
@@ -119,6 +120,22 @@ AUTO_MAPPER_API bool get_incubator_array_profile(
     return true;
 }
 
+AUTO_MAPPER_API bool get_desk_array_profile(
+    CDeskArrayProfile* profile
+) {
+    if (profile == nullptr) {
+        return false;
+    }
+
+    profile->row_axis_x = auto_mapper::core::indoor_decorations::DESK_DEFAULT_ROW_SPACING_X;
+    profile->row_axis_y = auto_mapper::core::indoor_decorations::DESK_DEFAULT_ROW_SPACING_Y;
+    profile->column_axis_x = auto_mapper::core::indoor_decorations::DESK_DEFAULT_COLUMN_SPACING_X;
+    profile->column_axis_y = auto_mapper::core::indoor_decorations::DESK_DEFAULT_COLUMN_SPACING_Y;
+    profile->footprint_width = auto_mapper::core::indoor_decorations::DESK_FOOTPRINT_ROW_LENGTH;
+    profile->footprint_height = auto_mapper::core::indoor_decorations::DESK_FOOTPRINT_COLUMN_LENGTH;
+    return true;
+}
+
 static auto_mapper::core::indoor_decorations::IncubatorArray convert_incubator_array(
     const CIncubatorArray& array
 ) {
@@ -152,6 +169,20 @@ static std::vector<CIncubatorPreviewPoint> build_incubator_preview_points(
     }
 
     return points;
+}
+
+static auto_mapper::core::indoor_decorations::DeskArray convert_desk_array(
+    const CDeskArray& array
+) {
+    return {
+        .start_x = array.start_x,
+        .start_y = array.start_y,
+        .row_length = array.row_length,
+        .column_length = array.column_length,
+        .item_spacing_scale = array.item_spacing_scale,
+        .row_spacing_scale = array.row_spacing_scale,
+        .pos_z = 0.0f
+    };
 }
 
 AUTO_MAPPER_API int get_incubator_array_preview_point_count(
@@ -383,6 +414,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_doors,
     const CIncubatorArray* incubator_arrays,
     int num_incubator_arrays,
+    const CDeskArray* desk_arrays,
+    int num_desk_arrays,
     float map_size_x,
     float map_size_y,
     bool gen_floor,
@@ -448,19 +481,20 @@ AUTO_MAPPER_API bool generate_map_from_segments(
 
     // 3. Build indoor decorations
     auto_mapper::core::indoor_decorations::IncubatorBuilder incubator_builder;
+    auto_mapper::core::indoor_decorations::DeskBuilder desk_builder;
     std::vector<auto_mapper::io::Sprite> decoration_sprites;
 
     for (int i = 0; i < num_incubator_arrays; ++i) {
-        auto_mapper::core::indoor_decorations::IncubatorArray array = {
-            .start_x = incubator_arrays[i].start_x,
-            .start_y = incubator_arrays[i].start_y,
-            .row_length = incubator_arrays[i].row_length,
-            .column_length = incubator_arrays[i].column_length,
-            .item_spacing_scale = incubator_arrays[i].item_spacing_scale,
-            .row_spacing_scale = incubator_arrays[i].row_spacing_scale
-        };
+        auto_mapper::core::indoor_decorations::IncubatorArray array = convert_incubator_array(incubator_arrays[i]);
 
         std::vector<auto_mapper::io::Sprite> array_sprites = incubator_builder.build_array(array);
+        decoration_sprites.insert(decoration_sprites.end(), array_sprites.begin(), array_sprites.end());
+    }
+
+    for (int i = 0; i < num_desk_arrays; ++i) {
+        auto_mapper::core::indoor_decorations::DeskArray array = convert_desk_array(desk_arrays[i]);
+
+        std::vector<auto_mapper::io::Sprite> array_sprites = desk_builder.build_array(array);
         decoration_sprites.insert(decoration_sprites.end(), array_sprites.begin(), array_sprites.end());
     }
 

@@ -75,7 +75,25 @@ struct CIncubatorArray {
     float row_spacing_scale;
 };
 
+struct CDeskArray {
+    float start_x;
+    float start_y;
+    float row_length;
+    float column_length;
+    float item_spacing_scale;
+    float row_spacing_scale;
+};
+
 struct CIncubatorArrayProfile {
+    float row_axis_x;
+    float row_axis_y;
+    float column_axis_x;
+    float column_axis_y;
+    float footprint_width;
+    float footprint_height;
+};
+
+struct CDeskArrayProfile {
     float row_axis_x;
     float row_axis_y;
     float column_axis_x;
@@ -94,6 +112,13 @@ struct CIncubatorPreviewPoint {
  */
 AUTO_MAPPER_API bool get_incubator_array_profile(
     CIncubatorArrayProfile* profile
+);
+
+/**
+ * @brief Read desk array layout values used by the C++ builder.
+ */
+AUTO_MAPPER_API bool get_desk_array_profile(
+    CDeskArrayProfile* profile
 );
 
 /**
@@ -123,6 +148,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_doors,
     const CIncubatorArray* incubator_arrays,
     int num_incubator_arrays,
+    const CDeskArray* desk_arrays,
+    int num_desk_arrays,
     float map_size_x,
     float map_size_y,
     bool gen_floor,

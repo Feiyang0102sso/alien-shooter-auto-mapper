@@ -17,6 +17,7 @@ WALL_PROFILES = {}
 STANDARD_DOOR_Z_CONFIGS = {}
 STANDARD_DOOR_SIZES = []
 INCUBATOR_ARRAY_PROFILE = {}
+DESK_ARRAY_PROFILE = {}
 AUTO_MAPPER_CLIENT = None
 WALL_TYPE_STANDARD = 0
 WALL_TYPE_LAB = 1
@@ -70,11 +71,13 @@ def register_all_from_dll(auto_mapper_client) -> bool:
     standard_door_sizes = auto_mapper_client.load_standard_door_sizes()
     standard_door_z_configs = auto_mapper_client.load_standard_door_z_config(standard_door_sizes)
     incubator_array_profile = auto_mapper_client.load_incubator_array_profile()
+    desk_array_profile = auto_mapper_client.load_desk_array_profile()
 
     register_wall_profiles(wall_profiles)
     register_standard_door_sizes(standard_door_sizes)
     register_standard_door_z_configs(standard_door_z_configs)
     register_incubator_array_profile(incubator_array_profile)
+    register_desk_array_profile(desk_array_profile)
 
     logger.info("Registered DLL metadata for UI.")
     return True
@@ -123,6 +126,16 @@ def register_incubator_array_profile(profile: dict) -> None:
 
     for key, value in profile.items():
         INCUBATOR_ARRAY_PROFILE[key] = value
+
+
+def register_desk_array_profile(profile: dict) -> None:
+    """
+    Replace registered desk array layout values.
+    """
+    DESK_ARRAY_PROFILE.clear()
+
+    for key, value in profile.items():
+        DESK_ARRAY_PROFILE[key] = value
 
 
 def get_wall_profile(wall_type: int) -> dict:
@@ -186,6 +199,26 @@ def get_incubator_array_profile() -> dict:
             raise RuntimeError(f"Incubator array profile was not registered from DLL. Missing: {key}")
 
     return dict(INCUBATOR_ARRAY_PROFILE)
+
+
+def get_desk_array_profile() -> dict:
+    """
+    Return DLL-backed desk array layout values.
+    """
+    required_keys = [
+        "row_axis_x",
+        "row_axis_y",
+        "column_axis_x",
+        "column_axis_y",
+        "footprint_width",
+        "footprint_height",
+    ]
+
+    for key in required_keys:
+        if key not in DESK_ARRAY_PROFILE:
+            raise RuntimeError(f"Desk array profile was not registered from DLL. Missing: {key}")
+
+    return dict(DESK_ARRAY_PROFILE)
 
 
 def get_incubator_preview_points(decoration) -> list:

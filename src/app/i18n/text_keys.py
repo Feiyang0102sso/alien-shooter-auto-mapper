@@ -56,6 +56,8 @@ class TextKey:
 
     DECORATION_INCUBATOR_LABEL = "decoration.incubator.label"
     DECORATION_INCUBATOR_DESCRIPTION = "decoration.incubator.description"
+    DECORATION_DESK_LABEL = "decoration.desk.label"
+    DECORATION_DESK_DESCRIPTION = "decoration.desk.description"
 
     CANVAS_TITLE = "canvas.title"
     CANVAS_INFO = "canvas.info"

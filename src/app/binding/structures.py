@@ -50,9 +50,39 @@ class CIncubatorArray(ctypes.Structure):
     ]
 
 
+class CDeskArray(ctypes.Structure):
+    """
+    C-compatible desk array decoration.
+    """
+
+    _fields_ = [
+        ("start_x", ctypes.c_float),
+        ("start_y", ctypes.c_float),
+        ("row_length", ctypes.c_float),
+        ("column_length", ctypes.c_float),
+        ("item_spacing_scale", ctypes.c_float),
+        ("row_spacing_scale", ctypes.c_float),
+    ]
+
+
 class CIncubatorArrayProfile(ctypes.Structure):
     """
     C-compatible incubator array layout values.
+    """
+
+    _fields_ = [
+        ("row_axis_x", ctypes.c_float),
+        ("row_axis_y", ctypes.c_float),
+        ("column_axis_x", ctypes.c_float),
+        ("column_axis_y", ctypes.c_float),
+        ("footprint_width", ctypes.c_float),
+        ("footprint_height", ctypes.c_float),
+    ]
+
+
+class CDeskArrayProfile(ctypes.Structure):
+    """
+    C-compatible desk array layout values.
     """
 
     _fields_ = [

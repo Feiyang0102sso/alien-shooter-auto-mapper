@@ -5,6 +5,8 @@ import ctypes
 from pathlib import Path
 
 from app.binding.structures import (
+    CDeskArray,
+    CDeskArrayProfile,
     CDoor,
     CDrawablePart,
     CIncubatorArray,
@@ -16,10 +18,10 @@ from app.binding.structures import (
 )
 from app.config import DLL_PATH
 from app.logger import logger
-from app.project.data import ProjectData
+from app.project.data import DECORATION_TYPE_DESK_ARRAY, DECORATION_TYPE_INCUBATOR_ARRAY, ProjectData
 
 
-REQUIRED_API_VERSION = 4
+REQUIRED_API_VERSION = 5
 
 
 class AutoMapperLibClient:
@@ -62,6 +64,8 @@ class AutoMapperLibClient:
             ctypes.POINTER(CDoor),
             ctypes.c_int,
             ctypes.POINTER(CIncubatorArray),
+            ctypes.c_int,
+            ctypes.POINTER(CDeskArray),
             ctypes.c_int,
             ctypes.c_float,
             ctypes.c_float,
@@ -123,6 +127,11 @@ class AutoMapperLibClient:
             ctypes.POINTER(CIncubatorArrayProfile),
         ]
         self.lib.get_incubator_array_profile.restype = ctypes.c_bool
+
+        self.lib.get_desk_array_profile.argtypes = [
+            ctypes.POINTER(CDeskArrayProfile),
+        ]
+        self.lib.get_desk_array_profile.restype = ctypes.c_bool
 
         self.lib.get_incubator_array_preview_point_count.argtypes = [
             ctypes.POINTER(CIncubatorArray),
@@ -265,6 +274,29 @@ class AutoMapperLibClient:
         logger.info(f"Loaded incubator array profile: {profile}")
         return profile
 
+    def load_desk_array_profile(self) -> dict:
+        """
+        Load desk array layout values from the DLL.
+        """
+        if not self.load():
+            return {}
+
+        c_profile = CDeskArrayProfile()
+        success = self.lib.get_desk_array_profile(ctypes.byref(c_profile))
+        if not success:
+            return {}
+
+        profile = {
+            "row_axis_x": float(c_profile.row_axis_x),
+            "row_axis_y": float(c_profile.row_axis_y),
+            "column_axis_x": float(c_profile.column_axis_x),
+            "column_axis_y": float(c_profile.column_axis_y),
+            "footprint_width": float(c_profile.footprint_width),
+            "footprint_height": float(c_profile.footprint_height),
+        }
+        logger.info(f"Loaded desk array profile: {profile}")
+        return profile
+
     def get_incubator_preview_points(self, decoration) -> list:
         """
         Load incubator preview unit points from the DLL.
@@ -310,7 +342,10 @@ class AutoMapperLibClient:
 
         segment_array = self._build_segment_array(project_data.segments)
         door_array = self._build_door_array(project_data.doors, project_data.is_door_open)
-        incubator_array = self._build_incubator_array(project_data.decorations)
+        incubator_decorations = self._filter_decorations(project_data.decorations, DECORATION_TYPE_INCUBATOR_ARRAY)
+        desk_decorations = self._filter_decorations(project_data.decorations, DECORATION_TYPE_DESK_ARRAY)
+        incubator_array = self._build_incubator_array(incubator_decorations)
+        desk_array = self._build_desk_array(desk_decorations)
         output_path_bytes = str(output_path).encode("utf-8")
 
         success = self.lib.generate_map_from_segments(
@@ -320,7 +355,9 @@ class AutoMapperLibClient:
             door_array,
             len(project_data.doors),
             incubator_array,
-            len(project_data.decorations),
+            len(incubator_decorations),
+            desk_array,
+            len(desk_decorations),
             float(project_data.map_size_x),
             float(project_data.map_size_y),
             generate_floor,
@@ -415,6 +452,20 @@ class AutoMapperLibClient:
 
         return incubator_array
 
+    def _build_desk_array(self, decorations: list):
+        """
+        Convert desk decorations into a C array.
+        """
+        DeskArray = CDeskArray * len(decorations)
+        desk_array = DeskArray()
+
+        index = 0
+        for decoration in decorations:
+            desk_array[index] = self._build_single_desk_array(decoration)
+            index += 1
+
+        return desk_array
+
     def _build_single_incubator_array(self, decoration) -> CIncubatorArray:
         """
         Convert one incubator decoration into a C struct.
@@ -427,6 +478,31 @@ class AutoMapperLibClient:
         incubator_array.item_spacing_scale = float(decoration.item_spacing_scale)
         incubator_array.row_spacing_scale = float(decoration.row_spacing_scale)
         return incubator_array
+
+    def _build_single_desk_array(self, decoration) -> CDeskArray:
+        """
+        Convert one desk decoration into a C struct.
+        """
+        desk_array = CDeskArray()
+        desk_array.start_x = float(decoration.start_x)
+        desk_array.start_y = float(decoration.start_y)
+        desk_array.row_length = float(decoration.row_length)
+        desk_array.column_length = float(decoration.column_length)
+        desk_array.item_spacing_scale = float(decoration.item_spacing_scale)
+        desk_array.row_spacing_scale = float(decoration.row_spacing_scale)
+        return desk_array
+
+    def _filter_decorations(self, decorations: list, decoration_type: str) -> list:
+        """
+        Return decorations matching one project decoration type.
+        """
+        matching_decorations = []
+
+        for decoration in decorations:
+            if decoration.decoration_type == decoration_type:
+                matching_decorations.append(decoration)
+
+        return matching_decorations
 
     def _convert_wall_profile(self, c_profile: CWallProfile) -> dict:
         """

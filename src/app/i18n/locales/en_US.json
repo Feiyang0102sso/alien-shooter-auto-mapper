@@ -41,6 +41,8 @@
   "label.column_spacing": "Column spacing",
   "decoration.incubator.label": "Incubator",
   "decoration.incubator.description": "Draw an incubator array area, then tune row and column spacing.",
+  "decoration.desk.label": "Desk",
+  "decoration.desk.description": "Draw a desk array area. Preview art is intentionally blank for now.",
   "canvas.title": "2.5D Isometric Canvas",
   "canvas.info": "Map: {map_size_x:.1f} x {map_size_y:.1f} | Wall: {wall_label} | Grid: {grid_columns} x {grid_rows}",
   "canvas.help": "Left click twice: draw wall. Right click: cancel. Middle drag: pan. Wheel: zoom.",
