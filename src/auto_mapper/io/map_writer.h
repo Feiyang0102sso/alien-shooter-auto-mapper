@@ -11,6 +11,12 @@
 
 namespace auto_mapper::io {
 
+enum class MapFormat {
+    AS1,
+    AS2,
+    AS2R
+};
+
 struct Sprite {
     int32_t vid{};
     float posX{};
@@ -30,12 +36,26 @@ struct Sprite {
  * @param output_path .map path
  * @param map_size_x mapX
  * @param map_size_y mapY
- * @param template_path empty.map template
  * @return whether write success
  */
 bool write_map(const std::vector<Sprite>& sprites, 
                const std::string& output_path, 
                float map_size_x = 600.0f, 
+               float map_size_y = 600.0f);
+
+/**
+ * write sprites into selected .map format
+ * @param sprites spirit list, ID from 1
+ * @param output_path .map path
+ * @param format target map format
+ * @param map_size_x mapX
+ * @param map_size_y mapY
+ * @return whether write success
+ */
+bool write_map(const std::vector<Sprite>& sprites,
+               const std::string& output_path,
+               MapFormat format,
+               float map_size_x = 600.0f,
                float map_size_y = 600.0f);
 
 } // namespace auto_mapper::io

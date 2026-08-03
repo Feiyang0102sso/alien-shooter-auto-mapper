@@ -37,6 +37,8 @@ target_link_libraries(auto_mapper_common PUBLIC spdlog::spdlog)
 
 # io/
 set(IO_SOURCES
+    src/auto_mapper/io/as1_map_writer.cpp
+    src/auto_mapper/io/as2_map_writer.cpp
     src/auto_mapper/io/map_writer.cpp
 )
 add_library(auto_mapper_io STATIC ${IO_SOURCES})

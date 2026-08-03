@@ -1,0 +1,629 @@
+//------------------------------------------------
+//--- 010 Editor v15.0.2 Binary Template
+//
+//      File: AS2_MAP.bt
+//   Authors: Feiyang
+//   Version: 1.0
+//   Purpose: Alien Shooter 2 / Zombie Shooter 2 map files
+//  Category: Game
+// File Mask: *.map
+//  ID Bytes: 52 45 53 20 // "RES "
+//   History: 1.0 - 2026-07-27 - Based on AS2R/AS2
+//------------------------------------------------
+
+string environmentFormat(uint32 value)
+{
+    local uint32 envShadow = 0x00000001;
+    local uint32 envRain = 0x00000C00;
+    local uint32 envSnow = 0x0000C000;
+    local uint32 envSunlight = 0x00010000;
+
+    string text = "";
+
+    if (value & envShadow)
+        text += "Shadow ";
+
+    if (value & envRain)
+        text += "Rain ";
+
+    if (value & envSnow)
+        text += "Snow ";
+
+    if (value & envSunlight)
+        text += "Sunlight ";
+
+    if (text == "")
+        text = "None";
+
+    return text;
+}
+
+/*
+    Map gamma block fixed 0x08 bytes.
+    The editor shows three RGB sliders. Pulling downward makes the map darker,
+    and pulling upward makes the map brighter.
+    The slider center is drawn as 0, but the decimal input box uses 128 as the
+    neutral center value.
+    Pulling upward makes the decimal input value decrease from 255 to 128.
+    Pulling downward makes the decimal input value increase from 1 to 127.
+
+    Maps store gamma as two BGR blocks:
+    lower* stores UI values below 128 as UI * 2 when value is greater than 1.
+    upper* stores UI values from 128 upward as 2 * (255 - UI).
+    The first block may also contain 0x01 marker bytes when upper channels are used.
+*/
+struct MapGamma {
+    ubyte   lowerBlue   <format=hex>;   // Gamma B when UI value < 128
+    ubyte   lowerGreen  <format=hex>;   // Gamma G when UI value < 128
+    ubyte   lowerRed    <format=hex>;   // Gamma R when UI value < 128
+    ubyte   upperMarker <format=hex>;   // Editor marker/unknown, may become 0x01.
+
+    ubyte   upperBlue   <format=hex>;   // Gamma B when UI value >= 128
+    ubyte   upperGreen  <format=hex>;   // Gamma G when UI value >= 128
+    ubyte   upperRed    <format=hex>;   // Gamma R when UI value >= 128
+    ubyte   reserved    <format=hex>;   // Reserved/unknown, currently observed as 0.
+};
+
+int mapGammaUiValue(ubyte lowerValue, ubyte upperValue)
+{
+    local int uiValue;
+
+    if (upperValue > 0)
+        uiValue = 255 - upperValue / 2;
+    else if (lowerValue > 1)
+        uiValue = lowerValue / 2;
+    else
+        uiValue = 0;
+
+    return uiValue;
+}
+
+string mapGammaFormat(MapGamma &value)
+{
+    local int red;
+    local int green;
+    local int blue;
+
+    red = mapGammaUiValue(value.lowerRed, value.upperRed);
+    green = mapGammaUiValue(value.lowerGreen, value.upperGreen);
+    blue = mapGammaUiValue(value.lowerBlue, value.upperBlue);
+
+    string text;
+    SPrintf(text, "MapGamma 0x%02X%02X%02X", red, green, blue);
+    return text;
+}
+
+// MAP header fixed
+struct FileHeader {
+    char    RES_Magic[4];           // "RES "
+    uint32  mapSize;                // map size
+    char    MAP_Magic[4];           // "MAP "
+};
+
+string mapVersionFormat(int32 value)
+{
+    if (value == 0x13)
+    {
+        return "13 AS2 map";
+    }
+    else if (value == 0x14)
+    {
+        return "14 AS2R/AS2C/ZS2 map";
+    }
+    else
+    {
+        local string text;
+        SPrintf(text, "unknown map version 0x%X", value);
+        return text;
+    }
+}
+
+// GRPH data.
+// AS2 legacy version 13 uses graphInfoSize 0x14 and has no sun fields.
+// AS2R+ version 14 and later currently use graphInfoSize 0x38 with sun fields.
+struct GRPH_Data {
+    char    GRPH_Magic[4];          // "GRPH"
+    uint32  graphSize;              // graph data size: 0x24 in AS2 legacy, 0x48 in AS2R+
+
+    uint32  options <format=hex>;   // usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+
+    uint32  graphInfoSize;          // sub section graph info size: 0x14 in AS2 legacy, 0x38 in AS2R+
+    local int64 graphInfoStart = FTell();
+
+    uint32  environment <read=environmentFormat, format=hex>; // Environment checkboxes, additive flags.
+                                      
+    MapGamma gamma <read=mapGammaFormat>; // Map gamma, stored as two BGR blocks.
+    uint32  windDirection;          // wind direction default 200
+    float   windSpeed;              // wind speed default 25 / 1000 = 0.025
+
+    if (graphInfoSize >= 0x20)
+    {
+        // default is FF FF FF FF; 0x20; 0x28
+        uint32  sunGamma <format=hex>;  // Sun light RGB sliders. Stored as BGRX; X seems unused. Up = 0xFF, down = 0x00.
+        // These 2 properties are buggy... UI has no text labels gamma control seems to be bug side effect
+        uint32  sunProperty1;           // Unknown sun property. UI horizontal slider range write 0-255 into gamma.
+        uint32  sunProperty2;           // Unknown sun property. UI vertical slider can write a large value into gamma.
+                                        // Note: moving property1/property2 together seems to change mapGamma's G value.
+                                        // Gamma RGB sliders are not restored by that change; likely an editor UI bug.
+    }
+
+    if (graphInfoSize >= 0x38)
+    {
+        ubyte   reserved[24];           // Reserved/unknown use... all 0 in AS2R maps
+    }
+
+    if (FTell() - graphInfoStart < graphInfoSize)
+    {
+        local int64 graphTailSize = graphInfoSize - (FTell() - graphInfoStart);
+        ubyte   graphTail[graphTailSize] <format=hex>;
+    }
+};
+
+// HEAD data fixed
+struct HEAD_Data {
+    char    HEAD_Magic[4];          // "HEAD"
+    uint32  headSize;               // head data size fixed 0x28
+
+    uint32  options <format=hex>;   // usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+
+    uint32  mapInfoSize;            // sub section map info size fixed 0x18
+    float   mapSizeX;               // map width
+    float   mapSizeY;               // map height
+    float   mapCamaraX;             // default camera X on load
+    float   mapCamaraY;             // default camera Y on load
+    uint32  currentTime;            // elapsed time
+    int32   version <read=mapVersionFormat>; // version number, 0x13 AS2, 0x14 AS2R/AS2C/ZS2
+
+    Printf("[INFO] Map version: %s\n", mapVersionFormat(version));
+};
+
+/*
+    Vid gamma block fixed 0x08 bytes.
+    range [-255, 255].
+    Negative values are stored as absolute values in the first BGRA block.
+    Positive values are stored directly in the second BGRA block.
+    For each channel, only one side should be used: negative side first,
+    otherwise positive side.
+*/
+struct VidGamma {
+    ubyte   negativeBlue;           // Unit Property B when value < 0
+    ubyte   negativeGreen;          // Unit Property G when value < 0
+    ubyte   negativeRed;            // Unit Property R when value < 0
+    ubyte   negativeAlpha;          // Unit Property A when value < 0
+
+    ubyte   positiveBlue;           // Unit Property B when value > 0
+    ubyte   positiveGreen;          // Unit Property G when value > 0
+    ubyte   positiveRed;            // Unit Property R when value > 0
+    ubyte   positiveAlpha;          // Unit Property A when value > 0
+};
+
+string visualGammaFormat(VidGamma &value)
+{
+    local int red;
+    local int green;
+    local int blue;
+    local int alpha;
+
+    if (value.negativeRed > 0)
+        red = -value.negativeRed;
+    else
+        red = value.positiveRed;
+
+    if (value.negativeGreen > 0)
+        green = -value.negativeGreen;
+    else
+        green = value.positiveGreen;
+
+    if (value.negativeBlue > 0)
+        blue = -value.negativeBlue;
+    else
+        blue = value.positiveBlue;
+
+    if (value.negativeAlpha > 0)
+        alpha = -value.negativeAlpha;
+    else
+        alpha = value.positiveAlpha;
+
+    string text;
+    SPrintf(text, "RGBA(%d, %d, %d, %d)", red, green, blue, alpha);
+    return text;
+}
+
+// single sprite record fixed 0x30 bytes for AS2/ZS2
+struct SpriteRecord {
+    uint32  objectId;               // ID
+    int32   vid;                    // VID Num
+    float   posX;                   // Coor X
+    float   posY;                   // Coor Y
+    float   posZ;                   // Coor Z
+    uint32  direction;              // dir
+    int32   army;                   // Army
+
+    VidGamma gamma <read=visualGammaFormat>; // Unit Property visual gamma
+
+    float   scaleX;                 // Unit Property Scale X
+    float   scaleY;                 // Unit Property Scale Y
+    float   scaleZ;                 // Unit Property Scale Z
+};
+
+// SPR data variable
+struct SPR_Data
+{
+    char    SPR_Magic[4];           // "SPR "
+    uint32  sprSize;                // spr data size
+
+    uint32  options <format=hex>;   // usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+
+    uint32  sprInfoSize;            // sub section spr info size, variable
+
+    local int count = (sprInfoSize - 4) / sizeof(SpriteRecord);
+    SpriteRecord sprites[count];
+
+    uint32  terminator <format=hex>;
+};
+
+string commandIDName(uint32 value)
+{
+    switch(value)
+    {
+        // ANI_*
+        case 0: return "ANI_STAND";
+        case 1: return "ANI_STOP_MOVE_ANI_BUILD";
+        case 2: return "ANI_GO";
+        case 3: return "ANI_START_MOVE";
+        case 4: return "ANI_L_ROTATE";
+        case 5: return "ANI_R_ROTATE";
+        case 6: return "ANI_OPEN";
+        case 7: return "ANI_HIT";
+        case 8: return "ANI_FIGHT";
+        case 9: return "ANI_SALUT";
+        case 10: return "ANI_STAND_OPEN";
+        case 11: return "ANI_CLASH_VERT";
+        case 12: return "ANI_LAZY_ANI_CLASH";
+        case 13: return "ANI_WOUND";
+        case 14: return "ANI_BIRTH";
+        case 15: return "ANI_DEATH";
+        case 16: return "ANI_DEATH2";
+
+        // ACT_*
+        case 32: return "ACT_ATTACK";
+        case 33: return "ACT_MOVE";
+        case 34: return "ACT_MOVE_TO";
+        case 35: return "ACT_BUILD_UNIT";
+        case 36: return "ACT_PATROL";
+        case 37: return "ACT_COOR_ATTACK";
+        case 38: return "ACT_RANDOM";
+        case 39: return "ACT_STOP";
+        case 40: return "ACT_PAUSE";
+        case 41: return "ACT_ROTATE";
+        case 43: return "ACT_FLAGMAN_TRIGGER";
+        case 44: return "ACT_MOVE_ACCURATELY";
+        case 45: return "ACT_FOLLOW";
+        case 46: return "ACT_STAND_FIRM";
+        case 62: return "ACT_CHANGE_VID";
+        case 63: return "ACT_CHANGE_COOR";
+        case 71: return "ACT_GOTO_STACK";
+        case 72: return "ACT_CLEAR_STACK";
+        case 73: return "ACT_STOP_STACK";
+        case 77: return "ACT_WHILE_NOT_QUEST";
+        case 78: return "ACT_SET_QUEST";
+        case 79: return "ACT_WHILE_NOT_SCRIPT_VAR";
+        case 85: return "ACT_DAMAGE";
+        case 88: return "ACT_SET_HP";
+        case 91: return "ACT_SET_GOAL_FOR_TELEPORT";
+        case 95: return "ACT_SET_BEHAVE";
+        case 97: return "ACT_SET_ARMY";
+        case 98: return "ACT_SET_INVISIBLE";
+        case 102: return "ACT_SET_LINK";
+        case 104: return "ACT_SET_UPLINK";
+        case 113: return "ACT_SET_DEATH_TIMER";
+        case 115: return "ACT_SET_DIALOG";
+        case 116: return "ACT_SET_FLAGMAN_DIALOG";
+        case 131: return "ACT_SCRIPT_VAR";
+        case 134: return "ACT_DESTROY_UNIT";
+        case 135: return "ACT_PLAY_SFX";
+        case 136: return "ACT_SCRIPT_EVENT";
+
+        default:
+            string text;
+            SPrintf(text, "UNKNOWN_COMMAND_%u", value);
+            return text;
+    }
+}
+
+string commandIdFormat(uint32 value)
+{
+    string text;
+    SPrintf(text, "%s (%u)", commandIDName(value), value);
+    return text;
+}
+
+// single command in the stack with its params, fixed 4 * 4 bytes.
+struct SingleCommandRecord {
+    uint32 actionId <read=commandIdFormat>;
+    uint32 param1;
+    uint32 param2;
+    uint32 param3;
+};
+
+string commandRecordFormat(SingleCommandRecord &value)
+{
+    string text;
+    SPrintf(
+        text,
+        "%s %u %u %u",
+        commandIDName(value.actionId),
+        value.param1,
+        value.param2,
+        value.param3
+    );
+    return text;
+}
+
+// one command stack tab in the map editor
+struct CommandStackSlot {
+    uint32 cmdCount;
+
+    if (cmdCount > 0)
+        SingleCommandRecord commands[cmdCount] <read=commandRecordFormat>;
+};
+
+// map editor has four stack blocks: (0), (1), (2), (3).
+struct CommandStackBlock {
+    uint32 stackCount;
+
+    if (stackCount > 0)
+        CommandStackSlot slots[stackCount] <optimize=false>;
+};
+
+// list that contains all drop loot
+struct DropList {
+    uint32 itemCount;
+
+    if (itemCount > 0)
+        uint32 itemVids[itemCount];
+};
+
+string behaviorFormat(uint32 value)
+{
+    local uint32 aggressive = 1;
+    local uint32 active = 2;
+    local uint32 randomMove = 4;
+    local uint32 inheritStackAfterDeath = 0x10000;
+
+    string text = "";
+
+    if (value & aggressive)
+        text += "Aggressive ";
+
+    if (value & active)
+        text += "Active ";
+
+    if (value & randomMove)
+        text += "RandomMove ";
+
+    if (value & inheritStackAfterDeath)
+        text += "InheritStackAfterDeath ";
+
+    if (text == "")
+        text = "None";
+
+    return text;
+}
+
+/*
+    Struct for each SPRD sub section.
+    Top level is still ObjectId + StatePayload, same as AS1/ZS1.
+
+    Current AS2 samples show this layout:
+    SPRD_Sub = subSize + ObjectId + StatePayload
+    StatePayload = Behavior + CommandStackBlock + DropList + nameText
+    CommandStackBlock = stackCount + CommandStackSlot[stackCount]
+    CommandStackSlot = cmdCount + SingleCommandRecord[cmdCount]
+    DropList = itemCount + itemVids[itemCount]
+    nameText = null-terminated string
+
+    If command/drop data is absent, it will keep 00 00 00 00
+    If one command is inserted, then it will automatically got 4 stacks
+    nameText always includes 00 as terminator.
+*/
+struct SPRD_Sub
+{
+    uint32 subSize;                 // payload size after this field
+
+    if (subSize == 4)
+    {
+        uint32 terminator <format=hex>;
+    }
+    else
+    {
+        local int64 payloadStart = FTell();
+
+        uint32 objectId;            // ID
+
+        local uint32 consumed =
+            (uint32)(FTell() - payloadStart);
+
+        local uint32 remaining =
+            subSize - consumed;
+
+        if (remaining >= 4)
+        {
+            uint32 behavior <read=behaviorFormat>; // AS2 behavior flags
+            remaining -= 4;
+        }
+
+        if (remaining >= 4)
+        {
+            local int64 stackStart = FTell();
+            local uint32 possibleStackCount = ReadUInt(stackStart);
+            local uint32 stackListSize = 4;
+            local uint32 stackIndex;
+            local int64 stackCursor = stackStart + 4;
+            local uint32 commandCount;
+
+            for (stackIndex = 0; stackIndex < possibleStackCount; stackIndex++)
+            {
+                if (stackListSize + 4 > remaining)
+                    break;
+
+                commandCount = ReadUInt(stackCursor);
+                stackListSize += 4 + commandCount * sizeof(SingleCommandRecord);
+                stackCursor += 4 + commandCount * sizeof(SingleCommandRecord);
+
+                if (stackListSize > remaining)
+                    break;
+            }
+
+            if (
+                stackIndex == possibleStackCount &&
+                stackListSize <= remaining
+            )
+            {
+                CommandStackBlock commandStackBlock;
+                remaining -= stackListSize;
+            }
+        }
+
+        if (remaining >= 4)
+        {
+            local uint32 possibleItemCount = ReadUInt(FTell());
+            local uint32 dropListSize =
+                4 + possibleItemCount * sizeof(uint32);
+
+            if (
+                dropListSize <= remaining
+            )
+            {
+                DropList dropList;
+                remaining -= dropListSize;
+            }
+        }
+
+        if (
+            remaining > 0 &&
+            ReadUByte(FTell()) == 0
+        )
+        {
+            ubyte nameTextTerminator <format=hex>; // Empty nameText terminator.
+
+            if (remaining > 1)
+            {
+                ubyte nameTextPadding[remaining - 1] <format=hex>;
+            }
+        }
+        else if (
+            remaining > 0 &&
+            ReadUByte(FTell() + remaining - 1) == 0
+        )
+        {
+            char nameText[remaining - 1];   // arbitrary name text, spaces are meaningful
+            ubyte nameTextTerminator <format=hex>;
+        }
+        else if (remaining > 0)
+        {
+            char nameText[remaining];       // arbitrary name text, spaces are meaningful
+        }
+    }
+};
+
+// SPRD data variable
+struct SPRD_Data {
+    char    SPRD_Magic[4];          // "SPRD"
+    uint32  sprdSize;               // sprd data size
+
+    uint32  options <format=hex>;   // usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, variable, object state count + 1 terminator
+
+    SPRD_Sub subs[subresourceCount] <optimize=false>;
+};
+
+// SPRD nameText may end on an odd offset; one 0x00 byte is used for 2-byte alignment.
+struct SPRD_Padding {
+    local int64 paddingOffset = FTell();
+    Printf("[INFO] SPRD alignment padding 00 at 0x%X\n", paddingOffset);
+    ubyte padding <format=hex>;
+};
+
+// PLAY data fixed 0x30 bytes for AS2/ZS2.
+// Compared with AS1/ZS1, playInfoSize grows from 0x10 to 0x20.
+// Current samples still store the first four uint32 values as player object IDs.
+struct PLAY_Data {
+    char    PLAY_Magic[4];          // "PLAY"
+    uint32  playSize;               // play data size fixed 0x30
+
+    uint32  options <format=hex>;   // usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+
+    uint32  playInfoSize;           // play info size fixed 0x20
+
+    uint32  player1_ObjectId;       // P1 ID
+    uint32  player2_ObjectId;       // P2 ID
+    uint32  player3_ObjectId;       // P3 ID
+    uint32  player4_ObjectId;       // P4 ID
+
+    ubyte   reserved[16];           // Reserved/unknown use, all 0 in current AS2 samples.
+};
+
+// one group member list, terminated by 0xFFFFFFFF.
+struct Group {
+    while (ReadUInt(FTell()) != 0xFFFFFFFF)
+    {
+        uint32 member_ObjectId;
+    }
+
+    uint32 groupTerminator <format=hex>;
+};
+
+// GROU data variable.
+// Current AS2 samples use the same group list layout as AS1/ZS1.
+struct GROU_Data {
+    char    GROU_Magic[4];          // "GROU"
+    uint32  groupSize;              // group data size variable
+
+    uint32  options <format=hex>;   // usually 0x80000000
+    uint32  packedDiff;             // differ when packed or compressed, usually 0
+    uint32  subresourceCount;       // sub_no, here it is fixed 1
+
+    uint32  groupInfoSize;          // group info size variable
+
+    if (groupInfoSize > 0)
+    {
+        local int64 groupStart = FTell();
+
+        while (
+            FTell() - groupStart < groupInfoSize &&
+            ReadUInt(FTell()) != 0xFFFFFFFF
+        )
+        {
+            Group group;
+        }
+
+        if (FTell() - groupStart < groupInfoSize)
+        {
+            uint32 globalTerminator <format=hex>;
+        }
+    }
+};
+
+FileHeader      fileHeader  <bgcolor=cLtBlue>;
+GRPH_Data       graph       <bgcolor=cLtGreen>;
+HEAD_Data       mapHead     <bgcolor=cLtPurple>;
+SPR_Data        spr         <bgcolor=cLtRed>;
+SPRD_Data       sprd        <bgcolor=cLtYellow>;
+
+if ((FTell() % 2) != 0 && ReadUByte(FTell()) == 0)
+{
+    SPRD_Padding sprdPadding <bgcolor=cGray>;
+}
+
+PLAY_Data       play        <bgcolor=cAqua>;
+GROU_Data       group       <bgcolor=cDkPurple>;
