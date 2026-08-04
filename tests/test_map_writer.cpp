@@ -84,8 +84,8 @@ TEST(MapWriterTest, AS2EmptyTemplatesKeepExpectedMapVersions) {
 }
 
 TEST(MapWriterTest, AS2EmptyTemplatesMatchPreDemoSamples) {
-    std::string as2_path = resolve_test_path("_pre-demo/AS2/empty/AS2empty.map");
-    std::string as2r_path = resolve_test_path("_pre-demo/AS2/empty/AS2Rempty.map");
+    std::string as2_path = resolve_test_path("tests/golden/AS2/empty/AS2empty.map");
+    std::string as2r_path = resolve_test_path("tests/golden/AS2/empty/AS2Rempty.map");
 
     std::vector<uint8_t> as2_sample = load_binary_file(as2_path);
     std::vector<uint8_t> as2r_sample = load_binary_file(as2r_path);
