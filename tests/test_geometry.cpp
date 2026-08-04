@@ -53,7 +53,7 @@ TEST(GeometryTest, ToIsoLabWallSteps) {
     EXPECT_FLOAT_EQ(p3.y, 128.0f);
 }
 
-#include "auto_mapper/core/wall_builder.h"
+#include "auto_mapper/core/wall_builder/wall_builder.h"
 
 TEST(WallBuilderTest, FloodFillTopology) {
     // 3x3 square room: (0,0) to (3,0), (3,0) to (3,3), (3,3) to (0,3), (0,3) to (0,0)

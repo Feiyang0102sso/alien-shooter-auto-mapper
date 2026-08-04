@@ -1,5 +1,5 @@
 #include "auto_mapper/api.h"
-#include "auto_mapper/core/wall_builder.h"
+#include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/core/door_builder.h"
 #include "auto_mapper/core/randomizer.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
@@ -38,43 +38,7 @@ static constexpr int STANDARD_DOOR_SIZES[] = {
     auto_mapper::core::DOOR_STANDARD.large.span_steps
 };
 
-static bool is_random_direction_sprite(int vid) {
-    if (vid == auto_mapper::core::WALL_STANDARD.dir_a_vid) {
-        return true;
-    }
-
-    if (vid == auto_mapper::core::WALL_STANDARD.dir_b_vid) {
-        return true;
-    }
-
-    if (vid == auto_mapper::core::WALL_STANDARD.pillar_vid) {
-        return true;
-    }
-
-    if (vid == auto_mapper::core::WALL_LAB.dir_a_vid) {
-        return true;
-    }
-
-    if (vid == auto_mapper::core::WALL_LAB.dir_b_vid) {
-        return true;
-    }
-
-    if (vid == auto_mapper::core::WALL_LAB.pillar_vid) {
-        return true;
-    }
-
-    if (vid == auto_mapper::core::WALL_STANDARD_DARK.dir_a_vid) {
-        return true;
-    }
-
-    if (vid == auto_mapper::core::WALL_STANDARD_DARK.dir_b_vid) {
-        return true;
-    }
-
-    if (vid == auto_mapper::core::WALL_STANDARD_DARK.pillar_vid) {
-        return true;
-    }
-
+static bool is_random_floor_direction_sprite(int vid) {
     if (vid == auto_mapper::core::FLOOR_STANDARD.vid) {
         return true;
     }
@@ -90,11 +54,11 @@ static bool is_random_direction_sprite(int vid) {
     return false;
 }
 
-static void randomize_wall_and_floor_directions(
+static void randomize_floor_directions(
     std::vector<auto_mapper::io::Sprite>& sprites
 ) {
     for (auto_mapper::io::Sprite& sprite : sprites) {
-        if (is_random_direction_sprite(sprite.vid)) {
+        if (is_random_floor_direction_sprite(sprite.vid)) {
             int direction = auto_mapper::core::Random::get(
                 MIN_SPRITE_DIRECTION,
                 MAX_SPRITE_DIRECTION
@@ -472,7 +436,7 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     std::vector<auto_mapper::io::Sprite> sprites = wall_builder.build(cpp_segments, gen_floor, gen_ceiling, excavations);
 
     if (random_direction) {
-        randomize_wall_and_floor_directions(sprites);
+        randomize_floor_directions(sprites);
     }
 
     // 2. Build doors

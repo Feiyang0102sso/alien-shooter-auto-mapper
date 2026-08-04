@@ -7,13 +7,15 @@
  * projected independently using its own WallProfile, then merged.
  */
 
-#include "auto_mapper/core/wall_builder.h"
+#include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/core/geometry.h"
+#include "auto_mapper/core/randomizer.h"
 #include "auto_mapper/common/logger.h"
 #include <algorithm>
 #include <cmath>
 #include <set>
 #include <map>
+#include <tuple>
 #include <utility>
 #include <unordered_map>
 
@@ -33,6 +35,18 @@ const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
 
     if (wall_type == WALL_TYPE_STANDARD_DARK) {
         return WALL_STANDARD_DARK;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_0) {
+        return WALL_AS2_SET1_FIXED_0;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_1) {
+        return WALL_AS2_SET1_FIXED_1;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_RANDOM) {
+        return WALL_AS2_SET1_RANDOM;
     }
 
     Logger::warning("Unknown wall_type={}, falling back to STANDARD", wall_type);
@@ -137,10 +151,10 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
         }
 
         for (const auto& p : edges_a) {
-            raw_sprites.push_back({p.first, p.second, wt, profile.dir_a_vid});
+            raw_sprites.push_back({p.first, p.second, wt, WallPartKind::DirA});
         }
         for (const auto& p : edges_b) {
-            raw_sprites.push_back({p.first, p.second, wt, profile.dir_b_vid});
+            raw_sprites.push_back({p.first, p.second, wt, WallPartKind::DirB});
         }
 
         std::set<Point> vertices;
@@ -167,17 +181,32 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
             int total_conns = (up ? 1 : 0) + (down ? 1 : 0) + (left ? 1 : 0) + (right ? 1 : 0);
 
             if (total_conns == 1 || (conn_a && conn_b)) {
-                raw_sprites.push_back({x, y, wt, profile.pillar_vid});
+                raw_sprites.push_back({x, y, wt, WallPartKind::Pillar});
             }
         }
     }
 
-    std::sort(raw_sprites.begin(), raw_sprites.end(), [](const RawSprite& a, const RawSprite& b) {
-        if (a.gx == b.gx && a.gy == b.gy) return a.vid < b.vid;
+    auto get_sort_vid = [](const RawSprite& sprite) {
+        const WallProfile& profile = WallBuilder::get_wall_profile(sprite.wall_type);
+        if (sprite.kind == WallPartKind::DirA) {
+            return profile.dir_a_vid;
+        }
+
+        if (sprite.kind == WallPartKind::DirB) {
+            return profile.dir_b_vid;
+        }
+
+        return profile.pillar_vid;
+    };
+
+    std::sort(raw_sprites.begin(), raw_sprites.end(), [&](const RawSprite& a, const RawSprite& b) {
+        if (a.gx == b.gx && a.gy == b.gy) {
+            return get_sort_vid(a) < get_sort_vid(b);
+        }
         return (a.gx + a.gy) < (b.gx + b.gy);
     });
     raw_sprites.erase(std::unique(raw_sprites.begin(), raw_sprites.end(), [](const RawSprite& a, const RawSprite& b) {
-        return a.gx == b.gx && a.gy == b.gy && a.wall_type == b.wall_type && a.vid == b.vid;
+        return a.gx == b.gx && a.gy == b.gy && a.wall_type == b.wall_type && a.kind == b.kind;
     }), raw_sprites.end());
 
     return raw_sprites;
@@ -427,9 +456,17 @@ std::vector<io::Sprite> WallBuilder::place_ceilings(const std::vector<Segment>& 
 std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<RawSprite>& raw_sprites) const {
     std::vector<io::Sprite> wall_sprites;
     wall_sprites.reserve(raw_sprites.size());
+    std::map<std::tuple<int, int, int>, int> selected_variant_indices;
 
     for (const auto& rs : raw_sprites) {
-        wall_sprites.push_back(place_single_wall(rs.gx, rs.gy, rs.wall_type, rs.vid));
+        std::tuple<int, int, int> variant_key = {rs.wall_type, rs.gx, rs.gy};
+        if (selected_variant_indices.find(variant_key) == selected_variant_indices.end()) {
+            const WallProfile& profile = get_wall_profile(rs.wall_type);
+            selected_variant_indices[variant_key] = select_wall_variant_index(profile);
+        }
+
+        int variant_index = selected_variant_indices[variant_key];
+        wall_sprites.push_back(place_single_wall_with_variant(rs.gx, rs.gy, rs.wall_type, rs.kind, variant_index));
     }
     return wall_sprites;
 }
@@ -452,20 +489,19 @@ std::vector<io::Sprite> WallBuilder::build(
 
         for (const auto& rs : raw_sprites) {
             bool to_erase = false;
-            const WallProfile& profile = get_wall_profile(rs.wall_type);
 
             for (const auto& ex : excavations) {
                 if (ex.wall_type == rs.wall_type) {
                     if (ex.direction_type == 0) {  // A direction (vertical, along y axis)
                         // Erase wall segment in range [ex.pos.y, ex.pos.y + ex.size - 1]
-                        if (rs.vid == profile.dir_a_vid) {
+                        if (rs.kind == WallPartKind::DirA) {
                             if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size - 1) {
                                 to_erase = true;
                                 break;
                             }
                         }
                         // Erase pillar in range [ex.pos.y, ex.pos.y + ex.size]
-                        if (rs.vid == profile.pillar_vid) {
+                        if (rs.kind == WallPartKind::Pillar) {
                             if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size) {
                                 to_erase = true;
                                 break;
@@ -473,14 +509,14 @@ std::vector<io::Sprite> WallBuilder::build(
                         }
                     } else if (ex.direction_type == 1) {  // B direction (horizontal, along x axis)
                         // Erase wall segment in range [ex.pos.x, ex.pos.x + ex.size - 1]
-                        if (rs.vid == profile.dir_b_vid) {
+                        if (rs.kind == WallPartKind::DirB) {
                             if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size - 1) {
                                 to_erase = true;
                                 break;
                             }
                         }
                         // Erase pillar in range [ex.pos.x, ex.pos.x + ex.size]
-                        if (rs.vid == profile.pillar_vid) {
+                        if (rs.kind == WallPartKind::Pillar) {
                             if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size) {
                                 to_erase = true;
                                 break;
@@ -535,23 +571,76 @@ io::Sprite WallBuilder::place_single_floor_celling(int gx, int gy, int vid, floa
     return io::Sprite(vid, pt.x, pt.y, pos_z, 0);
 }
 
-io::Sprite WallBuilder::place_single_wall(int gx, int gy, int wall_type, int vid) const {
+int WallBuilder::select_wall_variant_index(const WallProfile& profile) {
+    if (profile.variant_count <= 0) {
+        return 0;
+    }
+
+    if (profile.variant_pool_count <= 0) {
+        return 0;
+    }
+
+    int pool_index = profile.active_variant_pool;
+    if (pool_index < 0 || pool_index >= profile.variant_pool_count) {
+        pool_index = 0;
+    }
+
+    const WallVariantPool& pool = profile.variant_pools[pool_index];
+    if (pool.variant_count <= 0) {
+        return 0;
+    }
+
+    int selected_pool_item = 0;
+    if (pool.randomize) {
+        selected_pool_item = Random::get(0, pool.variant_count - 1);
+    }
+
+    int variant_index = pool.variant_indices[selected_pool_item];
+    if (variant_index < 0 || variant_index >= profile.variant_count) {
+        return 0;
+    }
+
+    return variant_index;
+}
+
+const WallVariant& WallBuilder::select_wall_variant(const WallProfile& profile) {
+    int variant_index = select_wall_variant_index(profile);
+    return profile.variants[variant_index];
+}
+
+const WallPartAsset& WallBuilder::select_wall_part_asset(const WallVariant& variant, WallPartKind kind) {
+    if (kind == WallPartKind::DirA) {
+        return variant.dir_a;
+    }
+
+    if (kind == WallPartKind::DirB) {
+        return variant.dir_b;
+    }
+
+    return variant.pillar;
+}
+
+io::Sprite WallBuilder::place_single_wall(int gx, int gy, int wall_type, WallPartKind kind) const {
+    const WallProfile& profile = get_wall_profile(wall_type);
+    int variant_index = select_wall_variant_index(profile);
+    return place_single_wall_with_variant(gx, gy, wall_type, kind, variant_index);
+}
+
+io::Sprite WallBuilder::place_single_wall_with_variant(int gx, int gy, int wall_type, WallPartKind kind, int variant_index) const {
     const WallProfile& profile = get_wall_profile(wall_type);
     MapPoint shift = get_wall_shift(map_size_x_, profile);
     MapPoint pos = to_iso(GridPoint{gx, gy}, profile.step_x, profile.step_y, shift);
-
-    if (vid == profile.dir_a_vid) {
-        pos.x += profile.offset_a_x;
-        pos.y += profile.offset_a_y;
-    } else if (vid == profile.dir_b_vid) {
-        pos.x += profile.offset_b_x;
-        pos.y += profile.offset_b_y;
-    } else if (vid == profile.pillar_vid) {
-        pos.x += profile.offset_p_x;
-        pos.y += profile.offset_p_y;
+    if (variant_index < 0 || variant_index >= profile.variant_count) {
+        variant_index = 0;
     }
 
-    return io::Sprite(vid, pos.x, pos.y);
+    const WallVariant& variant = profile.variants[variant_index];
+    const WallPartAsset& asset = select_wall_part_asset(variant, kind);
+
+    pos.x += asset.offset_x;
+    pos.y += asset.offset_y;
+
+    return io::Sprite(asset.vid, pos.x, pos.y, 0.0f, asset.direction);
 }
 
 } // namespace auto_mapper::core

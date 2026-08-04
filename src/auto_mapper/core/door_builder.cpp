@@ -5,7 +5,7 @@
 
 #include "auto_mapper/core/door_builder.h"
 #include "auto_mapper/core/randomizer.h"
-#include "auto_mapper/core/wall_builder.h"
+#include "auto_mapper/core/wall_builder/wall_builder.h"
 
 namespace auto_mapper::core {
 

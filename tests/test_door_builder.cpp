@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "auto_mapper/core/door_builder.h"
-#include "auto_mapper/core/wall_builder.h"
+#include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include "utils/test_utils.h"
 #include <set>

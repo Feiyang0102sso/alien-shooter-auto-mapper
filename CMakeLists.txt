@@ -47,7 +47,7 @@ target_link_libraries(auto_mapper_io PUBLIC auto_mapper_common)
 # core/
 set(CORE_SOURCES
     src/auto_mapper/core/geometry.cpp
-    src/auto_mapper/core/wall_builder.cpp
+    src/auto_mapper/core/wall_builder/wall_builder.cpp
     src/auto_mapper/core/door_builder.cpp
     src/auto_mapper/core/randomizer.cpp
     src/auto_mapper/core/indoor_decorations/array_layout.cpp

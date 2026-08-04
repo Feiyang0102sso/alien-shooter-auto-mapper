@@ -20,6 +20,32 @@ Unified name for Alien Shooter 2 Reloaded, Alien Shooter 2 Conscription, and Zom
 
 A group of wall sprites that share the same physical grid step and visual style.
 
+## Wall Variant
+
+A visual asset choice inside a wall set. A wall set may have different variant counts for direction parts and pillar parts.
+
+Wall variant is not the same as Direction A or Direction B. Direction names describe wall axes; variants describe selectable assets on those axes.
+
+Each wall variant still follows the same common shape: one Direction A wall part, one Direction B wall part, and one Pillar part. Wall step is usually shared by the whole wall set.
+
+The same VID may appear in multiple wall variants when its sprite `direction` value changes.
+
+## Wall Direction Value
+
+The numeric `direction` field stored on a `.map` sprite record.
+
+Wall Direction Value is not Direction A or Direction B. Direction A/B names describe wall axes; Wall Direction Value controls sprite orientation or animation state inside the game map data.
+
+## Locked Wall Variant Group
+
+A group of wall variants that must be selected together because their direction parts and pillars visually match each other.
+
+## Random Wall Variant Pool
+
+A group of compatible wall variants that may be randomly selected within the pool.
+
+Direction A, Direction B, and Pillar may all participate in random selection. If a part has only one compatible asset in the selected pool, that part is effectively fixed for that pool.
+
 ## Grid Coordinate
 
 The logical wall grid coordinate used by the editor and generator, written as `(gx, gy)`.
