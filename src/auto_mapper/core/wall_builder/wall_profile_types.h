@@ -19,6 +19,11 @@ enum class WallPartKind {
     Pillar
 };
 
+enum class WallPillarMode {
+    Complete,
+    DirectionalSlices
+};
+
 struct WallPartAsset {
     int vid;
     uint32_t direction;
@@ -56,6 +61,22 @@ struct WallProfile {
     WallVariantPool variant_pools[MAX_WALL_VARIANT_POOLS];
     int variant_pool_count = 0;
     int active_variant_pool = 0;
+    WallPillarMode pillar_mode = WallPillarMode::Complete;
+    WallPartAsset pillar_slice_up = {0, 0, 0.0f, 0.0f};
+    WallPartAsset pillar_slice_down = {0, 0, 0.0f, 0.0f};
+    WallPartAsset pillar_slice_left = {0, 0, 0.0f, 0.0f};
+    WallPartAsset pillar_slice_right = {0, 0, 0.0f, 0.0f};
+    bool randomize_wall_parts_independently = false;
+    int rare_variant_index = -1;
+    int rare_variant_min_interval = 0;
+    int rare_variant_max_interval = 0;
+    int corner_wall_variant_index = -1;
+    bool use_corner_pillar_assets = false;
+    bool skip_unmapped_pillars = false;
+    WallPartAsset pillar_corner_down_right = {0, 0, 0.0f, 0.0f};
+    WallPartAsset pillar_corner_down_left = {0, 0, 0.0f, 0.0f};
+    WallPartAsset pillar_corner_up_left = {0, 0, 0.0f, 0.0f};
+    WallPartAsset pillar_corner_up_right = {0, 0, 0.0f, 0.0f};
 };
 
 struct FloorProfile {

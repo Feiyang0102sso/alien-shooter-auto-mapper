@@ -49,6 +49,38 @@ const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
         return WALL_AS2_SET1_RANDOM;
     }
 
+    if (wall_type == WALL_TYPE_AS2_WALL_SET2_RANDOM) {
+        return WALL_AS2_SET2_RANDOM;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET3_RANDOM) {
+        return WALL_AS2_SET3_RANDOM;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET4_RANDOM) {
+        return WALL_AS2_SET4_RANDOM;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET5_RANDOM) {
+        return WALL_AS2_SET5_RANDOM;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET6_RANDOM) {
+        return WALL_AS2_SET6_RANDOM;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET7_RANDOM) {
+        return WALL_AS2_SET7_RANDOM;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET8_RANDOM) {
+        return WALL_AS2_SET8_RANDOM;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET9_RANDOM) {
+        return WALL_AS2_SET9_RANDOM;
+    }
+
     Logger::warning("Unknown wall_type={}, falling back to STANDARD", wall_type);
     return WALL_STANDARD;
 }
@@ -150,13 +182,6 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
             }
         }
 
-        for (const auto& p : edges_a) {
-            raw_sprites.push_back({p.first, p.second, wt, WallPartKind::DirA});
-        }
-        for (const auto& p : edges_b) {
-            raw_sprites.push_back({p.first, p.second, wt, WallPartKind::DirB});
-        }
-
         std::set<Point> vertices;
         for (const auto& p : edges_a) {
             vertices.insert({p.first, p.second - 1});
@@ -165,6 +190,28 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
         for (const auto& p : edges_b) {
             vertices.insert({p.first - 1, p.second});
             vertices.insert({p.first, p.second});
+        }
+
+        auto vertex_has_corner_connection = [&](int x, int y) {
+            bool up = edges_a.count({x, y}) > 0;
+            bool down = edges_a.count({x, y + 1}) > 0;
+            bool left = edges_b.count({x, y}) > 0;
+            bool right = edges_b.count({x + 1, y}) > 0;
+
+            bool conn_a = up || down;
+            bool conn_b = left || right;
+            return conn_a && conn_b;
+        };
+
+        for (const auto& p : edges_a) {
+            bool uses_corner_wall_variant = vertex_has_corner_connection(p.first, p.second - 1) ||
+                vertex_has_corner_connection(p.first, p.second);
+            raw_sprites.push_back({p.first, p.second, wt, WallPartKind::DirA, uses_corner_wall_variant});
+        }
+        for (const auto& p : edges_b) {
+            bool uses_corner_wall_variant = vertex_has_corner_connection(p.first - 1, p.second) ||
+                vertex_has_corner_connection(p.first, p.second);
+            raw_sprites.push_back({p.first, p.second, wt, WallPartKind::DirB, uses_corner_wall_variant});
         }
 
         for (const auto& v : vertices) {
@@ -181,7 +228,7 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
             int total_conns = (up ? 1 : 0) + (down ? 1 : 0) + (left ? 1 : 0) + (right ? 1 : 0);
 
             if (total_conns == 1 || (conn_a && conn_b)) {
-                raw_sprites.push_back({x, y, wt, WallPartKind::Pillar});
+                raw_sprites.push_back({x, y, wt, WallPartKind::Pillar, false, up, down, left, right});
             }
         }
     }
@@ -457,15 +504,63 @@ std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<R
     std::vector<io::Sprite> wall_sprites;
     wall_sprites.reserve(raw_sprites.size());
     std::map<std::tuple<int, int, int>, int> selected_variant_indices;
+    std::map<std::pair<int, WallPartKind>, int> rare_variant_remaining_by_wall_part;
 
     for (const auto& rs : raw_sprites) {
-        std::tuple<int, int, int> variant_key = {rs.wall_type, rs.gx, rs.gy};
-        if (selected_variant_indices.find(variant_key) == selected_variant_indices.end()) {
-            const WallProfile& profile = get_wall_profile(rs.wall_type);
-            selected_variant_indices[variant_key] = select_wall_variant_index(profile);
+        const WallProfile& profile = get_wall_profile(rs.wall_type);
+        if (rs.kind == WallPartKind::Pillar && profile.pillar_mode == WallPillarMode::DirectionalSlices) {
+            std::vector<io::Sprite> pillar_sprites = place_pillar_slices(rs);
+            wall_sprites.insert(wall_sprites.end(), pillar_sprites.begin(), pillar_sprites.end());
+            continue;
         }
 
-        int variant_index = selected_variant_indices[variant_key];
+        if (rs.kind == WallPartKind::Pillar && profile.pillar_vid <= 0) {
+            continue;
+        }
+
+        if (rs.kind == WallPartKind::Pillar && profile.use_corner_pillar_assets) {
+            const WallPartAsset* pillar_asset = select_corner_pillar_asset(profile, rs);
+            if (pillar_asset != nullptr) {
+                wall_sprites.push_back(place_wall_part_asset(rs.gx, rs.gy, rs.wall_type, *pillar_asset));
+                continue;
+            }
+
+            if (profile.skip_unmapped_pillars) {
+                continue;
+            }
+        }
+
+        int variant_index = select_wall_variant_index(profile);
+        bool is_wall_part = rs.kind == WallPartKind::DirA || rs.kind == WallPartKind::DirB;
+        if (is_wall_part && has_rare_wall_variant(profile)) {
+            std::pair<int, WallPartKind> rare_variant_key = {rs.wall_type, rs.kind};
+            if (rare_variant_remaining_by_wall_part.find(rare_variant_key) == rare_variant_remaining_by_wall_part.end()) {
+                rare_variant_remaining_by_wall_part[rare_variant_key] = reset_rare_wall_variant_interval(profile);
+            }
+
+            int rare_variant_remaining = rare_variant_remaining_by_wall_part[rare_variant_key];
+            if (rare_variant_remaining <= 0) {
+                variant_index = profile.rare_variant_index;
+                rare_variant_remaining_by_wall_part[rare_variant_key] = reset_rare_wall_variant_interval(profile);
+            } else {
+                rare_variant_remaining_by_wall_part[rare_variant_key] = rare_variant_remaining - 1;
+            }
+        }
+
+        if (!profile.randomize_wall_parts_independently) {
+            std::tuple<int, int, int> variant_key = {rs.wall_type, rs.gx, rs.gy};
+            if (selected_variant_indices.find(variant_key) == selected_variant_indices.end()) {
+                selected_variant_indices[variant_key] = variant_index;
+            }
+            variant_index = selected_variant_indices[variant_key];
+        }
+
+        if (is_wall_part && rs.uses_corner_wall_variant) {
+            if (profile.corner_wall_variant_index >= 0 && profile.corner_wall_variant_index < profile.variant_count) {
+                variant_index = profile.corner_wall_variant_index;
+            }
+        }
+
         wall_sprites.push_back(place_single_wall_with_variant(rs.gx, rs.gy, rs.wall_type, rs.kind, variant_index));
     }
     return wall_sprites;
@@ -608,6 +703,30 @@ const WallVariant& WallBuilder::select_wall_variant(const WallProfile& profile) 
     return profile.variants[variant_index];
 }
 
+bool WallBuilder::has_rare_wall_variant(const WallProfile& profile) {
+    if (profile.rare_variant_index < 0) {
+        return false;
+    }
+
+    if (profile.rare_variant_index >= profile.variant_count) {
+        return false;
+    }
+
+    if (profile.rare_variant_min_interval <= 0) {
+        return false;
+    }
+
+    if (profile.rare_variant_max_interval < profile.rare_variant_min_interval) {
+        return false;
+    }
+
+    return true;
+}
+
+int WallBuilder::reset_rare_wall_variant_interval(const WallProfile& profile) {
+    return Random::get(profile.rare_variant_min_interval, profile.rare_variant_max_interval);
+}
+
 const WallPartAsset& WallBuilder::select_wall_part_asset(const WallVariant& variant, WallPartKind kind) {
     if (kind == WallPartKind::DirA) {
         return variant.dir_a;
@@ -620,6 +739,56 @@ const WallPartAsset& WallBuilder::select_wall_part_asset(const WallVariant& vari
     return variant.pillar;
 }
 
+const WallPartAsset* WallBuilder::select_corner_pillar_asset(const WallProfile& profile, const RawSprite& raw_sprite) {
+    int connection_count = 0;
+    if (raw_sprite.connects_up) {
+        connection_count += 1;
+    }
+    if (raw_sprite.connects_down) {
+        connection_count += 1;
+    }
+    if (raw_sprite.connects_left) {
+        connection_count += 1;
+    }
+    if (raw_sprite.connects_right) {
+        connection_count += 1;
+    }
+
+    if (connection_count != 2) {
+        return nullptr;
+    }
+
+    if (raw_sprite.connects_down && raw_sprite.connects_right) {
+        if (profile.pillar_corner_down_right.vid > 0) {
+            return &profile.pillar_corner_down_right;
+        }
+        return nullptr;
+    }
+
+    if (raw_sprite.connects_down && raw_sprite.connects_left) {
+        if (profile.pillar_corner_down_left.vid > 0) {
+            return &profile.pillar_corner_down_left;
+        }
+        return nullptr;
+    }
+
+    if (raw_sprite.connects_up && raw_sprite.connects_left) {
+        if (profile.pillar_corner_up_left.vid > 0) {
+            return &profile.pillar_corner_up_left;
+        }
+        return nullptr;
+    }
+
+    if (raw_sprite.connects_up && raw_sprite.connects_right) {
+        if (profile.pillar_corner_up_right.vid > 0) {
+            return &profile.pillar_corner_up_right;
+        }
+        return nullptr;
+    }
+
+    return nullptr;
+}
+
 io::Sprite WallBuilder::place_single_wall(int gx, int gy, int wall_type, WallPartKind kind) const {
     const WallProfile& profile = get_wall_profile(wall_type);
     int variant_index = select_wall_variant_index(profile);
@@ -628,8 +797,6 @@ io::Sprite WallBuilder::place_single_wall(int gx, int gy, int wall_type, WallPar
 
 io::Sprite WallBuilder::place_single_wall_with_variant(int gx, int gy, int wall_type, WallPartKind kind, int variant_index) const {
     const WallProfile& profile = get_wall_profile(wall_type);
-    MapPoint shift = get_wall_shift(map_size_x_, profile);
-    MapPoint pos = to_iso(GridPoint{gx, gy}, profile.step_x, profile.step_y, shift);
     if (variant_index < 0 || variant_index >= profile.variant_count) {
         variant_index = 0;
     }
@@ -637,10 +804,61 @@ io::Sprite WallBuilder::place_single_wall_with_variant(int gx, int gy, int wall_
     const WallVariant& variant = profile.variants[variant_index];
     const WallPartAsset& asset = select_wall_part_asset(variant, kind);
 
+    return place_wall_part_asset(gx, gy, wall_type, asset);
+}
+
+io::Sprite WallBuilder::place_wall_part_asset(int gx, int gy, int wall_type, const WallPartAsset& asset) const {
+    const WallProfile& profile = get_wall_profile(wall_type);
+    MapPoint shift = get_wall_shift(map_size_x_, profile);
+    MapPoint pos = to_iso(GridPoint{gx, gy}, profile.step_x, profile.step_y, shift);
+
     pos.x += asset.offset_x;
     pos.y += asset.offset_y;
 
     return io::Sprite(asset.vid, pos.x, pos.y, 0.0f, asset.direction);
+}
+
+std::vector<io::Sprite> WallBuilder::place_pillar_slices(const RawSprite& raw_sprite) const {
+    const WallProfile& profile = get_wall_profile(raw_sprite.wall_type);
+    std::vector<io::Sprite> sprites;
+
+    if (raw_sprite.connects_up) {
+        sprites.push_back(place_wall_part_asset(
+            raw_sprite.gx,
+            raw_sprite.gy,
+            raw_sprite.wall_type,
+            profile.pillar_slice_up
+        ));
+    }
+
+    if (raw_sprite.connects_down) {
+        sprites.push_back(place_wall_part_asset(
+            raw_sprite.gx,
+            raw_sprite.gy,
+            raw_sprite.wall_type,
+            profile.pillar_slice_down
+        ));
+    }
+
+    if (raw_sprite.connects_left) {
+        sprites.push_back(place_wall_part_asset(
+            raw_sprite.gx,
+            raw_sprite.gy,
+            raw_sprite.wall_type,
+            profile.pillar_slice_left
+        ));
+    }
+
+    if (raw_sprite.connects_right) {
+        sprites.push_back(place_wall_part_asset(
+            raw_sprite.gx,
+            raw_sprite.gy,
+            raw_sprite.wall_type,
+            profile.pillar_slice_right
+        ));
+    }
+
+    return sprites;
 }
 
 } // namespace auto_mapper::core

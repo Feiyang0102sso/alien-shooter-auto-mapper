@@ -6,6 +6,14 @@ from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 from app.logger import logger
 from app.ui.colors import (
+    WALL_PROFILE_AS2_SET2,
+    WALL_PROFILE_AS2_SET3,
+    WALL_PROFILE_AS2_SET4,
+    WALL_PROFILE_AS2_SET5,
+    WALL_PROFILE_AS2_SET6,
+    WALL_PROFILE_AS2_SET7,
+    WALL_PROFILE_AS2_SET8,
+    WALL_PROFILE_AS2_SET9,
     WALL_PROFILE_FALLBACK,
     WALL_PROFILE_LAB,
     WALL_PROFILE_STANDARD,
@@ -22,6 +30,14 @@ AUTO_MAPPER_CLIENT = None
 WALL_TYPE_STANDARD = 0
 WALL_TYPE_LAB = 1
 WALL_TYPE_STANDARD_DARK = 2
+WALL_TYPE_AS2_SET2_RANDOM = 6
+WALL_TYPE_AS2_SET3_RANDOM = 7
+WALL_TYPE_AS2_SET4_RANDOM = 8
+WALL_TYPE_AS2_SET5_RANDOM = 9
+WALL_TYPE_AS2_SET6_RANDOM = 10
+WALL_TYPE_AS2_SET7_RANDOM = 11
+WALL_TYPE_AS2_SET8_RANDOM = 12
+WALL_TYPE_AS2_SET9_RANDOM = 13
 
 WALL_PROFILE_UI_METADATA = {
     WALL_TYPE_STANDARD: {
@@ -41,6 +57,54 @@ WALL_PROFILE_UI_METADATA = {
         "description_key": TextKey.WALL_STANDARD_DARK_DESCRIPTION,
         "color": WALL_PROFILE_STANDARD_DARK,
         "preview_key": "standard_dark",
+    },
+    WALL_TYPE_AS2_SET2_RANDOM: {
+        "short_label": "AS2 Wall Set 2",
+        "description": "Random AS2 wall set with directional multi-part pillars.",
+        "color": WALL_PROFILE_AS2_SET2,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET3_RANDOM: {
+        "short_label": "AS2 Wall Set 3",
+        "description": "Random AS2 wall set with rare direction variants.",
+        "color": WALL_PROFILE_AS2_SET3,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET4_RANDOM: {
+        "short_label": "AS2 Wall Set 4",
+        "description": "Random AS2 wall set with rare direction variants.",
+        "color": WALL_PROFILE_AS2_SET4,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET5_RANDOM: {
+        "short_label": "AS2 Wall Set 5",
+        "description": "Random AS2 wall set with fixed rare direction cadence.",
+        "color": WALL_PROFILE_AS2_SET5,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET6_RANDOM: {
+        "short_label": "AS2 Wall Set 6",
+        "description": "Random AS2 wall set with corner pillar directions.",
+        "color": WALL_PROFILE_AS2_SET6,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET7_RANDOM: {
+        "short_label": "AS2 Wall Set 7",
+        "description": "Random AS2 wall set with fixed rare direction cadence.",
+        "color": WALL_PROFILE_AS2_SET7,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET8_RANDOM: {
+        "short_label": "AS2 Wall Set 8",
+        "description": "Random AS2 wall set with per-corner pillar offsets.",
+        "color": WALL_PROFILE_AS2_SET8,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET9_RANDOM: {
+        "short_label": "AS2 Wall Set 9",
+        "description": "Random AS2 wall set with fixed corner wall directions.",
+        "color": WALL_PROFILE_AS2_SET9,
+        "preview_key": "",
     },
 }
 
@@ -369,6 +433,9 @@ def _get_wall_profile_ui_metadata(wall_type: int) -> dict:
     """
     if wall_type in WALL_PROFILE_UI_METADATA:
         metadata = dict(WALL_PROFILE_UI_METADATA[wall_type])
+        if "short_label" in metadata and "description" in metadata:
+            return metadata
+
         metadata["short_label"] = tr(metadata.pop("short_label_key"))
         metadata["description"] = tr(metadata.pop("description_key"))
         return metadata

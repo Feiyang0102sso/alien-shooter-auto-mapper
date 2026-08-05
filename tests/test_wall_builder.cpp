@@ -99,6 +99,226 @@ static bool is_as2_set1_random_wall_direction(uint32_t direction) {
     return false;
 }
 
+static bool is_as2_set2_random_wall_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    if (direction == 204u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set3_dir_a_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set3_dir_b_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set4_dir_a_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    if (direction == 204u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set4_dir_b_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    if (direction == 204u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set5_wall_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    if (direction == 204u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set6_wall_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    if (direction == 204u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set7_wall_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set8_wall_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    if (direction == 204u) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_as2_set9_wall_direction(uint32_t direction) {
+    if (direction == 0u) {
+        return true;
+    }
+
+    if (direction == 51u) {
+        return true;
+    }
+
+    if (direction == 102u) {
+        return true;
+    }
+
+    if (direction == 153u) {
+        return true;
+    }
+
+    return false;
+}
+
 static std::vector<Segment> build_room_segments_at(int start_x, int start_y, int size, int wall_type) {
     std::vector<Segment> segments;
     segments.push_back({{start_x, start_y}, {start_x + size, start_y}, wall_type});
@@ -122,6 +342,62 @@ static int count_sprites_by_vid(const std::vector<io::Sprite>& sprites, int vid)
     }
 
     return count;
+}
+
+static int count_sprites_by_vid_and_direction(
+    const std::vector<io::Sprite>& sprites,
+    int vid,
+    uint32_t direction
+) {
+    int count = 0;
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != vid) {
+            continue;
+        }
+
+        if (sprite.direction == direction) {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+static bool has_sprite_at(
+    const std::vector<io::Sprite>& sprites,
+    int vid,
+    float pos_x,
+    float pos_y,
+    uint32_t direction
+) {
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != vid) {
+            continue;
+        }
+
+        if (sprite.direction != direction) {
+            continue;
+        }
+
+        bool x_matches = std::abs(sprite.posX - pos_x) < 0.01f;
+        bool y_matches = std::abs(sprite.posY - pos_y) < 0.01f;
+        if (x_matches && y_matches) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void expect_as2_set2_wall_directions_are_allowed(const std::vector<io::Sprite>& sprites) {
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != 1700 && sprite.vid != 1701) {
+            continue;
+        }
+
+        EXPECT_TRUE(is_as2_set2_random_wall_direction(sprite.direction));
+    }
 }
 
 TEST(WallBuilderTest, As2WallSet1FixedProfilesUseFixedDirections) {
@@ -148,6 +424,504 @@ TEST(WallBuilderTest, As2WallSet1FixedProfilesUseFixedDirections) {
     EXPECT_EQ(fixed1_dir_b.direction, 51u);
     EXPECT_EQ(fixed1_pillar.vid, 1782);
     EXPECT_EQ(fixed1_pillar.direction, 85u);
+}
+
+TEST(WallBuilderTest, As2WallSet2BuildsRoomWithDirectionalPillarSlices) {
+    WallBuilder builder(2000.0f, 2000.0f);
+
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(3, WALL_TYPE_AS2_WALL_SET2_RANDOM),
+        false,
+        false
+    );
+
+    EXPECT_EQ(sprites.size(), 20u);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1701), 6);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1700), 6);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1702), 8);
+
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 0u), 2);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 64u), 2);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 128u), 2);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 192u), 2);
+
+    expect_as2_set2_wall_directions_are_allowed(sprites);
+}
+
+TEST(WallBuilderTest, As2WallSet2BuildsOpenLShapeWithEndpointAndCornerSlices) {
+    WallBuilder builder(2000.0f, 2000.0f);
+
+    std::vector<Segment> segments = {
+        {{0, 0}, {3, 0}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{3, 0}, {3, 3}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments, false, false);
+
+    EXPECT_EQ(sprites.size(), 10u);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1701), 3);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1700), 3);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1702), 4);
+
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 0u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 64u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 128u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 192u), 1);
+
+    expect_as2_set2_wall_directions_are_allowed(sprites);
+}
+
+TEST(WallBuilderTest, As2WallSet2BuildsCrossWithFourCenterSlices) {
+    WallBuilder builder(2000.0f, 2000.0f);
+
+    std::vector<Segment> segments = {
+        {{-2, 0}, {2, 0}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{0, -2}, {0, 2}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments, false, false);
+
+    EXPECT_EQ(sprites.size(), 16u);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1701), 4);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1700), 4);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1702), 8);
+
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 0u), 2);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 64u), 2);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 128u), 2);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 1702, 192u), 2);
+
+    expect_as2_set2_wall_directions_are_allowed(sprites);
+}
+
+TEST(WallBuilderTest, As2WallSet2WritesManualPreviewMap) {
+    WallBuilder builder(2000.0f, 2000.0f);
+
+    std::vector<Segment> segments;
+    std::vector<Segment> room_segments = build_room_segments_at(0, 0, 3, WALL_TYPE_AS2_WALL_SET2_RANDOM);
+    std::vector<Segment> l_shape_segments = {
+        {{6, 0}, {9, 0}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{9, 0}, {9, 3}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+    };
+    std::vector<Segment> cross_segments = {
+        {{0, 8}, {4, 8}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{2, 6}, {2, 10}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+    };
+
+    segments.insert(segments.end(), room_segments.begin(), room_segments.end());
+    segments.insert(segments.end(), l_shape_segments.begin(), l_shape_segments.end());
+    segments.insert(segments.end(), cross_segments.begin(), cross_segments.end());
+
+    std::vector<io::Sprite> sprites = builder.build(segments, false, false);
+    std::string preview_map_path = get_test_output_path("as2_wall_set2_directional_pillars.map");
+    bool write_success = io::write_map(
+        sprites,
+        preview_map_path,
+        io::MapFormat::AS2R,
+        2000.0f,
+        2000.0f
+    );
+
+    ASSERT_TRUE(write_success);
+    EXPECT_GT(sprites.size(), 0u);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1702), 20);
+}
+
+TEST(WallBuilderTest, As2WallSet3BuildsLargeRoomWithBoundedRareVariants) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int room_size = 40;
+
+    io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET3_RANDOM, WallPartKind::DirA);
+    io::Sprite dir_b_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET3_RANDOM, WallPartKind::DirB);
+    io::Sprite pillar_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET3_RANDOM, WallPartKind::Pillar);
+
+    EXPECT_EQ(WALL_AS2_SET3_RANDOM.dir_a_vid, 1100);
+    EXPECT_EQ(WALL_AS2_SET3_RANDOM.dir_b_vid, 1101);
+    EXPECT_EQ(dir_a_sample.vid, 1100);
+    EXPECT_EQ(dir_b_sample.vid, 1101);
+    EXPECT_EQ(pillar_sample.vid, 1102);
+    EXPECT_EQ(pillar_sample.direction, 0u);
+
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_AS2_WALL_SET3_RANDOM),
+        false,
+        false
+    );
+
+    int dir_a_count = count_sprites_by_vid(sprites, 1100);
+    int dir_b_count = count_sprites_by_vid(sprites, 1101);
+    int dir_a_rare_count = count_sprites_by_vid_and_direction(sprites, 1100, 153u);
+    int dir_b_rare_count = count_sprites_by_vid_and_direction(sprites, 1101, 51u);
+
+    EXPECT_EQ(sprites.size(), 164u);
+    EXPECT_EQ(dir_a_count, room_size * 2);
+    EXPECT_EQ(dir_b_count, room_size * 2);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1102), 4);
+    EXPECT_GE(dir_a_rare_count, 1);
+    EXPECT_GE(dir_b_rare_count, 1);
+
+    int max_dir_a_rare_count = dir_a_count / (WALL_AS2_SET3_RANDOM.rare_variant_min_interval + 1) + 1;
+    int max_dir_b_rare_count = dir_b_count / (WALL_AS2_SET3_RANDOM.rare_variant_min_interval + 1) + 1;
+    EXPECT_LE(dir_a_rare_count, max_dir_a_rare_count);
+    EXPECT_LE(dir_b_rare_count, max_dir_b_rare_count);
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid == 1100) {
+            EXPECT_TRUE(is_as2_set3_dir_a_direction(sprite.direction));
+        }
+
+        if (sprite.vid == 1101) {
+            EXPECT_TRUE(is_as2_set3_dir_b_direction(sprite.direction));
+        }
+
+        if (sprite.vid == 1102) {
+            EXPECT_EQ(sprite.direction, 0u);
+        }
+    }
+
+    std::string preview_map_path = get_test_output_path("as2_wall_set3_rare_variants.map");
+    bool write_success = io::write_map(
+        sprites,
+        preview_map_path,
+        io::MapFormat::AS2R,
+        2000.0f,
+        2000.0f
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+TEST(WallBuilderTest, As2WallSet4BuildsLargeRoomWithBoundedRareVariants) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int room_size = 40;
+
+    io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET4_RANDOM, WallPartKind::DirA);
+    io::Sprite dir_b_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET4_RANDOM, WallPartKind::DirB);
+    io::Sprite pillar_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET4_RANDOM, WallPartKind::Pillar);
+
+    EXPECT_EQ(WALL_AS2_SET4_RANDOM.dir_a_vid, 1131);
+    EXPECT_EQ(WALL_AS2_SET4_RANDOM.dir_b_vid, 1130);
+    EXPECT_EQ(dir_a_sample.vid, 1131);
+    EXPECT_EQ(dir_b_sample.vid, 1130);
+    EXPECT_EQ(pillar_sample.vid, 1132);
+    EXPECT_EQ(pillar_sample.direction, 51u);
+
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_AS2_WALL_SET4_RANDOM),
+        false,
+        false
+    );
+
+    int dir_a_count = count_sprites_by_vid(sprites, 1131);
+    int dir_b_count = count_sprites_by_vid(sprites, 1130);
+    int dir_a_rare_count = count_sprites_by_vid_and_direction(sprites, 1131, 153u);
+    int dir_b_rare_count = count_sprites_by_vid_and_direction(sprites, 1130, 51u);
+
+    EXPECT_EQ(sprites.size(), 164u);
+    EXPECT_EQ(dir_a_count, room_size * 2);
+    EXPECT_EQ(dir_b_count, room_size * 2);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 1132), 4);
+    EXPECT_GE(dir_a_rare_count, 1);
+    EXPECT_GE(dir_b_rare_count, 1);
+
+    int max_dir_a_rare_count = dir_a_count / (WALL_AS2_SET4_RANDOM.rare_variant_min_interval + 1) + 1;
+    int max_dir_b_rare_count = dir_b_count / (WALL_AS2_SET4_RANDOM.rare_variant_min_interval + 1) + 1;
+    EXPECT_LE(dir_a_rare_count, max_dir_a_rare_count);
+    EXPECT_LE(dir_b_rare_count, max_dir_b_rare_count);
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid == 1131) {
+            EXPECT_TRUE(is_as2_set4_dir_a_direction(sprite.direction));
+        }
+
+        if (sprite.vid == 1130) {
+            EXPECT_TRUE(is_as2_set4_dir_b_direction(sprite.direction));
+        }
+
+        if (sprite.vid == 1132) {
+            EXPECT_EQ(sprite.direction, 51u);
+        }
+    }
+
+    std::string preview_map_path = get_test_output_path("as2_wall_set4_rare_variants.map");
+    bool write_success = io::write_map(
+        sprites,
+        preview_map_path,
+        io::MapFormat::AS2R,
+        2000.0f,
+        2000.0f
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+TEST(WallBuilderTest, As2WallSet5BuildsRoomWithFixedRareCadenceAndCornerPillars) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int room_size = 9;
+
+    io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET5_RANDOM, WallPartKind::DirA);
+    io::Sprite dir_b_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET5_RANDOM, WallPartKind::DirB);
+
+    EXPECT_EQ(WALL_AS2_SET5_RANDOM.dir_a_vid, 2501);
+    EXPECT_EQ(WALL_AS2_SET5_RANDOM.dir_b_vid, 2500);
+    EXPECT_EQ(dir_a_sample.vid, 2501);
+    EXPECT_EQ(dir_b_sample.vid, 2500);
+
+    std::vector<Segment> room_segments = build_room_segments(room_size, WALL_TYPE_AS2_WALL_SET5_RANDOM);
+    std::vector<io::Sprite> room_sprites = builder.build(
+        room_segments,
+        false,
+        false
+    );
+
+    int dir_a_count = count_sprites_by_vid(room_sprites, 2501);
+    int dir_b_count = count_sprites_by_vid(room_sprites, 2500);
+    int dir_a_rare_count = count_sprites_by_vid_and_direction(room_sprites, 2501, 51u);
+    int dir_b_rare_count = count_sprites_by_vid_and_direction(room_sprites, 2500, 51u);
+
+    EXPECT_EQ(room_sprites.size(), 40u);
+    EXPECT_EQ(dir_a_count, room_size * 2);
+    EXPECT_EQ(dir_b_count, room_size * 2);
+    EXPECT_EQ(dir_a_rare_count, dir_a_count / 4);
+    EXPECT_EQ(dir_b_rare_count, dir_b_count / 4);
+    EXPECT_EQ(count_sprites_by_vid(room_sprites, 2502), 4);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(room_sprites, 2502, 0u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(room_sprites, 2502, 51u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(room_sprites, 2502, 128u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(room_sprites, 2502, 192u), 1);
+
+    std::vector<io::Sprite> preview_sprites = room_sprites;
+
+    for (const io::Sprite& sprite : preview_sprites) {
+        if (sprite.vid == 2500 || sprite.vid == 2501) {
+            EXPECT_TRUE(is_as2_set5_wall_direction(sprite.direction));
+        }
+    }
+
+    std::string preview_map_path = get_test_output_path("as2_wall_set5_fixed_rare_variants.map");
+    bool write_success = io::write_map(
+        preview_sprites,
+        preview_map_path,
+        io::MapFormat::AS2R,
+        2000.0f,
+        2000.0f
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+TEST(WallBuilderTest, As2WallSet6BuildsRoomWithRandomDirectionsAndSingleCornerPillar) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int room_size = 9;
+
+    io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET6_RANDOM, WallPartKind::DirA);
+    io::Sprite dir_b_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET6_RANDOM, WallPartKind::DirB);
+
+    EXPECT_EQ(WALL_AS2_SET6_RANDOM.dir_a_vid, 2601);
+    EXPECT_EQ(WALL_AS2_SET6_RANDOM.dir_b_vid, 2600);
+    EXPECT_EQ(dir_a_sample.vid, 2601);
+    EXPECT_EQ(dir_b_sample.vid, 2600);
+
+    std::vector<Segment> room_segments = build_room_segments(room_size, WALL_TYPE_AS2_WALL_SET6_RANDOM);
+    std::vector<io::Sprite> room_sprites = builder.build(
+        room_segments,
+        false,
+        false
+    );
+
+    int dir_a_count = count_sprites_by_vid(room_sprites, 2601);
+    int dir_b_count = count_sprites_by_vid(room_sprites, 2600);
+
+    EXPECT_EQ(room_sprites.size(), 37u);
+    EXPECT_EQ(dir_a_count, room_size * 2);
+    EXPECT_EQ(dir_b_count, room_size * 2);
+    EXPECT_EQ(count_sprites_by_vid(room_sprites, 2602), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(room_sprites, 2602, 0u), 1);
+    std::vector<io::Sprite> preview_sprites = room_sprites;
+
+    for (const io::Sprite& sprite : preview_sprites) {
+        if (sprite.vid == 2600 || sprite.vid == 2601) {
+            EXPECT_TRUE(is_as2_set6_wall_direction(sprite.direction));
+        }
+    }
+
+    std::string preview_map_path = get_test_output_path("as2_wall_set6_random_variants.map");
+    bool write_success = io::write_map(
+        preview_sprites,
+        preview_map_path,
+        io::MapFormat::AS2R,
+        2000.0f,
+        2000.0f
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+TEST(WallBuilderTest, As2WallSet7BuildsRoomWithFixedRareCadenceAndFixedPillars) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int room_size = 9;
+
+    io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET7_RANDOM, WallPartKind::DirA);
+    io::Sprite dir_b_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET7_RANDOM, WallPartKind::DirB);
+    io::Sprite pillar_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET7_RANDOM, WallPartKind::Pillar);
+
+    EXPECT_EQ(WALL_AS2_SET7_RANDOM.dir_a_vid, 2621);
+    EXPECT_EQ(WALL_AS2_SET7_RANDOM.dir_b_vid, 2620);
+    EXPECT_EQ(WALL_AS2_SET7_RANDOM.pillar_vid, 2622);
+    EXPECT_FLOAT_EQ(WALL_AS2_SET7_RANDOM.offset_p_x, -0.5f);
+    EXPECT_FLOAT_EQ(WALL_AS2_SET7_RANDOM.offset_p_y, 64.0f);
+    EXPECT_EQ(dir_a_sample.vid, 2621);
+    EXPECT_EQ(dir_b_sample.vid, 2620);
+    EXPECT_EQ(pillar_sample.vid, 2622);
+    EXPECT_EQ(pillar_sample.direction, 204u);
+
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_AS2_WALL_SET7_RANDOM),
+        false,
+        false
+    );
+
+    int dir_a_count = count_sprites_by_vid(sprites, 2621);
+    int dir_b_count = count_sprites_by_vid(sprites, 2620);
+    int dir_a_rare_count = count_sprites_by_vid_and_direction(sprites, 2621, 0u);
+    int dir_b_rare_count = count_sprites_by_vid_and_direction(sprites, 2620, 0u);
+
+    EXPECT_EQ(sprites.size(), 40u);
+    EXPECT_EQ(dir_a_count, room_size * 2);
+    EXPECT_EQ(dir_b_count, room_size * 2);
+    EXPECT_EQ(dir_a_rare_count, dir_a_count / 4);
+    EXPECT_EQ(dir_b_rare_count, dir_b_count / 4);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 2622), 4);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 2622, 204u), 4);
+    EXPECT_TRUE(has_sprite_at(sprites, 2622, 1012.0f, 144.0f, 204u));
+    EXPECT_TRUE(has_sprite_at(sprites, 2622, 202.0f, 720.0f, 204u));
+    EXPECT_TRUE(has_sprite_at(sprites, 2622, 1822.0f, 720.0f, 204u));
+    EXPECT_TRUE(has_sprite_at(sprites, 2622, 1012.0f, 1296.0f, 204u));
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid == 2620 || sprite.vid == 2621) {
+            EXPECT_TRUE(is_as2_set7_wall_direction(sprite.direction));
+        }
+    }
+
+    std::string preview_map_path = get_test_output_path("as2_wall_set7_fixed_rare_variants.map");
+    bool write_success = io::write_map(
+        sprites,
+        preview_map_path,
+        io::MapFormat::AS2R,
+        2000.0f,
+        2000.0f
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+TEST(WallBuilderTest, As2WallSet8BuildsRoomWithRandomDirectionsAndPerCornerPillars) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int room_size = 9;
+
+    io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET8_RANDOM, WallPartKind::DirA);
+    io::Sprite dir_b_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET8_RANDOM, WallPartKind::DirB);
+
+    EXPECT_EQ(WALL_AS2_SET8_RANDOM.dir_a_vid, 2641);
+    EXPECT_EQ(WALL_AS2_SET8_RANDOM.dir_b_vid, 2640);
+    EXPECT_EQ(WALL_AS2_SET8_RANDOM.pillar_vid, 2642);
+    EXPECT_EQ(dir_a_sample.vid, 2641);
+    EXPECT_EQ(dir_b_sample.vid, 2640);
+
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_AS2_WALL_SET8_RANDOM),
+        false,
+        false
+    );
+
+    int dir_a_count = count_sprites_by_vid(sprites, 2641);
+    int dir_b_count = count_sprites_by_vid(sprites, 2640);
+
+    EXPECT_EQ(sprites.size(), 40u);
+    EXPECT_EQ(dir_a_count, room_size * 2);
+    EXPECT_EQ(dir_b_count, room_size * 2);
+    EXPECT_EQ(count_sprites_by_vid(sprites, 2642), 4);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 2642, 0u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 2642, 64u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 2642, 128u), 1);
+    EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 2642, 192u), 1);
+    EXPECT_TRUE(has_sprite_at(sprites, 2642, 1094.5f, 155.0f, 128u));
+    EXPECT_TRUE(has_sprite_at(sprites, 2642, 1817.5f, 724.0f, 64u));
+    EXPECT_TRUE(has_sprite_at(sprites, 2642, 1018.5f, 1236.0f, 0u));
+    EXPECT_TRUE(has_sprite_at(sprites, 2642, 297.5f, 668.0f, 192u));
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid == 2640 || sprite.vid == 2641) {
+            EXPECT_TRUE(is_as2_set8_wall_direction(sprite.direction));
+        }
+    }
+
+    std::string preview_map_path = get_test_output_path("as2_wall_set8_random_variants.map");
+    bool write_success = io::write_map(
+        sprites,
+        preview_map_path,
+        io::MapFormat::AS2R,
+        2000.0f,
+        2000.0f
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+TEST(WallBuilderTest, As2WallSet9BuildsRoomWithCornerWallDirectionsAndNoPillars) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int room_size = 9;
+
+    io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET9_RANDOM, WallPartKind::DirA);
+    io::Sprite dir_b_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET9_RANDOM, WallPartKind::DirB);
+
+    EXPECT_EQ(WALL_AS2_SET9_RANDOM.dir_a_vid, 1721);
+    EXPECT_EQ(WALL_AS2_SET9_RANDOM.dir_b_vid, 1720);
+    EXPECT_EQ(WALL_AS2_SET9_RANDOM.pillar_vid, 0);
+    EXPECT_EQ(WALL_AS2_SET9_RANDOM.corner_wall_variant_index, 0);
+    EXPECT_EQ(dir_a_sample.vid, 1721);
+    EXPECT_EQ(dir_b_sample.vid, 1720);
+
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_AS2_WALL_SET9_RANDOM),
+        false,
+        false
+    );
+
+    int dir_a_count = count_sprites_by_vid(sprites, 1721);
+    int dir_b_count = count_sprites_by_vid(sprites, 1720);
+
+    EXPECT_EQ(sprites.size(), 36u);
+    EXPECT_EQ(dir_a_count, room_size * 2);
+    EXPECT_EQ(dir_b_count, room_size * 2);
+
+    EXPECT_TRUE(has_sprite_at(sprites, 1721, 1012.5f, 144.0f, 0u));
+    EXPECT_TRUE(has_sprite_at(sprites, 1721, 292.5f, 656.0f, 0u));
+    EXPECT_TRUE(has_sprite_at(sprites, 1721, 1822.5f, 720.0f, 0u));
+    EXPECT_TRUE(has_sprite_at(sprites, 1721, 1102.5f, 1232.0f, 0u));
+    EXPECT_TRUE(has_sprite_at(sprites, 1720, 1102.5f, 144.0f, 0u));
+    EXPECT_TRUE(has_sprite_at(sprites, 1720, 1822.5f, 656.0f, 0u));
+    EXPECT_TRUE(has_sprite_at(sprites, 1720, 292.5f, 720.0f, 0u));
+    EXPECT_TRUE(has_sprite_at(sprites, 1720, 1012.5f, 1232.0f, 0u));
+
+    for (const io::Sprite& sprite : sprites) {
+        EXPECT_NE(sprite.vid, 0);
+        if (sprite.vid == 1720 || sprite.vid == 1721) {
+            EXPECT_TRUE(is_as2_set9_wall_direction(sprite.direction));
+        }
+    }
+
+    std::string preview_map_path = get_test_output_path("as2_wall_set9_corner_wall_variants.map");
+    bool write_success = io::write_map(
+        sprites,
+        preview_map_path,
+        io::MapFormat::AS2R,
+        2000.0f,
+        2000.0f
+    );
+
+    ASSERT_TRUE(write_success);
 }
 
 TEST(WallBuilderTest, As2WallSet1RandomProfileUsesAllowedVariantPool) {

@@ -20,7 +20,15 @@ inline constexpr int SUPPORTED_WALL_TYPES[] = {
     WALL_TYPE_STANDARD_DARK,
     WALL_TYPE_AS2_WALL_SET1_FIXED_0,
     WALL_TYPE_AS2_WALL_SET1_FIXED_1,
-    WALL_TYPE_AS2_WALL_SET1_RANDOM
+    WALL_TYPE_AS2_WALL_SET1_RANDOM,
+    WALL_TYPE_AS2_WALL_SET2_RANDOM,
+    WALL_TYPE_AS2_WALL_SET3_RANDOM,
+    WALL_TYPE_AS2_WALL_SET4_RANDOM,
+    WALL_TYPE_AS2_WALL_SET5_RANDOM,
+    WALL_TYPE_AS2_WALL_SET6_RANDOM,
+    WALL_TYPE_AS2_WALL_SET7_RANDOM,
+    WALL_TYPE_AS2_WALL_SET8_RANDOM,
+    WALL_TYPE_AS2_WALL_SET9_RANDOM
 };
 
 inline constexpr int SUPPORTED_WALL_TYPE_COUNT =
@@ -68,6 +76,11 @@ private:
         int gy;
         int wall_type;
         WallPartKind kind;
+        bool uses_corner_wall_variant = false;
+        bool connects_up = false;
+        bool connects_down = false;
+        bool connects_left = false;
+        bool connects_right = false;
         bool operator==(const RawSprite& other) const {
             return gx == other.gx && gy == other.gy && wall_type == other.wall_type && kind == other.kind;
         }
@@ -96,8 +109,13 @@ private:
     static const CeilingProfile& get_ceiling_profile(int ceiling_type);
     static const WallVariant& select_wall_variant(const WallProfile& profile);
     static int select_wall_variant_index(const WallProfile& profile);
+    static bool has_rare_wall_variant(const WallProfile& profile);
+    static int reset_rare_wall_variant_interval(const WallProfile& profile);
     static const WallPartAsset& select_wall_part_asset(const WallVariant& variant, WallPartKind kind);
+    static const WallPartAsset* select_corner_pillar_asset(const WallProfile& profile, const RawSprite& raw_sprite);
     io::Sprite place_single_wall_with_variant(int gx, int gy, int wall_type, WallPartKind kind, int variant_index) const;
+    io::Sprite place_wall_part_asset(int gx, int gy, int wall_type, const WallPartAsset& asset) const;
+    std::vector<io::Sprite> place_pillar_slices(const RawSprite& raw_sprite) const;
 
     float map_size_x_;
     float map_size_y_;

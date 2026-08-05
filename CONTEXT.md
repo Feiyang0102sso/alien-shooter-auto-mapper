@@ -40,11 +40,23 @@ Wall Direction Value is not Direction A or Direction B. Direction A/B names desc
 
 A group of wall variants that must be selected together because their direction parts and pillars visually match each other.
 
+Wall sets with directional pillar slices do not necessarily need a locked wall variant group. Their wall sprites may randomize independently when the visual series is compatible, while pillar slice directions remain tied to wall topology.
+
 ## Random Wall Variant Pool
 
 A group of compatible wall variants that may be randomly selected within the pool.
 
 Direction A, Direction B, and Pillar may all participate in random selection. If a part has only one compatible asset in the selected pool, that part is effectively fixed for that pool.
+
+Some wall sets expose only one random profile when their compatible wall sprites can be freely selected from one visual series.
+
+## Rare Wall Variant Cadence
+
+An optional spacing rule for a wall set that inserts a rare wall variant after a random number of ordinary wall parts.
+
+The cadence is direction-aware: Direction A and Direction B can each receive the rare variant without relying on the other direction's wall count.
+
+Rare wall variants are used for visually strong wall sprites that should appear, but not dominate the wall set.
 
 ## Grid Coordinate
 
@@ -108,6 +120,20 @@ dy = +step_y
 ## Pillar
 
 A wall set sprite used at endpoints, corners, and wall intersections.
+
+## Directional Pillar Slice
+
+A pillar sprite that represents only one visible direction-specific slice of a pillar.
+
+Directional pillar slices are used by wall sets where an endpoint, corner, or intersection is assembled from multiple direction-specific pillar pieces instead of one complete pillar sprite.
+
+Directional pillar slices follow the same logical pillar trigger points as a normal pillar. The difference is that one logical pillar point may expand into one or more slice sprites, one for each connected wall direction.
+
+## Multi-Part Pillar
+
+A pillar generation mode where one logical pillar point can produce multiple pillar sprites.
+
+Multi-part pillars are shared behavior for wall sets whose pillar visuals are assembled from direction-specific pieces. They are not specific to one wall set.
 
 ## Wall Step Inference
 
