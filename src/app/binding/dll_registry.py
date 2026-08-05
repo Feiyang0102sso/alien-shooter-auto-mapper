@@ -6,6 +6,7 @@ from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 from app.logger import logger
 from app.ui.colors import (
+    WALL_PROFILE_AS2_SET1,
     WALL_PROFILE_AS2_SET2,
     WALL_PROFILE_AS2_SET3,
     WALL_PROFILE_AS2_SET4,
@@ -30,6 +31,9 @@ AUTO_MAPPER_CLIENT = None
 WALL_TYPE_STANDARD = 0
 WALL_TYPE_LAB = 1
 WALL_TYPE_STANDARD_DARK = 2
+WALL_TYPE_AS2_SET1_FIXED_0 = 3
+WALL_TYPE_AS2_SET1_FIXED_1 = 4
+WALL_TYPE_AS2_SET1_RANDOM = 5
 WALL_TYPE_AS2_SET2_RANDOM = 6
 WALL_TYPE_AS2_SET3_RANDOM = 7
 WALL_TYPE_AS2_SET4_RANDOM = 8
@@ -57,6 +61,24 @@ WALL_PROFILE_UI_METADATA = {
         "description_key": TextKey.WALL_STANDARD_DARK_DESCRIPTION,
         "color": WALL_PROFILE_STANDARD_DARK,
         "preview_key": "standard_dark",
+    },
+    WALL_TYPE_AS2_SET1_FIXED_0: {
+        "short_label": "AS2 Wall Set 1 - Variant 1",
+        "description": "AS2 wall set 1 fixed variant 1.",
+        "color": WALL_PROFILE_AS2_SET1,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET1_FIXED_1: {
+        "short_label": "AS2 Wall Set 1 - Variant 2",
+        "description": "AS2 wall set 1 fixed variant 2.",
+        "color": WALL_PROFILE_AS2_SET1,
+        "preview_key": "",
+    },
+    WALL_TYPE_AS2_SET1_RANDOM: {
+        "short_label": "AS2 Wall Set 1 - Random",
+        "description": "AS2 wall set 1 random variant pool.",
+        "color": WALL_PROFILE_AS2_SET1,
+        "preview_key": "",
     },
     WALL_TYPE_AS2_SET2_RANDOM: {
         "short_label": "AS2 Wall Set 2",

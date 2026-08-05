@@ -24,6 +24,15 @@ from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.eraser import EraserPropertiesWidget
 
 IMAGE_ROOT = APP_RESOURCE_DIR / "images" / "preview" / "AS1"
+INSPECTOR_MAX_WIDTH = 320
+COMPONENT_PREVIEW_WIDTH = 260
+COMPONENT_PREVIEW_HEIGHT = 190
+AS2_SET1_VARIANTS = [
+    (3, "墙体主体1"),
+    (4, "墙体主体2"),
+    (5, "墙体主体3"),
+]
+AS2_SET1_WALL_TYPES = {3, 4, 5}
 
 
 class InspectorPanel(QWidget):
@@ -33,6 +42,7 @@ class InspectorPanel(QWidget):
 
     map_size_applied = Signal(float, float)
     drawable_part_changed = Signal(str)
+    wall_set_variant_changed = Signal(int, str)
     eraser_size_changed = Signal(int)
     decoration_spacing_changed = Signal(float, float)
     decoration_delete_requested = Signal()
@@ -40,6 +50,7 @@ class InspectorPanel(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("inspectorPanel")
+        self.setMaximumWidth(INSPECTOR_MAX_WIDTH)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 8, 14, 14)
@@ -98,12 +109,13 @@ class InspectorPanel(QWidget):
 
         self.component_combo = QComboBox()
         self._drawable_part_ids = []
+        self._drawable_wall_types = []
         self.component_combo.currentIndexChanged.connect(self._emit_drawable_part_changed)
         component_layout.addWidget(self.component_combo)
 
         self.preview = QLabel()
         self.preview.setObjectName("componentPreview")
-        self.preview.setFixedSize(300, 200)
+        self.preview.setFixedSize(COMPONENT_PREVIEW_WIDTH, COMPONENT_PREVIEW_HEIGHT)
         self.preview.setAlignment(Qt.AlignCenter)
         component_layout.addWidget(self.preview)
 
@@ -174,21 +186,7 @@ class InspectorPanel(QWidget):
         self.component_combo.setVisible(True)
         self.nvid_label.setVisible(True)
 
-        self.component_combo.blockSignals(True)
-        self.component_combo.clear()
-        self._drawable_part_ids = []
-
-        for part_id, label in get_drawable_parts(wall_type):
-            self._drawable_part_ids.append(part_id)
-            self.component_combo.addItem(label)
-
-        self.component_combo.setCurrentIndex(0)
-        self.component_combo.blockSignals(False)
-
-        if self._drawable_part_ids:
-            first_part_id = self._drawable_part_ids[0]
-            self._update_preview(wall_type, first_part_id)
-            self.drawable_part_changed.emit(first_part_id)
+        self._reload_drawable_part_choices(wall_type)
 
     def set_decoration_tool(self, decoration_type: str, decoration_name: str) -> None:
         """
@@ -261,7 +259,14 @@ class InspectorPanel(QWidget):
             return
 
         part_id = self._drawable_part_ids[index]
-        self._update_preview(self.current_wall_type, part_id)
+        wall_type = self._drawable_wall_types[index]
+
+        if wall_type != self.current_wall_type:
+            self.current_wall_type = wall_type
+            variant_label = self.component_combo.currentText()
+            self.wall_set_variant_changed.emit(wall_type, variant_label)
+
+        self._update_preview(wall_type, part_id)
         self.drawable_part_changed.emit(part_id)
 
     def _emit_decoration_spacing_changed(self) -> None:
@@ -277,6 +282,53 @@ class InspectorPanel(QWidget):
         Update component preview for the active decoration tool.
         """
         self.preview.clear()
+
+    def _reload_drawable_part_choices(self, wall_type: int) -> None:
+        """
+        Reload drawable part choices after a wall set or wall variant changes.
+        """
+        self.component_combo.blockSignals(True)
+        self.component_combo.clear()
+        self._drawable_part_ids = []
+        self._drawable_wall_types = []
+
+        if wall_type in AS2_SET1_WALL_TYPES:
+            for variant_wall_type, variant_label in AS2_SET1_VARIANTS:
+                self._drawable_part_ids.append("wall_body")
+                self._drawable_wall_types.append(variant_wall_type)
+                self.component_combo.addItem(variant_label)
+        else:
+            for part_id, label in get_drawable_parts(wall_type):
+                self._drawable_part_ids.append(part_id)
+                self._drawable_wall_types.append(wall_type)
+                self.component_combo.addItem(label)
+
+            if not self._drawable_part_ids:
+                self._drawable_part_ids.append("wall_body")
+                self._drawable_wall_types.append(wall_type)
+                self.component_combo.addItem(tr(TextKey.DRAWABLE_WALL_BODY))
+
+        selected_index = self._find_drawable_wall_type_index(wall_type)
+        self.component_combo.setCurrentIndex(selected_index)
+        self.component_combo.blockSignals(False)
+
+        if self._drawable_part_ids:
+            part_id = self._drawable_part_ids[selected_index]
+            selected_wall_type = self._drawable_wall_types[selected_index]
+            self._update_preview(selected_wall_type, part_id)
+            self.drawable_part_changed.emit(part_id)
+
+    def _find_drawable_wall_type_index(self, wall_type: int) -> int:
+        """
+        Return the combo index matching the current wall type.
+        """
+        index = 0
+        while index < len(self._drawable_wall_types):
+            if self._drawable_wall_types[index] == wall_type:
+                return index
+            index += 1
+
+        return 0
 
     def _update_preview(self, wall_type: int, part_id: str) -> None:
         """
@@ -321,8 +373,8 @@ class InspectorPanel(QWidget):
             pixmap = QPixmap(str(image_path))
             self.preview.setPixmap(
                 pixmap.scaled(
-                    300,
-                    200,
+                    COMPONENT_PREVIEW_WIDTH,
+                    COMPONENT_PREVIEW_HEIGHT,
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation
                 )

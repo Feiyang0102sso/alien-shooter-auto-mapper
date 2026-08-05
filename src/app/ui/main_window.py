@@ -182,6 +182,7 @@ class MainWindow(QMainWindow):
         """
         Connect first-pass panel interactions.
         """
+        self.theme_shelf.game_family_changed.connect(self._on_game_family_changed)
         self.theme_shelf.wall_set_selected.connect(self._on_wall_set_selected)
         self.decoration_shelf.decoration_selected.connect(self._on_decoration_tool_selected)
         self.drawing_toolbar.drawing_mode_changed.connect(self._on_drawing_mode_changed)
@@ -197,6 +198,7 @@ class MainWindow(QMainWindow):
         self.viewport.drawing_cancelled.connect(self._on_drawing_cancelled)
         self.inspector.map_size_applied.connect(self._on_map_size_applied)
         self.inspector.drawable_part_changed.connect(self._on_drawable_part_changed)
+        self.inspector.wall_set_variant_changed.connect(self._on_wall_set_variant_changed)
         self.inspector.eraser_size_changed.connect(self._on_eraser_size_changed)
         self.inspector.decoration_spacing_changed.connect(self._on_decoration_spacing_changed)
         self.inspector.decoration_delete_requested.connect(self._on_decoration_delete_requested)
@@ -212,6 +214,21 @@ class MainWindow(QMainWindow):
         self.inspector.clear_decoration_selection()
         self.statusBar().showMessage(tr(TextKey.STATUS_WALL_SET_SELECTED, wall_name=wall_name))
         logger.info(f"Wall set selected: {wall_type}")
+
+    def _on_wall_set_variant_changed(self, wall_type: int, variant_name: str) -> None:
+        """
+        Apply a right-panel wall set variant selection.
+        """
+        self.viewport.set_wall_type(wall_type)
+        self.statusBar().showMessage(tr(TextKey.STATUS_WALL_SET_SELECTED, wall_name=variant_name))
+        logger.info(f"Wall set variant selected: {wall_type}")
+
+    def _on_game_family_changed(self, game_family: str) -> None:
+        """
+        Clear drawing state when switching between AS1 and AS2 wall entries.
+        """
+        self._clear_canvas()
+        logger.info(f"Game family switched: {game_family}")
 
     def _on_decoration_tool_selected(self, decoration_type: str, decoration_name: str) -> None:
         """

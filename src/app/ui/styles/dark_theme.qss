@@ -192,6 +192,17 @@ QPushButton:hover {
     color: #07110d;
 }
 
+#gameFamilyButton {
+    min-height: 34px;
+    font-weight: 700;
+}
+
+#gameFamilyButton:checked {
+    background: #2aa879;
+    border-color: #45c797;
+    color: #07110d;
+}
+
 QComboBox {
     background: #182329;
     border: 1px solid #36505d;
