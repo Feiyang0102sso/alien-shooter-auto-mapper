@@ -41,9 +41,8 @@ inline constexpr As2DoorProfile make_as2_wall_set1_door_profile(uint32_t pillar_
             .panel_dir_map = {
                 .dir_a = 128,
                 .dir_b = 0
-            },
-            .compensation_pillar_dir_a = NO_COMPENSATION_PILLAR,
-            .compensation_pillar_dir_b = NO_COMPENSATION_PILLAR
+            }
+            // extra_wall_* left at defaults (0) -- no compensation on small doors
         },
         .large = {
             .span_steps = 2,
@@ -69,18 +68,27 @@ inline constexpr As2DoorProfile make_as2_wall_set1_door_profile(uint32_t pillar_
                 .dir_a = 128,
                 .dir_b = 0
             },
-            .compensation_pillar_dir_a = {
-                .vid = 1782,
-                .direction = pillar_direction,
-                .offset_x = 45.0f,
-                .offset_y = -96.0f
+            // Compensate pillars via the unified Door Flank Part lists (1 each side).
+            // These parts are appended AFTER WallBuilder excavations, so they
+            // never get erased by a neighboring door on the same wall run.
+            .door_flank_parts_dir_a = {
+                {
+                    .vid = 1782,
+                    .direction = pillar_direction,
+                    .offset_x = 45.0f,
+                    .offset_y = -96.0f
+                }
             },
-            .compensation_pillar_dir_b = {
-                .vid = 1782,
-                .direction = pillar_direction,
-                .offset_x = -135.0f,
-                .offset_y = -96.0f
-            }
+            .door_flank_part_count_dir_a = 1,
+            .door_flank_parts_dir_b = {
+                {
+                    .vid = 1782,
+                    .direction = pillar_direction,
+                    .offset_x = -135.0f,
+                    .offset_y = -96.0f
+                }
+            },
+            .door_flank_part_count_dir_b = 1
         }
     };
 }
@@ -108,9 +116,9 @@ inline constexpr As2DoorProfile make_as2_two_part_large_door_profile(
             .panel_dir_map = {
                 .dir_a = 0,
                 .dir_b = 0
-            },
-            .compensation_pillar_dir_a = NO_COMPENSATION_PILLAR,
-            .compensation_pillar_dir_b = NO_COMPENSATION_PILLAR
+            }
+            // extra_wall_* defaults (0): small-door mode is unused for this
+            // family of wall sets -- no compensation parts needed.
         },
         .large = {
             .span_steps = 2,
@@ -146,9 +154,9 @@ inline constexpr As2DoorProfile make_as2_two_part_large_door_profile(
             .panel_dir_map = {
                 .dir_a = 128,
                 .dir_b = 0
-            },
-            .compensation_pillar_dir_a = NO_COMPENSATION_PILLAR,
-            .compensation_pillar_dir_b = NO_COMPENSATION_PILLAR
+            }
+            // extra_wall_* defaults (0): this family has no standalone
+            // compensation pillars or air walls on the door itself.
         }
     };
 }
@@ -197,9 +205,8 @@ inline constexpr As2DoorProfile make_as2_manual_single_frame_large_door_profile(
             .panel_dir_map = {
                 .dir_a = 0,
                 .dir_b = 0
-            },
-            .compensation_pillar_dir_a = NO_COMPENSATION_PILLAR,
-            .compensation_pillar_dir_b = NO_COMPENSATION_PILLAR
+            }
+            // extra_wall_* defaults (0): small doors not supported by family.
         },
         .large = {
             .span_steps = 2,
@@ -233,20 +240,96 @@ inline constexpr As2DoorProfile make_as2_manual_single_frame_large_door_profile(
             .panel_offset_a_x = panel_offset_a_x,
             .panel_offset_a_y = panel_offset_a_y,
             .panel_offset_b_x = panel_offset_b_x,
-            .panel_offset_b_y = panel_offset_b_y,
-            .compensation_pillar_dir_a = NO_COMPENSATION_PILLAR,
-            .compensation_pillar_dir_b = NO_COMPENSATION_PILLAR
+            .panel_offset_b_y = panel_offset_b_y
+            // extra_wall_* defaults (0): no air-walls by default.
+            // Set5 overrides this via its dedicated factory below.
         }
     };
 }
 
-inline constexpr As2DoorProfile DOOR_AS2_WALL_SET5 = make_as2_manual_single_frame_large_door_profile(
-    2504,
-    2506,
-    2505,
-    128,
-    0
-);
+inline constexpr As2DoorProfile make_as2_wall_set5_door_profile() {
+    // air wall on each side
+    // Offsets are measured from the 2504 frame anchor (`pt` = pos_x/pos_y of
+    // the 2504 sprite in the .map):
+    //   air_wall_x = pt.x + offset_x
+    //   air_wall_y = pt.y + offset_y
+    return {
+        .small = {
+            .span_steps = 1,
+            .frame_parts = {},
+            .frame_part_count = 0,
+            .panel = {
+                .vid_closed = 0,
+                .vid_open = 0
+            },
+            .panel_dir_map = {
+                .dir_a = 0,
+                .dir_b = 0
+            }
+        },
+        .large = {
+            .span_steps = 2,
+            .frame_parts = {
+                {
+                    .vid = 2504,
+                    .dir_map = {
+                        .dir_a = 128,
+                        .dir_b = 0
+                    },
+                    .offset_a_x = 0.0f,
+                    .offset_a_y = 0.0f,
+                    .offset_b_x = 0.0f,
+                    .offset_b_y = 0.0f
+                }
+            },
+            .frame_part_count = 1,
+            .panel = {
+                .vid_closed = 2506,
+                .vid_open = 2505
+            },
+            .panel_dir_map = {
+                .dir_a = 128,
+                .dir_b = 0
+            },
+            .use_large_center_offset = false,
+            // Air walls (Door Flank Parts) appended AFTER WallBuilder
+            // excavations, so they are immune to erasure from the door-opening
+            // pass.
+            .door_flank_parts_dir_a = {
+                {
+                    .vid = 631,
+                    .direction = 0,
+                    .offset_x = 53.0f,
+                    .offset_y = -35.0f
+                },
+                {
+                    .vid = 631,
+                    .direction = 0,
+                    .offset_x = -141.0f,
+                    .offset_y = 104.0f
+                }
+            },
+            .door_flank_part_count_dir_a = 2,
+            .door_flank_parts_dir_b = {
+                {
+                    .vid = 631,
+                    .direction = 128,
+                    .offset_x = -42.0f,
+                    .offset_y = -34.0f
+                },
+                {
+                    .vid = 631,
+                    .direction = 128,
+                    .offset_x = 143.0f,
+                    .offset_y = 109.0f
+                }
+            },
+            .door_flank_part_count_dir_b = 2
+        }
+    };
+}
+
+inline constexpr As2DoorProfile DOOR_AS2_WALL_SET5 = make_as2_wall_set5_door_profile();
 
 inline constexpr As2DoorProfile DOOR_AS2_WALL_SET6 = make_as2_manual_single_frame_large_door_profile(
     2604,

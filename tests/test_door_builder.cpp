@@ -821,8 +821,10 @@ TEST(DoorBuilderTest, AS2WallSet5LargeDoorUsesSingleFrame) {
         }
     };
 
+    // 4 doors x (1 frame + 1 panel + 2 air-wall VID 631 [one left, one right,
+    //   FAR only — near-frame air-walls are intentionally omitted]) = 4 x 4 = 16
     std::vector<io::Sprite> sprites = builder.build(doors);
-    ASSERT_EQ(sprites.size(), 8u);
+    ASSERT_EQ(sprites.size(), 16u);
 
     std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
     for (const io::Sprite& sprite : sprites) {
@@ -835,6 +837,16 @@ TEST(DoorBuilderTest, AS2WallSet5LargeDoorUsesSingleFrame) {
     std::pair<int, uint32_t> open_panel_dir_b = {2505, 0u};
     std::pair<int, uint32_t> closed_panel_dir_a = {2506, 128u};
     std::pair<int, uint32_t> open_panel_dir_a = {2505, 128u};
+    // Air-wall VID 631 appended by DoorBuilder AFTER excavations.
+    // Per calibration map _wall_set_5_doors.json the 631 direction is
+    // OPPOSITE to the 2504 frame direction, and there are 2 (far) per door
+    // (one on each side, i.e. left-and-right layout, near-frame omitted):
+    //   direction_type A (2504 dir = 128, "\" visual): 2 x 631 dir=0
+    //       per door x 2 doors = 4
+    //   direction_type B (2504 dir = 0,   "/" visual): 2 x 631 dir=128
+    //       per door x 2 doors = 4
+    std::pair<int, uint32_t> air_wall_for_2504_dir_128 = {631, 0u};
+    std::pair<int, uint32_t> air_wall_for_2504_dir_0 = {631, 128u};
 
     EXPECT_EQ(count_by_vid_and_direction[frame_dir_b], 2);
     EXPECT_EQ(count_by_vid_and_direction[frame_dir_a], 2);
@@ -842,6 +854,8 @@ TEST(DoorBuilderTest, AS2WallSet5LargeDoorUsesSingleFrame) {
     EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_b], 1);
     EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_a], 1);
     EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_a], 1);
+    EXPECT_EQ(count_by_vid_and_direction[air_wall_for_2504_dir_128], 4);
+    EXPECT_EQ(count_by_vid_and_direction[air_wall_for_2504_dir_0], 4);
 }
 
 TEST(DoorBuilderTest, AS2WallSet5LargeDoorVariantsWriteCompactLShapeMap) {

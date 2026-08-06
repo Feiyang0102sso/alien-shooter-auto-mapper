@@ -135,11 +135,19 @@ Do not assume a door assembly always has one frame sprite at the same anchor as 
 
 The open or closed visual state of a door panel.
 
+## Door Flank Part
+
+An arbitrary wall-class sprite (pillar, air-wall, or regular wall) placed next to a door assembly to visually seal the frame gap.
+
+Door Flank Parts are declared per door direction in the profile (Direction A and Direction B independently), each carrying its own asset id, sprite direction, and map-coordinate offset from the frame anchor. A direction can carry zero, one, or many flank parts — symmetric (one on each side) or asymmetric (only one side).
+
+Flank parts are emitted in the DoorBuilder pass, NOT in WallBuilder, so they survive the WallBuilder door-opening excavation pass. Do not emit flank parts in WallBuilder.
+
+_Avoid:_ Compensation Pillar (pillar-specific legacy term).
+
 ## Compensation Pillar
 
-A pillar sprite added beside a door assembly when the door art does not visually include the full pillar edge.
-
-Compensation pillar direction matches the pillar direction of the active wall variant group.
+Legacy name for a Door Flank Part when the asset happens to be a pillar sprite. Retained for historical references but new glossary entries use **Door Flank Part**.
 
 ## Directional Pillar Slice
 

@@ -11,6 +11,7 @@
 namespace auto_mapper::core {
 
 inline constexpr int MAX_AS2_DOOR_FRAME_PARTS = 2;
+inline constexpr int MAX_AS2_DOOR_FLANK_PARTS_PER_DIR = 4;
 
 struct DoorZRange {
     float min_z; // Lower z offset.
@@ -90,8 +91,17 @@ struct As2DoorSizeVariant {
     float panel_offset_a_y = 0.0f;
     float panel_offset_b_x = 0.0f;
     float panel_offset_b_y = 0.0f;
-    WallPartAsset compensation_pillar_dir_a;
-    WallPartAsset compensation_pillar_dir_b;
+    // Door Flank Parts appended by DoorBuilder (after excavations, so they
+    // never get removed by the wall-erasure pass). Used for:
+    //  - Set1 large door compensation pillars (1 per direction)
+    //  - Set5 air walls VID 631 (2 per direction, placed on both sides)
+    //  - Set7 gap-filling real walls on one side of the door
+    // Each direction has its own independent count and list, so offsets can
+    // live on the left, right, or both sides of the door freely.
+    WallPartAsset door_flank_parts_dir_a[MAX_AS2_DOOR_FLANK_PARTS_PER_DIR];
+    int door_flank_part_count_dir_a = 0;
+    WallPartAsset door_flank_parts_dir_b[MAX_AS2_DOOR_FLANK_PARTS_PER_DIR];
+    int door_flank_part_count_dir_b = 0;
 };
 
 struct As2DoorProfile {

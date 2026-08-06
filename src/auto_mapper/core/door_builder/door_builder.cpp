@@ -284,27 +284,47 @@ static int get_as2_panel_id(const As2DoorSizeVariant& variant, const DoorInstanc
     return variant.panel.vid_closed;
 }
 
-static void push_as2_compensation_pillar(
+static void push_as2_door_flank_parts(
     std::vector<io::Sprite>& door_sprites,
     const As2DoorSizeVariant& variant,
     int direction_type,
     const MapPoint& pt
 ) {
-    const WallPartAsset& pillar = (direction_type == 0) ?
-        variant.compensation_pillar_dir_a :
-        variant.compensation_pillar_dir_b;
+    // Choose the per-direction list independently. Each side can have 0..N
+    // parts of its own, supporting: parts on the left only, right only, or
+    // both sides with different counts / offsets.
+    int count = 0;
+    const WallPartAsset* parts = nullptr;
 
-    if (pillar.vid <= 0) {
+    if (direction_type == 0) {
+        count = variant.door_flank_part_count_dir_a;
+        parts = variant.door_flank_parts_dir_a;
+    } else {
+        count = variant.door_flank_part_count_dir_b;
+        parts = variant.door_flank_parts_dir_b;
+    }
+
+    if (count <= 0 || parts == nullptr) {
         return;
     }
 
-    door_sprites.push_back(io::Sprite(
-        pillar.vid,
-        pt.x + pillar.offset_x,
-        pt.y + pillar.offset_y,
-        0.0f,
-        pillar.direction
-    ));
+    for (int i = 0; i < count; ++i) {
+        const WallPartAsset& part = parts[i];
+        if (part.vid <= 0) {
+            continue;
+        }
+
+        // Placed at (pt + offset) with z=0. These sprites are generated
+        // AFTER WallBuilder excavations have run, so they are immune to
+        // erasure from the door-opening pass (including neighboring doors).
+        door_sprites.push_back(io::Sprite(
+            part.vid,
+            pt.x + part.offset_x,
+            pt.y + part.offset_y,
+            0.0f,
+            part.direction
+        ));
+    }
 }
 
 DoorBuilder::DoorBuilder(float map_size_x, float map_size_y)
@@ -360,7 +380,7 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
                 ));
             }
 
-            push_as2_compensation_pillar(door_sprites, variant, door.direction_type, pt);
+            push_as2_door_flank_parts(door_sprites, variant, door.direction_type, pt);
             continue;
         }
 
