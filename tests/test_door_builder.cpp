@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "auto_mapper/core/door_builder.h"
-#include "auto_mapper/core/door_profiles_as1.h"
+#include "../src/auto_mapper/core/door_builder/door_builder.h"
+#include "../src/auto_mapper/core/door_builder/door_profiles_as1.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include "utils/test_utils.h"
@@ -427,4 +427,769 @@ TEST(DoorBuilderTest, AS2WallSet1DoorVariantsWriteCompactLShapeMap) {
     );
 
     ASSERT_TRUE(write_success);
+}
+
+TEST(DoorBuilderTest, AS2WallSet2LargeDoorUsesTwoFrameParts) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    std::vector<DoorInstance> doors = {
+        {
+            {0, 0},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {0, 4},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {4, 0},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {8, 0},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        }
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(doors);
+    ASSERT_EQ(sprites.size(), 12u);
+
+    std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
+    for (const io::Sprite& sprite : sprites) {
+        count_by_vid_and_direction[{sprite.vid, sprite.direction}] += 1;
+    }
+
+    std::pair<int, uint32_t> frame_dir_b_left = {1703, 0u};
+    std::pair<int, uint32_t> frame_dir_b_right = {1703, 64u};
+    std::pair<int, uint32_t> frame_dir_a_left = {1703, 128u};
+    std::pair<int, uint32_t> frame_dir_a_right = {1703, 192u};
+    std::pair<int, uint32_t> closed_panel_dir_b = {1785, 0u};
+    std::pair<int, uint32_t> open_panel_dir_b = {1786, 0u};
+    std::pair<int, uint32_t> closed_panel_dir_a = {1785, 128u};
+    std::pair<int, uint32_t> open_panel_dir_a = {1786, 128u};
+
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_b_left], 2);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_b_right], 2);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_a_left], 2);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_a_right], 2);
+    EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_b], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_b], 1);
+    EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_a], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_a], 1);
+}
+
+TEST(DoorBuilderTest, AS2WallSet2LargeDoorVariantsWriteCompactLShapeMap) {
+    const float map_size_x = 5000.0f;
+    const float map_size_y = 5000.0f;
+
+    std::vector<Segment> segments = {
+        {{2, 10}, {2, 22}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{2, 22}, {14, 22}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{18, 10}, {18, 22}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{18, 22}, {30, 22}, WALL_TYPE_AS2_WALL_SET2_RANDOM}
+    };
+
+    std::vector<DoorInstance> doors = {
+        {
+            {2, 13},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {2, 18},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {5, 22},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {10, 22},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {18, 15},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {23, 22},
+            WALL_TYPE_AS2_WALL_SET2_RANDOM,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        }
+    };
+
+    std::vector<DoorExcavation> excavations;
+    excavations.reserve(doors.size());
+    for (const DoorInstance& door : doors) {
+        excavations.push_back({
+            door.pos,
+            door.direction_type,
+            door.size,
+            door.wall_type
+        });
+    }
+
+    WallBuilder wall_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> sprites = wall_builder.build(segments, false, false, excavations);
+
+    DoorBuilder door_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> door_sprites = door_builder.build(doors);
+    sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
+
+    std::string output_path = get_test_output_path("as2_wall_set2_door_variants.map");
+    bool write_success = io::write_map(
+        sprites,
+        output_path,
+        io::MapFormat::AS2R,
+        map_size_x,
+        map_size_y
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+static void expect_as2_wall_set3_or_set4_large_door_parts(int wall_type) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    std::vector<DoorInstance> doors = {
+        {
+            {0, 0},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {0, 4},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {4, 0},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {8, 0},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        }
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(doors);
+    ASSERT_EQ(sprites.size(), 12u);
+
+    std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
+    for (const io::Sprite& sprite : sprites) {
+        count_by_vid_and_direction[{sprite.vid, sprite.direction}] += 1;
+    }
+
+    std::pair<int, uint32_t> frame_dir_b_left = {1103, 0u};
+    std::pair<int, uint32_t> frame_dir_b_right = {1103, 128u};
+    std::pair<int, uint32_t> frame_dir_a_left = {1103, 64u};
+    std::pair<int, uint32_t> frame_dir_a_right = {1103, 192u};
+    std::pair<int, uint32_t> closed_panel_dir_b = {1785, 0u};
+    std::pair<int, uint32_t> open_panel_dir_b = {1786, 0u};
+    std::pair<int, uint32_t> closed_panel_dir_a = {1785, 128u};
+    std::pair<int, uint32_t> open_panel_dir_a = {1786, 128u};
+
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_b_left], 2);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_b_right], 2);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_a_left], 2);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_a_right], 2);
+    EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_b], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_b], 1);
+    EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_a], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_a], 1);
+}
+
+TEST(DoorBuilderTest, AS2WallSet3AndSet4LargeDoorUseTwoFrameParts) {
+    expect_as2_wall_set3_or_set4_large_door_parts(WALL_TYPE_AS2_WALL_SET3_RANDOM);
+    expect_as2_wall_set3_or_set4_large_door_parts(WALL_TYPE_AS2_WALL_SET4_RANDOM);
+}
+
+static void write_as2_wall_set3_or_set4_large_door_map(int wall_type, const std::string& output_name) {
+    const float map_size_x = 5000.0f;
+    const float map_size_y = 5000.0f;
+
+    std::vector<Segment> segments = {
+        {{2, 10}, {2, 22}, wall_type},
+        {{2, 22}, {14, 22}, wall_type},
+        {{18, 10}, {18, 22}, wall_type},
+        {{18, 22}, {30, 22}, wall_type}
+    };
+
+    std::vector<DoorInstance> doors = {
+        {
+            {2, 13},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {2, 18},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {5, 22},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {10, 22},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {18, 15},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {23, 22},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        }
+    };
+
+    std::vector<DoorExcavation> excavations;
+    excavations.reserve(doors.size());
+    for (const DoorInstance& door : doors) {
+        excavations.push_back({
+            door.pos,
+            door.direction_type,
+            door.size,
+            door.wall_type
+        });
+    }
+
+    WallBuilder wall_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> sprites = wall_builder.build(segments, false, false, excavations);
+
+    DoorBuilder door_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> door_sprites = door_builder.build(doors);
+    sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
+
+    std::string output_path = get_test_output_path(output_name);
+    bool write_success = io::write_map(
+        sprites,
+        output_path,
+        io::MapFormat::AS2R,
+        map_size_x,
+        map_size_y
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+TEST(DoorBuilderTest, AS2WallSet3AndSet4LargeDoorVariantsWriteCompactLShapeMaps) {
+    write_as2_wall_set3_or_set4_large_door_map(
+        WALL_TYPE_AS2_WALL_SET3_RANDOM,
+        "as2_wall_set3_door_variants.map"
+    );
+    write_as2_wall_set3_or_set4_large_door_map(
+        WALL_TYPE_AS2_WALL_SET4_RANDOM,
+        "as2_wall_set4_door_variants.map"
+    );
+}
+
+TEST(DoorBuilderTest, AS2WallSet5LargeDoorUsesSingleFrame) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    std::vector<DoorInstance> doors = {
+        {
+            {0, 0},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {0, 4},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {4, 0},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {8, 0},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        }
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(doors);
+    ASSERT_EQ(sprites.size(), 8u);
+
+    std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
+    for (const io::Sprite& sprite : sprites) {
+        count_by_vid_and_direction[{sprite.vid, sprite.direction}] += 1;
+    }
+
+    std::pair<int, uint32_t> frame_dir_b = {2504, 0u};
+    std::pair<int, uint32_t> frame_dir_a = {2504, 128u};
+    std::pair<int, uint32_t> closed_panel_dir_b = {2506, 0u};
+    std::pair<int, uint32_t> open_panel_dir_b = {2505, 0u};
+    std::pair<int, uint32_t> closed_panel_dir_a = {2506, 128u};
+    std::pair<int, uint32_t> open_panel_dir_a = {2505, 128u};
+
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_b], 2);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_a], 2);
+    EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_b], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_b], 1);
+    EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_a], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_a], 1);
+}
+
+TEST(DoorBuilderTest, AS2WallSet5LargeDoorVariantsWriteCompactLShapeMap) {
+    const float map_size_x = 5000.0f;
+    const float map_size_y = 5000.0f;
+
+    std::vector<Segment> segments = {
+        {{2, 10}, {2, 22}, WALL_TYPE_AS2_WALL_SET5_RANDOM},
+        {{2, 22}, {14, 22}, WALL_TYPE_AS2_WALL_SET5_RANDOM},
+        {{18, 10}, {18, 22}, WALL_TYPE_AS2_WALL_SET5_RANDOM},
+        {{18, 22}, {30, 22}, WALL_TYPE_AS2_WALL_SET5_RANDOM}
+    };
+
+    std::vector<DoorInstance> doors = {
+        {
+            {2, 13},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {2, 18},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {5, 22},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {10, 22},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {18, 15},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {23, 22},
+            WALL_TYPE_AS2_WALL_SET5_RANDOM,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        }
+    };
+
+    std::vector<DoorExcavation> excavations;
+    excavations.reserve(doors.size());
+    for (const DoorInstance& door : doors) {
+        excavations.push_back({
+            door.pos,
+            door.direction_type,
+            door.size,
+            door.wall_type
+        });
+    }
+
+    WallBuilder wall_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> sprites = wall_builder.build(segments, false, false, excavations);
+
+    DoorBuilder door_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> door_sprites = door_builder.build(doors);
+    sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
+
+    std::string output_path = get_test_output_path("as2_wall_set5_door_variants.map");
+    bool write_success = io::write_map(
+        sprites,
+        output_path,
+        io::MapFormat::AS2R,
+        map_size_x,
+        map_size_y
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+static void expect_as2_manual_single_frame_large_door_parts(
+    int wall_type,
+    int frame_vid,
+    int closed_panel_vid,
+    int open_panel_vid,
+    uint32_t dir_a,
+    uint32_t dir_b,
+    bool open_has_panel
+) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    std::vector<DoorInstance> doors = {
+        {
+            {0, 0},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {0, 4},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {4, 0},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {8, 0},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        }
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(doors);
+
+    std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
+    for (const io::Sprite& sprite : sprites) {
+        count_by_vid_and_direction[{sprite.vid, sprite.direction}] += 1;
+    }
+
+    std::pair<int, uint32_t> frame_dir_a = {frame_vid, dir_a};
+    std::pair<int, uint32_t> frame_dir_b = {frame_vid, dir_b};
+    std::pair<int, uint32_t> closed_panel_dir_a = {closed_panel_vid, dir_a};
+    std::pair<int, uint32_t> closed_panel_dir_b = {closed_panel_vid, dir_b};
+    std::pair<int, uint32_t> open_panel_dir_a = {open_panel_vid, dir_a};
+    std::pair<int, uint32_t> open_panel_dir_b = {open_panel_vid, dir_b};
+
+    if (!open_has_panel) {
+        ASSERT_EQ(sprites.size(), 6u);
+        EXPECT_EQ(count_by_vid_and_direction[frame_dir_a], 2);
+        EXPECT_EQ(count_by_vid_and_direction[frame_dir_b], 2);
+        EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_a], 1);
+        EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_b], 1);
+        EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_a], 0);
+        EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_b], 0);
+        return;
+    }
+
+    ASSERT_EQ(sprites.size(), 8u);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_a], 2);
+    EXPECT_EQ(count_by_vid_and_direction[frame_dir_b], 2);
+    EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_a], 1);
+    EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_b], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_a], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_panel_dir_b], 1);
+}
+
+TEST(DoorBuilderTest, AS2WallSet6LargeDoorUsesSingleFrame) {
+    expect_as2_manual_single_frame_large_door_parts(
+        WALL_TYPE_AS2_WALL_SET6_RANDOM,
+        2604,
+        2605,
+        2606,
+        128,
+        0,
+        true
+    );
+}
+
+TEST(DoorBuilderTest, AS2WallSet7OpenDoorKeepsFrameAndOmitsPanel) {
+    expect_as2_manual_single_frame_large_door_parts(
+        WALL_TYPE_AS2_WALL_SET7_RANDOM,
+        2624,
+        2645,
+        0,
+        128,
+        51,
+        false
+    );
+}
+
+TEST(DoorBuilderTest, AS2WallSet7ClosedPanelUsesManualOffsets) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    DoorInstance dir_a_door = {
+        {0, 0},
+        WALL_TYPE_AS2_WALL_SET7_RANDOM,
+        0,
+        2,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    std::vector<io::Sprite> sprites = builder.build({dir_a_door});
+    ASSERT_EQ(sprites.size(), 2u);
+    EXPECT_EQ(sprites[0].vid, 2624);
+    EXPECT_EQ(sprites[1].vid, 2645);
+    EXPECT_EQ(sprites[0].direction, 128u);
+    EXPECT_EQ(sprites[1].direction, 128u);
+    EXPECT_FLOAT_EQ(sprites[1].posX - sprites[0].posX, -79.0f);
+    EXPECT_FLOAT_EQ(sprites[1].posY - sprites[0].posY, 55.0f);
+
+    DoorInstance dir_b_door = dir_a_door;
+    dir_b_door.direction_type = 1;
+
+    std::vector<io::Sprite> dir_b_sprites = builder.build({dir_b_door});
+    ASSERT_EQ(dir_b_sprites.size(), 2u);
+    EXPECT_EQ(dir_b_sprites[0].vid, 2624);
+    EXPECT_EQ(dir_b_sprites[1].vid, 2645);
+    EXPECT_EQ(dir_b_sprites[0].direction, 51u);
+    EXPECT_EQ(dir_b_sprites[1].direction, 51u);
+    EXPECT_FLOAT_EQ(dir_b_sprites[1].posX - dir_b_sprites[0].posX, 6.0f);
+    EXPECT_FLOAT_EQ(dir_b_sprites[1].posY - dir_b_sprites[0].posY, -5.0f);
+}
+
+static void write_as2_manual_single_frame_large_door_map(int wall_type, const std::string& output_name) {
+    const float map_size_x = 5000.0f;
+    const float map_size_y = 5000.0f;
+
+    std::vector<Segment> segments = {
+        {{2, 10}, {2, 22}, wall_type},
+        {{2, 22}, {14, 22}, wall_type},
+        {{18, 10}, {18, 22}, wall_type},
+        {{18, 22}, {30, 22}, wall_type}
+    };
+
+    std::vector<DoorInstance> doors = {
+        {
+            {2, 13},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {2, 18},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {5, 22},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {10, 22},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {18, 15},
+            wall_type,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {23, 22},
+            wall_type,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        }
+    };
+
+    std::vector<DoorExcavation> excavations;
+    excavations.reserve(doors.size());
+    for (const DoorInstance& door : doors) {
+        excavations.push_back({
+            door.pos,
+            door.direction_type,
+            door.size,
+            door.wall_type
+        });
+    }
+
+    WallBuilder wall_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> sprites = wall_builder.build(segments, false, false, excavations);
+
+    DoorBuilder door_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> door_sprites = door_builder.build(doors);
+    sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
+
+    std::string output_path = get_test_output_path(output_name);
+    bool write_success = io::write_map(
+        sprites,
+        output_path,
+        io::MapFormat::AS2R,
+        map_size_x,
+        map_size_y
+    );
+
+    ASSERT_TRUE(write_success);
+}
+
+TEST(DoorBuilderTest, AS2WallSet6AndSet7LargeDoorVariantsWriteCompactLShapeMaps) {
+    write_as2_manual_single_frame_large_door_map(
+        WALL_TYPE_AS2_WALL_SET6_RANDOM,
+        "as2_wall_set6_door_variants.map"
+    );
+    write_as2_manual_single_frame_large_door_map(
+        WALL_TYPE_AS2_WALL_SET7_RANDOM,
+        "as2_wall_set7_door_variants.map"
+    );
 }

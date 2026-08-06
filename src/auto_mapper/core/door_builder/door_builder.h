@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "auto_mapper/core/door_profile_types.h"
+#include "auto_mapper/core//door_builder/door_profile_types.h"
 #include "auto_mapper/core/geometry.h"
 #include "auto_mapper/io/map_writer.h"
 #include <vector>

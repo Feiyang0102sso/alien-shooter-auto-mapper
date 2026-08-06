@@ -7,7 +7,7 @@
 #pragma once
 
 #include "auto_mapper/core/wall_builder/wall_builder.h"
-#include "auto_mapper/core/door_builder.h"
+#include "../../src/auto_mapper/core/door_builder/door_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
 #include <string>
 #include <vector>

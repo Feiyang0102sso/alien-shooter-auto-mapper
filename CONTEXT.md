@@ -125,6 +125,12 @@ A wall set sprite used at endpoints, corners, and wall intersections.
 
 A group of sprites that represents one logical door opening in a wall set.
 
+## Multi-Part Door Frame
+
+A door frame can be assembled from multiple frame sprites around one logical door panel.
+
+Do not assume a door assembly always has one frame sprite at the same anchor as the panel. Some wall sets place frame parts beside the panel, and each frame part has its own direction and offset from the panel anchor.
+
 ## Door Panel State
 
 The open or closed visual state of a door panel.

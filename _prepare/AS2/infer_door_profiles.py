@@ -59,6 +59,29 @@ class PillarOffsetCandidate:
 
 
 @dataclass(frozen=True)
+class PanelAxisSample:
+    """A repeated panel direction delta mapped to one wall axis."""
+
+    panel_direction: int
+    axis_name: str
+    grid_distance: int
+    dx: float
+    dy: float
+
+
+@dataclass(frozen=True)
+class FramePartCandidate:
+    """A frame part placed at a stable offset from a panel anchor."""
+
+    frame_vid: int
+    frame_direction: int
+    axis_name: str
+    offset_x: float
+    offset_y: float
+    count: int
+
+
+@dataclass(frozen=True)
 class TargetWallVariant:
     """Wall variant directions used by the target door profile."""
 
@@ -462,6 +485,176 @@ def infer_panel_direction_map(
     return result
 
 
+def find_panel_sprites(candidate_sprites: list[DoorSprite], state_vids: set[int]) -> list[DoorSprite]:
+    """Return panel sprites matching inferred or hinted state VIDs."""
+    panel_sprites: list[DoorSprite] = []
+
+    for sprite in candidate_sprites:
+        if sprite.vid in state_vids:
+            panel_sprites.append(sprite)
+
+    return panel_sprites
+
+
+def infer_panel_axis_samples(
+    panel_sprites: list[DoorSprite],
+    step_x: float,
+    step_y: float,
+) -> list[PanelAxisSample]:
+    """Infer axis names for each panel direction value."""
+    direction_values: set[int] = set()
+    for sprite in panel_sprites:
+        direction_values.add(sprite.direction)
+
+    samples: list[PanelAxisSample] = []
+    for direction in sorted(direction_values):
+        same_direction_sprites: list[DoorSprite] = []
+        for sprite in panel_sprites:
+            if sprite.direction == direction:
+                same_direction_sprites.append(sprite)
+
+        best_sample: PanelAxisSample | None = None
+        for first_index in range(0, len(same_direction_sprites)):
+            first = same_direction_sprites[first_index]
+            for second_index in range(first_index + 1, len(same_direction_sprites)):
+                second = same_direction_sprites[second_index]
+                delta = normalize_delta(first, second)
+                if delta is None:
+                    continue
+
+                dx, dy = delta
+                grid_distance = delta_to_grid_distance(dx, dy, step_x, step_y)
+                if grid_distance is None:
+                    continue
+
+                axis_name = "dir_a"
+                if dx > 0:
+                    axis_name = "dir_b"
+
+                sample = PanelAxisSample(
+                    panel_direction=direction,
+                    axis_name=axis_name,
+                    grid_distance=grid_distance,
+                    dx=dx,
+                    dy=dy,
+                )
+
+                if best_sample is None:
+                    best_sample = sample
+                    continue
+
+                if sample.grid_distance < best_sample.grid_distance:
+                    best_sample = sample
+
+        if best_sample is not None:
+            samples.append(best_sample)
+
+    return samples
+
+
+def map_panel_directions_from_panel_samples(
+    state_vids: set[int],
+    panel_sprites: list[DoorSprite],
+    panel_axis_samples: list[PanelAxisSample],
+) -> dict:
+    """Format panel direction mapping when frames are offset from panels."""
+    direction_to_axis: dict[int, str] = {}
+    for sample in panel_axis_samples:
+        direction_to_axis[sample.panel_direction] = sample.axis_name
+
+    result: dict = {}
+    for sprite in panel_sprites:
+        if sprite.vid not in state_vids:
+            continue
+
+        axis_name = direction_to_axis.get(sprite.direction)
+        if axis_name is None:
+            continue
+
+        vid_key = str(sprite.vid)
+        if vid_key not in result:
+            result[vid_key] = {}
+        result[vid_key][axis_name] = sprite.direction
+
+    return result
+
+
+def infer_panel_centered_frame_parts(
+    frame_vid: int,
+    panel_sprites: list[DoorSprite],
+    frame_sprites: list[DoorSprite],
+    panel_axis_samples: list[PanelAxisSample],
+    step_x: float,
+    step_y: float,
+) -> list[FramePartCandidate]:
+    """Infer frame parts placed near panel anchors."""
+    direction_to_axis: dict[int, str] = {}
+    for sample in panel_axis_samples:
+        direction_to_axis[sample.panel_direction] = sample.axis_name
+
+    max_offset_x = step_x
+    max_offset_y = step_y
+    part_counts: dict[tuple[int, str, float, float], int] = {}
+
+    for panel in panel_sprites:
+        axis_name = direction_to_axis.get(panel.direction)
+        if axis_name is None:
+            continue
+
+        for frame in frame_sprites:
+            offset_x = rounded_number(frame.pos_x - panel.pos_x)
+            offset_y = rounded_number(frame.pos_y - panel.pos_y)
+
+            if abs(offset_x) > max_offset_x:
+                continue
+
+            if abs(offset_y) > max_offset_y:
+                continue
+
+            key = (frame.direction, axis_name, offset_x, offset_y)
+            if key not in part_counts:
+                part_counts[key] = 0
+            part_counts[key] += 1
+
+    candidates: list[FramePartCandidate] = []
+    for key, count in part_counts.items():
+        frame_direction, axis_name, offset_x, offset_y = key
+        candidate = FramePartCandidate(
+            frame_vid=frame_vid,
+            frame_direction=frame_direction,
+            axis_name=axis_name,
+            offset_x=offset_x,
+            offset_y=offset_y,
+            count=count,
+        )
+        candidates.append(candidate)
+
+    candidates.sort(key=frame_part_sort_key)
+    return candidates
+
+
+def frame_part_sort_key(candidate: FramePartCandidate) -> tuple[str, float, float, int]:
+    """Sort frame parts by axis and visual left/right offset."""
+    return candidate.axis_name, candidate.offset_x, candidate.offset_y, candidate.frame_direction
+
+
+def format_frame_parts(candidates: list[FramePartCandidate]) -> list[dict]:
+    """Format frame part candidates for JSON output."""
+    items: list[dict] = []
+
+    for candidate in candidates:
+        item = {
+            "frame_vid": candidate.frame_vid,
+            "frame_direction": candidate.frame_direction,
+            "axis": candidate.axis_name,
+            "offset_from_panel": [candidate.offset_x, candidate.offset_y],
+            "repeat_count": candidate.count,
+        }
+        items.append(item)
+
+    return items
+
+
 def find_nearby_pillar_offsets(
     frame_sprites: list[DoorSprite],
     pillar_sprites: list[DoorSprite],
@@ -546,12 +739,36 @@ def build_frame_report(
     frame_sprites = find_sprites_by_vid(candidate_sprites, frame_vid)
     axis_samples = infer_frame_axis_samples(frame_sprites, step_x, step_y)
     state_vids = collect_state_vids_for_frame(frame_vid, candidate_sprites, frame_vids)
+    if len(state_vids) == 0:
+        hinted_state_vids = open_hints | closed_hints
+        candidate_vids = collect_vids(candidate_sprites)
+        for vid in hinted_state_vids:
+            if vid in candidate_vids:
+                state_vids.add(vid)
+
     state_report = classify_state_vids(state_vids, open_hints, closed_hints)
     panel_direction_map = infer_panel_direction_map(
         frame_vid=frame_vid,
         state_vids=state_vids,
         candidate_sprites=candidate_sprites,
         axis_samples=axis_samples,
+    )
+    panel_sprites = find_panel_sprites(candidate_sprites, state_vids)
+    panel_axis_samples = infer_panel_axis_samples(panel_sprites, step_x, step_y)
+    if len(panel_direction_map) == 0:
+        panel_direction_map = map_panel_directions_from_panel_samples(
+            state_vids=state_vids,
+            panel_sprites=panel_sprites,
+            panel_axis_samples=panel_axis_samples,
+        )
+
+    frame_parts = infer_panel_centered_frame_parts(
+        frame_vid=frame_vid,
+        panel_sprites=panel_sprites,
+        frame_sprites=frame_sprites,
+        panel_axis_samples=panel_axis_samples,
+        step_x=step_x,
+        step_y=step_y,
     )
 
     pillar_sprites: list[DoorSprite] = []
@@ -588,6 +805,7 @@ def build_frame_report(
         "span_steps": span_steps,
         "target_wall_variant": target_wall_variant_report,
         "frame_direction_map": map_frame_directions(axis_samples),
+        "frame_parts": format_frame_parts(frame_parts),
         "panel_vids": state_report["states"],
         "state_assumption": state_report["assumption"],
         "panel_direction_map": panel_direction_map,
@@ -659,6 +877,7 @@ def print_report(report: dict) -> None:
             f"needs_pillar={assembly['needs_compensation_pillar']}"
         )
         print(f"    frame dirs: {assembly['frame_direction_map']}")
+        print(f"    frame parts: {assembly['frame_parts']}")
         print(f"    panels: {assembly['panel_vids']}")
         print(f"    panel dirs: {assembly['panel_direction_map']}")
         if assembly["state_assumption"] is not None:

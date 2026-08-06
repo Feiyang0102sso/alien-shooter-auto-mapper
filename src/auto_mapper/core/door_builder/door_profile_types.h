@@ -10,6 +10,8 @@
 
 namespace auto_mapper::core {
 
+inline constexpr int MAX_AS2_DOOR_FRAME_PARTS = 2;
+
 struct DoorZRange {
     float min_z; // Lower z offset.
     float max_z; // Upper z offset. Same as min_z means fixed offset.
@@ -64,12 +66,30 @@ struct As2DoorPanelAssets {
     int vid_open;
 };
 
+struct As2DoorFramePart {
+    int vid;
+    SpriteDirectionMapping dir_map;
+    float offset_a_x;
+    float offset_a_y;
+    float offset_b_x;
+    float offset_b_y;
+};
+
 struct As2DoorSizeVariant {
     int span_steps;
-    int vid_frame;
+    As2DoorFramePart frame_parts[MAX_AS2_DOOR_FRAME_PARTS];
+    int frame_part_count;
     As2DoorPanelAssets panel;
-    SpriteDirectionMapping frame_dir_map;
     SpriteDirectionMapping panel_dir_map;
+    bool use_large_center_offset = true;
+    float base_offset_a_x = 0.0f;
+    float base_offset_a_y = 0.0f;
+    float base_offset_b_x = 0.0f;
+    float base_offset_b_y = 0.0f;
+    float panel_offset_a_x = 0.0f;
+    float panel_offset_a_y = 0.0f;
+    float panel_offset_b_x = 0.0f;
+    float panel_offset_b_y = 0.0f;
     WallPartAsset compensation_pillar_dir_a;
     WallPartAsset compensation_pillar_dir_b;
 };

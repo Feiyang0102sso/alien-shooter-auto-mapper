@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "auto_mapper/core/door_profile_types.h"
+#include "door_profile_types.h"
 
 namespace auto_mapper::core {
 
