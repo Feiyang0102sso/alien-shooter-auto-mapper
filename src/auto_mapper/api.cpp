@@ -1,6 +1,7 @@
 #include "auto_mapper/api.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/core/door_builder.h"
+#include "auto_mapper/core/door_profiles_as1.h"
 #include "auto_mapper/core/randomizer.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"

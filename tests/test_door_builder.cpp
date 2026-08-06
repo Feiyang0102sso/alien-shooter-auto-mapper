@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 #include "auto_mapper/core/door_builder.h"
+#include "auto_mapper/core/door_profiles_as1.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include "utils/test_utils.h"
+#include <map>
 #include <set>
 
 using namespace auto_mapper;
@@ -336,4 +338,93 @@ TEST(DoorBuilderTest, LabDoorIgnoresTwoTileSize) {
     ASSERT_EQ(two_tile_sprites.size(), 1);
     EXPECT_FLOAT_EQ(two_tile_sprites[0].posX, one_tile_sprites[0].posX);
     EXPECT_FLOAT_EQ(two_tile_sprites[0].posY, one_tile_sprites[0].posY);
+}
+
+TEST(DoorBuilderTest, AS2WallSet1DoorVariantsUseTwoStatesWithoutLights) {
+    const std::string json_path = resolve_test_path("tests/golden/as2_wall_set1_door_variants.json");
+    TestScene scene = load_test_scene(json_path);
+
+    ASSERT_FLOAT_EQ(scene.map_size_x, 5000.0f);
+    ASSERT_FLOAT_EQ(scene.map_size_y, 5000.0f);
+    ASSERT_EQ(scene.doors.size(), 12u);
+
+    DoorBuilder door_builder(scene.map_size_x, scene.map_size_y);
+    std::vector<io::Sprite> door_sprites = door_builder.build(scene.doors);
+
+    ASSERT_EQ(door_sprites.size(), 30u);
+
+    std::map<int, int> vid_counts;
+    std::map<int, std::set<uint32_t>> directions_by_vid;
+    std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
+    for (const io::Sprite& sprite : door_sprites) {
+        vid_counts[sprite.vid] += 1;
+        directions_by_vid[sprite.vid].insert(sprite.direction);
+        count_by_vid_and_direction[{sprite.vid, sprite.direction}] += 1;
+    }
+
+    EXPECT_EQ(vid_counts[1779], 6);
+    EXPECT_EQ(vid_counts[1777], 3);
+    EXPECT_EQ(vid_counts[1778], 3);
+    EXPECT_EQ(vid_counts[1788], 6);
+    EXPECT_EQ(vid_counts[1785], 3);
+    EXPECT_EQ(vid_counts[1786], 3);
+
+    EXPECT_EQ(vid_counts[423], 0);
+    EXPECT_EQ(vid_counts[424], 0);
+    EXPECT_EQ(vid_counts[425], 0);
+    EXPECT_EQ(vid_counts[1782], 6);
+
+    std::pair<int, uint32_t> fixed1_pillar_key = {1782, 85u};
+    std::pair<int, uint32_t> random_pillar_key = {1782, 170u};
+    std::pair<int, uint32_t> fixed0_pillar_key = {1782, 0u};
+    EXPECT_EQ(count_by_vid_and_direction[fixed1_pillar_key], 4);
+    EXPECT_EQ(count_by_vid_and_direction[random_pillar_key], 2);
+    EXPECT_EQ(count_by_vid_and_direction[fixed0_pillar_key], 0);
+
+    EXPECT_TRUE(directions_by_vid[1779].count(0) > 0);
+    EXPECT_TRUE(directions_by_vid[1779].count(51) > 0);
+    EXPECT_TRUE(directions_by_vid[1777].count(0) > 0);
+    EXPECT_TRUE(directions_by_vid[1777].count(128) > 0);
+    EXPECT_TRUE(directions_by_vid[1778].count(0) > 0);
+    EXPECT_TRUE(directions_by_vid[1778].count(128) > 0);
+    EXPECT_TRUE(directions_by_vid[1788].count(0) > 0);
+    EXPECT_TRUE(directions_by_vid[1788].count(128) > 0);
+    EXPECT_TRUE(directions_by_vid[1785].count(0) > 0);
+    EXPECT_TRUE(directions_by_vid[1785].count(128) > 0);
+    EXPECT_TRUE(directions_by_vid[1786].count(0) > 0);
+    EXPECT_TRUE(directions_by_vid[1786].count(128) > 0);
+}
+
+TEST(DoorBuilderTest, AS2WallSet1DoorVariantsWriteCompactLShapeMap) {
+    const std::string json_path = resolve_test_path("tests/golden/as2_wall_set1_door_variants.json");
+    TestScene scene = load_test_scene(json_path);
+
+    std::vector<DoorExcavation> excavations;
+    excavations.reserve(scene.doors.size());
+    for (const DoorInstance& door : scene.doors) {
+        excavations.push_back({
+            door.pos,
+            door.direction_type,
+            door.size,
+            door.wall_type
+        });
+    }
+
+    WallBuilder wall_builder(scene.map_size_x, scene.map_size_y);
+    std::vector<io::Sprite> sprites = wall_builder.build(scene.segments, false, false, excavations);
+
+    DoorBuilder door_builder(scene.map_size_x, scene.map_size_y);
+    std::vector<io::Sprite> door_sprites = door_builder.build(scene.doors);
+    sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
+
+    std::string output_path = get_test_output_path("as2_wall_set1_door_variants.map");
+    bool write_success = io::write_map(
+        sprites,
+        output_path,
+        io::MapFormat::AS2R,
+        scene.map_size_x,
+        scene.map_size_y
+    );
+
+    ASSERT_TRUE(write_success);
 }

@@ -1,0 +1,135 @@
+{
+  "door_source": "D:\\c coding\\auto_mapper\\_prepare\\AS2\\wall_sets\\wall_set1\\_wall_set_1_doors.json",
+  "wall_source": "D:\\c coding\\auto_mapper\\_prepare\\AS2\\wall_sets\\wall_set1\\_wall_set_1.json",
+  "status": "ok",
+  "wall_step": {
+    "step_x": 90.0,
+    "step_y": 64.0
+  },
+  "wall_vids": [
+    1780,
+    1781,
+    1782
+  ],
+  "candidate_door_vids": [
+    1777,
+    1778,
+    1779,
+    1785,
+    1786,
+    1788
+  ],
+  "door_assemblies": [
+    {
+      "frame_vid": 1779,
+      "span_steps": 1,
+      "target_wall_variant": null,
+      "frame_direction_map": {
+        "dir_b": {
+          "frame_direction": 0,
+          "repeat_delta": [
+            180.0,
+            128.0
+          ],
+          "grid_distance": 2
+        },
+        "dir_a": {
+          "frame_direction": 51,
+          "repeat_delta": [
+            -180.0,
+            128.0
+          ],
+          "grid_distance": 2
+        }
+      },
+      "panel_vids": [
+        {
+          "vid": 1777,
+          "role": "closed"
+        },
+        {
+          "vid": 1778,
+          "role": "open"
+        }
+      ],
+      "state_assumption": "No state hints were provided; smaller VID is treated as closed.",
+      "panel_direction_map": {
+        "1778": {
+          "dir_b": 0,
+          "dir_a": 128
+        },
+        "1777": {
+          "dir_b": 0,
+          "dir_a": 128
+        }
+      },
+      "needs_compensation_pillar": false,
+      "compensation_pillar_reason": "no_repeated_nearby_pillar_offsets",
+      "compensation_pillar_vid_candidates": [
+        1782
+      ],
+      "nearby_pillar_offset_candidates": []
+    },
+    {
+      "frame_vid": 1788,
+      "span_steps": 2,
+      "target_wall_variant": null,
+      "frame_direction_map": {
+        "dir_b": {
+          "frame_direction": 0,
+          "repeat_delta": [
+            270.0,
+            192.0
+          ],
+          "grid_distance": 3
+        },
+        "dir_a": {
+          "frame_direction": 128,
+          "repeat_delta": [
+            -270.0,
+            192.0
+          ],
+          "grid_distance": 3
+        }
+      },
+      "panel_vids": [
+        {
+          "vid": 1785,
+          "role": "closed"
+        },
+        {
+          "vid": 1786,
+          "role": "open"
+        }
+      ],
+      "state_assumption": "No state hints were provided; smaller VID is treated as closed.",
+      "panel_direction_map": {
+        "1786": {
+          "dir_b": 0,
+          "dir_a": 128
+        },
+        "1785": {
+          "dir_b": 0,
+          "dir_a": 128
+        }
+      },
+      "needs_compensation_pillar": true,
+      "compensation_pillar_reason": "nearby_pillar_offsets_found",
+      "compensation_pillar_vid_candidates": [
+        1782
+      ],
+      "nearby_pillar_offset_candidates": [
+        {
+          "offset_x": 45.0,
+          "offset_y": -96.0,
+          "repeat_count": 2
+        },
+        {
+          "offset_x": -135.0,
+          "offset_y": -96.0,
+          "repeat_count": 2
+        }
+      ]
+    }
+  ]
+}

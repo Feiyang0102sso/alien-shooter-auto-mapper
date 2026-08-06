@@ -121,6 +121,20 @@ dy = +step_y
 
 A wall set sprite used at endpoints, corners, and wall intersections.
 
+## Door Assembly
+
+A group of sprites that represents one logical door opening in a wall set.
+
+## Door Panel State
+
+The open or closed visual state of a door panel.
+
+## Compensation Pillar
+
+A pillar sprite added beside a door assembly when the door art does not visually include the full pillar edge.
+
+Compensation pillar direction matches the pillar direction of the active wall variant group.
+
 ## Directional Pillar Slice
 
 A pillar sprite that represents only one visible direction-specific slice of a pillar.

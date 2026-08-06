@@ -4,6 +4,8 @@
  */
 
 #include "auto_mapper/core/door_builder.h"
+#include "auto_mapper/core/door_profiles_as1.h"
+#include "auto_mapper/core/door_profiles_as2.h"
 #include "auto_mapper/core/randomizer.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 
@@ -31,6 +33,34 @@ static void apply_door_direction_offset(MapPoint& pos, int direction_type, int s
     }
 }
 
+static MapPoint get_as2_door_position(const DoorInstance& door, const WallProfile& profile, const MapPoint& shift) {
+    MapPoint pos = to_iso(door.pos, profile.step_x, profile.step_y, shift);
+
+    if (door.direction_type == 0) {
+        pos.x += profile.offset_a_x;
+        pos.y += profile.offset_a_y;
+
+        if (door.size == 2) {
+            float divisor = static_cast<float>(profile.grid_divisor);
+            pos.x -= profile.step_x / divisor;
+            pos.y += profile.step_y / divisor;
+        }
+
+        return pos;
+    }
+
+    pos.x += profile.offset_b_x;
+    pos.y += profile.offset_b_y;
+
+    if (door.size == 2) {
+        float divisor = static_cast<float>(profile.grid_divisor);
+        pos.x += profile.step_x / divisor;
+        pos.y += profile.step_y / divisor;
+    }
+
+    return pos;
+}
+
 static bool is_lab_dead_door(const DoorInstance& door) {
     return door.light_state == LIGHT_STATE_BROKEN;
 }
@@ -47,12 +77,40 @@ static bool is_standard_family_wall(int wall_type) {
     return false;
 }
 
+static bool is_as2_wall_set1_family_wall(int wall_type) {
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_0) {
+        return true;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_1) {
+        return true;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_RANDOM) {
+        return true;
+    }
+
+    return false;
+}
+
 static const StandardDoorProfile& get_standard_door_profile(int wall_type) {
     if (wall_type == WALL_TYPE_STANDARD_DARK) {
         return DOOR_STANDARD_DARK;
     }
 
     return DOOR_STANDARD;
+}
+
+static const As2DoorProfile& get_as2_door_profile(int wall_type) {
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_1) {
+        return DOOR_AS2_WALL_SET1_FIXED_1;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_RANDOM) {
+        return DOOR_AS2_WALL_SET1_RANDOM;
+    }
+
+    return DOOR_AS2_WALL_SET1_FIXED_0;
 }
 
 const StandardDoorSizeVariant& get_standard_door_variant(int size) {
@@ -110,6 +168,48 @@ static int get_standard_light_id(const StandardDoorProfile& profile, const DoorI
     return 0;
 }
 
+static const As2DoorSizeVariant& get_as2_door_variant(
+    const As2DoorProfile& profile,
+    int size
+) {
+    if (size == profile.small.span_steps) {
+        return profile.small;
+    }
+
+    return profile.large;
+}
+
+static int get_as2_panel_id(const As2DoorSizeVariant& variant, const DoorInstance& door) {
+    if (door.door_state == DOOR_STATE_OPEN) {
+        return variant.panel.vid_open;
+    }
+
+    return variant.panel.vid_closed;
+}
+
+static void push_as2_compensation_pillar(
+    std::vector<io::Sprite>& door_sprites,
+    const As2DoorSizeVariant& variant,
+    int direction_type,
+    const MapPoint& pt
+) {
+    const WallPartAsset& pillar = (direction_type == 0) ?
+        variant.compensation_pillar_dir_a :
+        variant.compensation_pillar_dir_b;
+
+    if (pillar.vid <= 0) {
+        return;
+    }
+
+    door_sprites.push_back(io::Sprite(
+        pillar.vid,
+        pt.x + pillar.offset_x,
+        pt.y + pillar.offset_y,
+        0.0f,
+        pillar.direction
+    ));
+}
+
 DoorBuilder::DoorBuilder(float map_size_x, float map_size_y)
     : map_size_x_(map_size_x), map_size_y_(map_size_y) {}
 
@@ -129,6 +229,26 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
 
         MapPoint pt = to_iso(door.pos, w_prof.step_x, w_prof.step_y, shift);
         apply_door_direction_offset(pt, door.direction_type, effective_size, w_prof);
+
+        if (is_as2_wall_set1_family_wall(door.wall_type)) {
+            const As2DoorProfile& door_profile = get_as2_door_profile(door.wall_type);
+            const As2DoorSizeVariant& variant = get_as2_door_variant(door_profile, door.size);
+            pt = get_as2_door_position(door, w_prof, shift);
+
+            uint32_t frame_dir = get_sprite_dir(variant.frame_dir_map, door.direction_type);
+            if (variant.vid_frame > 0) {
+                door_sprites.push_back(io::Sprite(variant.vid_frame, pt.x, pt.y, 0.0f, frame_dir));
+            }
+
+            int panel_vid = get_as2_panel_id(variant, door);
+            uint32_t panel_dir = get_sprite_dir(variant.panel_dir_map, door.direction_type);
+            if (panel_vid > 0) {
+                door_sprites.push_back(io::Sprite(panel_vid, pt.x, pt.y, door.z_offset, panel_dir));
+            }
+
+            push_as2_compensation_pillar(door_sprites, variant, door.direction_type, pt);
+            continue;
+        }
 
         if (door.wall_type == WALL_TYPE_LAB) {
             if (is_lab_dead_door(door)) {
