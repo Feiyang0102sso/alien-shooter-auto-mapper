@@ -77,6 +77,13 @@ struct WallProfile {
     WallPartAsset pillar_corner_down_left = {0, 0, 0.0f, 0.0f};
     WallPartAsset pillar_corner_up_left = {0, 0, 0.0f, 0.0f};
     WallPartAsset pillar_corner_up_right = {0, 0, 0.0f, 0.0f};
+    // Door flank: when > 0, WallBuilder excavates this many extra wall slots
+    // on each side of a door opening (DirA/DirB segments only, not pillars).
+    // DoorBuilder then re-places those slots with a fixed variant so the
+    // wall direction is locked (e.g. direction 102 for Set7/Set9).
+    int door_flank_clear = 0;
+    // Variant index to use when re-placing flank walls. -1 = no flank walls.
+    int door_flank_variant_index = -1;
 };
 
 struct FloorProfile {

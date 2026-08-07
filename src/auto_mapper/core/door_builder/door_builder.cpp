@@ -343,6 +343,64 @@ static void push_as2_door_flank_parts(
     }
 }
 
+static void push_door_flank_walls(
+    std::vector<io::Sprite>& door_sprites,
+    const DoorInstance& door,
+    const WallProfile& w_prof,
+    float map_size_x
+) {
+    if (w_prof.door_flank_variant_index < 0) {
+        return;
+    }
+
+    if (w_prof.door_flank_variant_index >= w_prof.variant_count) {
+        return;
+    }
+
+    if (w_prof.door_flank_clear <= 0) {
+        return;
+    }
+
+    const WallVariant& variant = w_prof.variants[w_prof.door_flank_variant_index];
+
+    // Flank walls are the same WallPartKind as the door direction.
+    WallPartKind flank_kind;
+    if (door.direction_type == 0) {
+        flank_kind = WallPartKind::DirA;
+    } else {
+        flank_kind = WallPartKind::DirB;
+    }
+
+    const WallPartAsset& asset = WallBuilder::select_wall_part_asset(variant, flank_kind);
+    if (asset.vid <= 0) {
+        return;
+    }
+
+    // Compute the grid positions of the flank walls on each side of the door.
+    // For DirA (vertical): above = (x, y-1), below = (x, y+size)
+    // For DirB (horizontal): left = (x-1, y), right = (x+size, y)
+    GridPoint flank_positions[2];
+    if (door.direction_type == 0) {
+        flank_positions[0] = {door.pos.x, door.pos.y - 1};
+        flank_positions[1] = {door.pos.x, door.pos.y + door.size};
+    } else {
+        flank_positions[0] = {door.pos.x - 1, door.pos.y};
+        flank_positions[1] = {door.pos.x + door.size, door.pos.y};
+    }
+
+    // Place each flank wall using the same to_iso + offset logic as
+    // WallBuilder::place_wall_part_asset, so the sprite lands exactly
+    // on the correct grid cell with normal wall offsets.
+    MapPoint shift = WallBuilder::get_wall_shift(map_size_x, w_prof);
+
+    for (int i = 0; i < 2; ++i) {
+        MapPoint pos = to_iso(flank_positions[i], w_prof.step_x, w_prof.step_y, shift);
+        pos.x += asset.offset_x;
+        pos.y += asset.offset_y;
+        door_sprites.push_back(io::Sprite(asset.vid, pos.x, pos.y, 0.0f, asset.direction));
+    }
+}
+
 DoorBuilder::DoorBuilder(float map_size_x, float map_size_y)
     : map_size_x_(map_size_x), map_size_y_(map_size_y) {}
 
@@ -397,6 +455,12 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
             }
 
             push_as2_door_flank_parts(door_sprites, variant, door.direction_type, pt);
+
+            // Re-place flank walls with a fixed variant so their direction is
+            // locked (e.g. direction 102 for Set7/Set9). WallBuilder has
+            // already excavated these slots thanks to door_flank_clear.
+            push_door_flank_walls(door_sprites, door, w_prof, map_size_x_);
+
             continue;
         }
 

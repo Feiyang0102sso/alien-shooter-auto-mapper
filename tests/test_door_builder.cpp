@@ -6,6 +6,7 @@
 #include "utils/test_utils.h"
 #include <map>
 #include <set>
+#include <cmath>
 
 using namespace auto_mapper;
 using namespace auto_mapper::core;
@@ -963,7 +964,8 @@ static void expect_as2_manual_single_frame_large_door_parts(
     int open_panel_vid,
     uint32_t dir_a,
     uint32_t dir_b,
-    bool open_has_panel
+    bool open_has_panel,
+    int expected_flank_per_door = 0
 ) {
     DoorBuilder builder(5000.0f, 5000.0f);
 
@@ -1013,6 +1015,9 @@ static void expect_as2_manual_single_frame_large_door_parts(
         count_by_vid_and_direction[{sprite.vid, sprite.direction}] += 1;
     }
 
+    // Each door produces `expected_flank_per_door` extra flank-wall sprites.
+    int total_flank = expected_flank_per_door * 4;
+
     std::pair<int, uint32_t> frame_dir_a = {frame_vid, dir_a};
     std::pair<int, uint32_t> frame_dir_b = {frame_vid, dir_b};
     std::pair<int, uint32_t> closed_panel_dir_a = {closed_panel_vid, dir_a};
@@ -1021,7 +1026,8 @@ static void expect_as2_manual_single_frame_large_door_parts(
     std::pair<int, uint32_t> open_panel_dir_b = {open_panel_vid, dir_b};
 
     if (!open_has_panel) {
-        ASSERT_EQ(sprites.size(), 6u);
+        // 4 frames + 2 closed panels + flank walls
+        ASSERT_EQ(sprites.size(), static_cast<size_t>(6 + total_flank));
         EXPECT_EQ(count_by_vid_and_direction[frame_dir_a], 2);
         EXPECT_EQ(count_by_vid_and_direction[frame_dir_b], 2);
         EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_a], 1);
@@ -1031,7 +1037,8 @@ static void expect_as2_manual_single_frame_large_door_parts(
         return;
     }
 
-    ASSERT_EQ(sprites.size(), 8u);
+    // 4 frames + 4 panels + flank walls
+    ASSERT_EQ(sprites.size(), static_cast<size_t>(8 + total_flank));
     EXPECT_EQ(count_by_vid_and_direction[frame_dir_a], 2);
     EXPECT_EQ(count_by_vid_and_direction[frame_dir_b], 2);
     EXPECT_EQ(count_by_vid_and_direction[closed_panel_dir_a], 1);
@@ -1060,7 +1067,8 @@ TEST(DoorBuilderTest, AS2WallSet7OpenDoorKeepsFrameAndOmitsPanel) {
         0,
         128,
         51,
-        false
+        false,
+        2
     );
 }
 
@@ -1077,8 +1085,9 @@ TEST(DoorBuilderTest, AS2WallSet7ClosedPanelUsesManualOffsets) {
         0.0f
     };
 
+    // 1 frame + 1 panel + 2 flank walls = 4 sprites
     std::vector<io::Sprite> sprites = builder.build({dir_a_door});
-    ASSERT_EQ(sprites.size(), 2u);
+    ASSERT_EQ(sprites.size(), 4u);
     EXPECT_EQ(sprites[0].vid, 2624);
     EXPECT_EQ(sprites[1].vid, 2645);
     EXPECT_EQ(sprites[0].direction, 128u);
@@ -1090,7 +1099,7 @@ TEST(DoorBuilderTest, AS2WallSet7ClosedPanelUsesManualOffsets) {
     dir_b_door.direction_type = 1;
 
     std::vector<io::Sprite> dir_b_sprites = builder.build({dir_b_door});
-    ASSERT_EQ(dir_b_sprites.size(), 2u);
+    ASSERT_EQ(dir_b_sprites.size(), 4u);
     EXPECT_EQ(dir_b_sprites[0].vid, 2624);
     EXPECT_EQ(dir_b_sprites[1].vid, 2645);
     EXPECT_EQ(dir_b_sprites[0].direction, 51u);
@@ -1103,7 +1112,7 @@ TEST(DoorBuilderTest, AS2WallSet9UsesMonolithicDoorNoSeparateFrame) {
     DoorBuilder builder(5000.0f, 5000.0f);
 
     // 4 doors: dir_a closed, dir_a open, dir_b closed, dir_b open.
-    // Each door is a single monolithic sprite (no separate frame).
+    // Each door is a single monolithic sprite (no separate frame) + 2 flank walls.
     std::vector<DoorInstance> doors = {
         {
             {0, 0},
@@ -1143,8 +1152,9 @@ TEST(DoorBuilderTest, AS2WallSet9UsesMonolithicDoorNoSeparateFrame) {
         }
     };
 
+    // 4 monolithic door sprites + 4 doors x 2 flank walls = 12
     std::vector<io::Sprite> sprites = builder.build(doors);
-    ASSERT_EQ(sprites.size(), 4u);
+    ASSERT_EQ(sprites.size(), 12u);
 
     std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
     for (const io::Sprite& sprite : sprites) {
@@ -1152,8 +1162,8 @@ TEST(DoorBuilderTest, AS2WallSet9UsesMonolithicDoorNoSeparateFrame) {
     }
 
     // Closed door: VID 1731. Open door: VID 1732.
-    // dir_a (direction_type 0, "/") → direction 128.
-    // dir_b (direction_type 1, "\") → direction 0.
+    // dir_a (direction_type 0, "/") -> direction 128.
+    // dir_b (direction_type 1, "\") -> direction 0.
     std::pair<int, uint32_t> closed_dir_a = {1731, 128u};
     std::pair<int, uint32_t> open_dir_a   = {1732, 128u};
     std::pair<int, uint32_t> closed_dir_b = {1731,   0u};
@@ -1178,10 +1188,9 @@ TEST(DoorBuilderTest, AS2WallSet9PanelOffsetsAreZeroRelativeToAnchor) {
         0.0f
     };
 
-    // Monolithic door: only one sprite, and its panel offsets are 0 relative
-    // to the door anchor (base_offset is absorbed into `pt` already).
+    // Monolithic door: first sprite is the door, remaining 2 are flank walls.
     std::vector<io::Sprite> sprites_a = builder.build({dir_a_door});
-    ASSERT_EQ(sprites_a.size(), 1u);
+    ASSERT_EQ(sprites_a.size(), 3u);
     EXPECT_EQ(sprites_a[0].vid, 1731);
     EXPECT_EQ(sprites_a[0].direction, 128u);
     EXPECT_FLOAT_EQ(sprites_a[0].posZ, 0.0f);
@@ -1190,7 +1199,7 @@ TEST(DoorBuilderTest, AS2WallSet9PanelOffsetsAreZeroRelativeToAnchor) {
     dir_b_door.direction_type = 1;
 
     std::vector<io::Sprite> sprites_b = builder.build({dir_b_door});
-    ASSERT_EQ(sprites_b.size(), 1u);
+    ASSERT_EQ(sprites_b.size(), 3u);
     EXPECT_EQ(sprites_b[0].vid, 1731);
     EXPECT_EQ(sprites_b[0].direction, 0u);
     EXPECT_FLOAT_EQ(sprites_b[0].posZ, 0.0f);
@@ -1317,4 +1326,166 @@ TEST(DoorBuilderTest, AS2WallSet9LargeDoorVariantsWriteCompactLShapeMap) {
         WALL_TYPE_AS2_WALL_SET9_RANDOM,
         "as2_wall_set9_door_variants.map"
     );
+}
+
+// --- Door Flank Wall tests ---
+
+/// Set7 door flank walls use variant[1]: dir_a VID=2621 dir=102, dir_b VID=2620 dir=102.
+TEST(DoorBuilderTest, AS2WallSet7DoorFlankWallsUseFixedDirection102) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    DoorInstance dir_a_door = {
+        {0, 0},
+        WALL_TYPE_AS2_WALL_SET7_RANDOM,
+        0,
+        2,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    std::vector<io::Sprite> sprites_a = builder.build({dir_a_door});
+    // 1 frame + 1 panel + 2 flank walls
+    ASSERT_EQ(sprites_a.size(), 4u);
+
+    // Flank walls are the last 2 sprites
+    for (int i = 2; i < 4; ++i) {
+        EXPECT_EQ(sprites_a[i].vid, 2621)
+            << "dir_a flank wall VID should be 2621";
+        EXPECT_EQ(sprites_a[i].direction, 102u)
+            << "dir_a flank wall direction should be 102";
+    }
+
+    DoorInstance dir_b_door = dir_a_door;
+    dir_b_door.direction_type = 1;
+
+    std::vector<io::Sprite> sprites_b = builder.build({dir_b_door});
+    ASSERT_EQ(sprites_b.size(), 4u);
+
+    for (int i = 2; i < 4; ++i) {
+        EXPECT_EQ(sprites_b[i].vid, 2620)
+            << "dir_b flank wall VID should be 2620";
+        EXPECT_EQ(sprites_b[i].direction, 102u)
+            << "dir_b flank wall direction should be 102";
+    }
+}
+
+/// Set9 door flank walls use variant[2]: dir_a VID=1721 dir=102, dir_b VID=1720 dir=102.
+TEST(DoorBuilderTest, AS2WallSet9DoorFlankWallsUseFixedDirection102) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    DoorInstance dir_a_door = {
+        {0, 0},
+        WALL_TYPE_AS2_WALL_SET9_RANDOM,
+        0,
+        2,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    std::vector<io::Sprite> sprites_a = builder.build({dir_a_door});
+    // 1 monolithic door + 2 flank walls
+    ASSERT_EQ(sprites_a.size(), 3u);
+
+    for (int i = 1; i < 3; ++i) {
+        EXPECT_EQ(sprites_a[i].vid, 1721)
+            << "dir_a flank wall VID should be 1721";
+        EXPECT_EQ(sprites_a[i].direction, 102u)
+            << "dir_a flank wall direction should be 102";
+    }
+
+    DoorInstance dir_b_door = dir_a_door;
+    dir_b_door.direction_type = 1;
+
+    std::vector<io::Sprite> sprites_b = builder.build({dir_b_door});
+    ASSERT_EQ(sprites_b.size(), 3u);
+
+    for (int i = 1; i < 3; ++i) {
+        EXPECT_EQ(sprites_b[i].vid, 1720)
+            << "dir_b flank wall VID should be 1720";
+        EXPECT_EQ(sprites_b[i].direction, 102u)
+            << "dir_b flank wall direction should be 102";
+    }
+}
+
+/// WallBuilder excavation should clear flank wall slots (DirA/DirB) but not
+/// extra pillars, so DoorBuilder can re-place them with fixed direction.
+TEST(DoorBuilderTest, AS2WallSet7ExcavationClearsFlankWallSlots) {
+    const float map_size_x = 5000.0f;
+    const float map_size_y = 5000.0f;
+
+    // A vertical wall segment long enough to have walls on both sides of the door.
+    std::vector<Segment> segments = {
+        {{2, 0}, {2, 10}, WALL_TYPE_AS2_WALL_SET7_RANDOM}
+    };
+
+    // Large door at (2, 4), direction A (vertical), size 2.
+    // Excavation clears (2,4) and (2,5) for the door itself.
+    // Flank clear=1 also clears (2,3) and (2,6) DirA wall segments.
+    DoorInstance door = {
+        {2, 4},
+        WALL_TYPE_AS2_WALL_SET7_RANDOM,
+        0,
+        2,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    std::vector<DoorExcavation> excavations = {
+        {door.pos, door.direction_type, door.size, door.wall_type}
+    };
+
+    WallBuilder wall_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> wall_sprites = wall_builder.build(segments, false, false, excavations);
+
+    // Count DirA wall sprites (VID 2621) at the flank positions.
+    // Positions (2,3) and (2,6) should be excavated, so no wall sprite
+    // from WallBuilder should appear at those grid coordinates.
+    const WallProfile& profile = WallBuilder::get_wall_profile(WALL_TYPE_AS2_WALL_SET7_RANDOM);
+    MapPoint shift = WallBuilder::get_wall_shift(map_size_x, profile);
+
+    // Calculate expected positions for flank wall grid points
+    MapPoint flank_above = to_iso({2, 3}, profile.step_x, profile.step_y, shift);
+    flank_above.x += profile.offset_a_x;
+    flank_above.y += profile.offset_a_y;
+
+    MapPoint flank_below = to_iso({2, 6}, profile.step_x, profile.step_y, shift);
+    flank_below.x += profile.offset_a_x;
+    flank_below.y += profile.offset_a_y;
+
+    // No wall sprite from WallBuilder should be at the flank positions
+    // (they were excavated). We check by looking for sprites with VID 2621
+    // near those positions.
+    for (const io::Sprite& sprite : wall_sprites) {
+        if (sprite.vid != 2621) {
+            continue;
+        }
+
+        float dx_above = std::abs(sprite.posX - flank_above.x);
+        float dy_above = std::abs(sprite.posY - flank_above.y);
+        float dx_below = std::abs(sprite.posX - flank_below.x);
+        float dy_below = std::abs(sprite.posY - flank_below.y);
+
+        bool is_at_flank_above = (dx_above < 1.0f && dy_above < 1.0f);
+        bool is_at_flank_below = (dx_below < 1.0f && dy_below < 1.0f);
+
+        EXPECT_FALSE(is_at_flank_above)
+            << "WallBuilder should not place wall at flank-above position";
+        EXPECT_FALSE(is_at_flank_below)
+            << "WallBuilder should not place wall at flank-below position";
+    }
+
+    // DoorBuilder should re-place those 2 flank walls with direction 102.
+    DoorBuilder door_builder(map_size_x, map_size_y);
+    std::vector<io::Sprite> door_sprites = door_builder.build({door});
+
+    int flank_wall_count = 0;
+    for (const io::Sprite& sprite : door_sprites) {
+        if (sprite.vid == 2621 && sprite.direction == 102u) {
+            flank_wall_count += 1;
+        }
+    }
+    EXPECT_EQ(flank_wall_count, 2);
 }

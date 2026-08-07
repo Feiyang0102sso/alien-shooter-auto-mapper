@@ -70,6 +70,9 @@ public:
     io::Sprite place_single_floor_celling(int gx, int gy, int vid, float step_x, float step_y, float pos_z, int grid_divisor) const;
     io::Sprite place_single_wall(int gx, int gy, int wall_type, WallPartKind kind) const;
 
+    // Look up a WallPartAsset from a variant by kind (public for door_builder.cpp access)
+    static const WallPartAsset& select_wall_part_asset(const WallVariant& variant, WallPartKind kind);
+
 private:
     struct RawSprite {
         int gx;
@@ -111,7 +114,6 @@ private:
     static int select_wall_variant_index(const WallProfile& profile);
     static bool has_rare_wall_variant(const WallProfile& profile);
     static int reset_rare_wall_variant_interval(const WallProfile& profile);
-    static const WallPartAsset& select_wall_part_asset(const WallVariant& variant, WallPartKind kind);
     static const WallPartAsset* select_corner_pillar_asset(const WallProfile& profile, const RawSprite& raw_sprite);
     io::Sprite place_single_wall_with_variant(int gx, int gy, int wall_type, WallPartKind kind, int variant_index) const;
     io::Sprite place_wall_part_asset(int gx, int gy, int wall_type, const WallPartAsset& asset) const;

@@ -324,7 +324,9 @@ inline constexpr WallProfile WALL_AS2_SET7_RANDOM = {
     .randomize_wall_parts_independently = true,
     .rare_variant_index = 2,
     .rare_variant_min_interval = 3,
-    .rare_variant_max_interval = 3
+    .rare_variant_max_interval = 3,
+    .door_flank_clear = 1,
+    .door_flank_variant_index = 1
 };
 
 inline constexpr WallProfile WALL_AS2_SET8_RANDOM = {
@@ -396,7 +398,9 @@ inline constexpr WallProfile WALL_AS2_SET9_RANDOM = {
     .variant_pool_count = 1,
     .active_variant_pool = 0,
     .randomize_wall_parts_independently = true,
-    .corner_wall_variant_index = 0
+    .corner_wall_variant_index = 0,
+    .door_flank_clear = 1,
+    .door_flank_variant_index = 2
 };
 
 } // namespace auto_mapper::core

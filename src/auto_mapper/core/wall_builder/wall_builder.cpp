@@ -586,36 +586,49 @@ std::vector<io::Sprite> WallBuilder::build(
             bool to_erase = false;
 
             for (const auto& ex : excavations) {
-                if (ex.wall_type == rs.wall_type) {
-                    if (ex.direction_type == 0) {  // A direction (vertical, along y axis)
-                        // Erase wall segment in range [ex.pos.y, ex.pos.y + ex.size - 1]
-                        if (rs.kind == WallPartKind::DirA) {
-                            if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size - 1) {
-                                to_erase = true;
-                                break;
-                            }
+                if (ex.wall_type != rs.wall_type) {
+                    continue;
+                }
+
+                const WallProfile& ex_profile = get_wall_profile(ex.wall_type);
+                int flank = ex_profile.door_flank_clear;
+
+                if (ex.direction_type == 0) {  // A direction (vertical, along y axis)
+                    // Erase wall segment in range [ex.pos.y, ex.pos.y + ex.size - 1]
+                    // Extended by flank on each side for DirA segments only.
+                    if (rs.kind == WallPartKind::DirA) {
+                        int min_gy = ex.pos.y - flank;
+                        int max_gy = ex.pos.y + ex.size - 1 + flank;
+                        if (rs.gx == ex.pos.x && rs.gy >= min_gy && rs.gy <= max_gy) {
+                            to_erase = true;
+                            break;
                         }
-                        // Erase pillar in range [ex.pos.y, ex.pos.y + ex.size]
-                        if (rs.kind == WallPartKind::Pillar) {
-                            if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size) {
-                                to_erase = true;
-                                break;
-                            }
+                    }
+                    // Erase pillar in range [ex.pos.y, ex.pos.y + ex.size]
+                    // (pillars are NOT extended by flank)
+                    if (rs.kind == WallPartKind::Pillar) {
+                        if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size) {
+                            to_erase = true;
+                            break;
                         }
-                    } else if (ex.direction_type == 1) {  // B direction (horizontal, along x axis)
-                        // Erase wall segment in range [ex.pos.x, ex.pos.x + ex.size - 1]
-                        if (rs.kind == WallPartKind::DirB) {
-                            if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size - 1) {
-                                to_erase = true;
-                                break;
-                            }
+                    }
+                } else if (ex.direction_type == 1) {  // B direction (horizontal, along x axis)
+                    // Erase wall segment in range [ex.pos.x, ex.pos.x + ex.size - 1]
+                    // Extended by flank on each side for DirB segments only.
+                    if (rs.kind == WallPartKind::DirB) {
+                        int min_gx = ex.pos.x - flank;
+                        int max_gx = ex.pos.x + ex.size - 1 + flank;
+                        if (rs.gy == ex.pos.y && rs.gx >= min_gx && rs.gx <= max_gx) {
+                            to_erase = true;
+                            break;
                         }
-                        // Erase pillar in range [ex.pos.x, ex.pos.x + ex.size]
-                        if (rs.kind == WallPartKind::Pillar) {
-                            if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size) {
-                                to_erase = true;
-                                break;
-                            }
+                    }
+                    // Erase pillar in range [ex.pos.x, ex.pos.x + ex.size]
+                    // (pillars are NOT extended by flank)
+                    if (rs.kind == WallPartKind::Pillar) {
+                        if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size) {
+                            to_erase = true;
+                            break;
                         }
                     }
                 }
