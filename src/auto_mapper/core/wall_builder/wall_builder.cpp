@@ -87,9 +87,23 @@ const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
 
 const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {
     static const std::unordered_map<int, FloorProfile> profiles = {
+        // AS1 floors
         {FLOOR_TYPE_STANDARD, FLOOR_STANDARD},
         {FLOOR_TYPE_LAB,      FLOOR_LAB},
-        {FLOOR_TYPE_STANDARD_DARK, FLOOR_STANDARD_DARK}
+        {FLOOR_TYPE_STANDARD_DARK, FLOOR_STANDARD_DARK},
+        // AS2 floors (floor_type directly reuses wall_type numbers,
+        // matching the seg.wall_type stored in physical_floor_type)
+        {FLOOR_TYPE_AS2_SET1_FIXED_0, FLOOR_AS2_SET1},
+        {FLOOR_TYPE_AS2_SET1_FIXED_1, FLOOR_AS2_SET1},
+        {FLOOR_TYPE_AS2_SET1_RANDOM,  FLOOR_AS2_SET1},
+        {FLOOR_TYPE_AS2_SET2_RANDOM,  FLOOR_AS2_SET2},
+        {FLOOR_TYPE_AS2_SET3_RANDOM,  FLOOR_AS2_SET3},
+        {FLOOR_TYPE_AS2_SET4_RANDOM,  FLOOR_AS2_SET4},
+        {FLOOR_TYPE_AS2_SET5_RANDOM,  FLOOR_AS2_SET5},
+        {FLOOR_TYPE_AS2_SET6_RANDOM,  FLOOR_AS2_SET6},
+        {FLOOR_TYPE_AS2_SET7_RANDOM,  FLOOR_AS2_SET7},
+        {FLOOR_TYPE_AS2_SET8_RANDOM,  FLOOR_AS2_SET8},
+        {FLOOR_TYPE_AS2_SET9_RANDOM,  FLOOR_AS2_SET9}
     };
     if (profiles.find(floor_type) != profiles.end()) {
         return profiles.at(floor_type);
@@ -381,7 +395,28 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
     b_min_px -= 200.0f; b_max_px += 200.0f;
     b_min_py -= 200.0f; b_max_py += 200.0f;
 
-    std::vector<int> floor_types = {FLOOR_TYPE_STANDARD, FLOOR_TYPE_LAB, FLOOR_TYPE_STANDARD_DARK};
+    // AS1 + AS2 floor types (14 total).
+    // AS2 floor_type numbers directly match wall_type numbers stored
+    // by build_physical_grid() into floor_type_grid.
+    std::vector<int> floor_types = {
+        // AS1
+        FLOOR_TYPE_STANDARD,
+        FLOOR_TYPE_LAB,
+        FLOOR_TYPE_STANDARD_DARK,
+        // AS2 Set1 (3 variants share same floor VID 1783)
+        FLOOR_TYPE_AS2_SET1_FIXED_0,
+        FLOOR_TYPE_AS2_SET1_FIXED_1,
+        FLOOR_TYPE_AS2_SET1_RANDOM,
+        // AS2 Set2 ~ Set9
+        FLOOR_TYPE_AS2_SET2_RANDOM,
+        FLOOR_TYPE_AS2_SET3_RANDOM,
+        FLOOR_TYPE_AS2_SET4_RANDOM,
+        FLOOR_TYPE_AS2_SET5_RANDOM,
+        FLOOR_TYPE_AS2_SET6_RANDOM,
+        FLOOR_TYPE_AS2_SET7_RANDOM,
+        FLOOR_TYPE_AS2_SET8_RANDOM,
+        FLOOR_TYPE_AS2_SET9_RANDOM
+    };
     for (int ft : floor_types) {
         const FloorProfile& f_prof = get_floor_profile(ft);
         MapPoint shift = get_floor_ceiling_shift(map_size_x_, f_prof.step_x, f_prof.step_y, f_prof.grid_divisor);
@@ -443,7 +478,9 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
                 }
 
                 if (should_place_floor) {
-                    floor_sprites.push_back(place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor));
+                    io::Sprite floor_sprite = place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor);
+                    floor_sprite.gamma = f_prof.gamma;
+                    floor_sprites.push_back(floor_sprite);
                 }
             }
         }

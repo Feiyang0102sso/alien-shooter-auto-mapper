@@ -407,4 +407,105 @@ inline constexpr WallProfile WALL_AS2_SET9_RANDOM = {
     .door_flank_variant_index = 2
 };
 
+// ---------------------------------------------------------------------------
+// AS2 Floor Profiles
+// Floor type numbers directly reuse the wall type numbers, because
+// build_physical_grid() stores seg.wall_type into physical_floor_type.
+// All AS2 floors share the same step 80x56, pos_z=0, grid_divisor=1.
+// ---------------------------------------------------------------------------
+
+// Set1 (wall types 3,4,5) -> VID 1783, dir 0-255
+inline constexpr int FLOOR_TYPE_AS2_SET1_FIXED_0 = 3;
+inline constexpr int FLOOR_TYPE_AS2_SET1_FIXED_1 = 4;
+inline constexpr int FLOOR_TYPE_AS2_SET1_RANDOM  = 5;
+inline constexpr FloorProfile FLOOR_AS2_SET1 = {
+    .vid = 1783,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+
+// Set2 (wall type 6) -> VID 1724, dir {0,32,128,160,192,224}
+// gamma tint (-80,-80,-80) darkens the floor for Set2's unique palette
+inline constexpr int FLOOR_TYPE_AS2_SET2_RANDOM = 6;
+inline constexpr FloorProfile FLOOR_AS2_SET2 = {
+    .vid = 1724,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1,
+    .gamma = {-80, -80, -80, 0}
+};
+
+// Set3 (wall type 7) -> VID 1121, dir {0,32,128,160,192,224}
+inline constexpr int FLOOR_TYPE_AS2_SET3_RANDOM = 7;
+inline constexpr FloorProfile FLOOR_AS2_SET3 = {
+    .vid = 1121,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+
+// Set4 (wall type 8) -> VID 1121, dir {0,32,128,160,192,224}
+inline constexpr int FLOOR_TYPE_AS2_SET4_RANDOM = 8;
+inline constexpr FloorProfile FLOOR_AS2_SET4 = {
+    .vid = 1121,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+
+// Set5 (wall type 9) -> VID 2503, dir 0-255
+inline constexpr int FLOOR_TYPE_AS2_SET5_RANDOM = 9;
+inline constexpr FloorProfile FLOOR_AS2_SET5 = {
+    .vid = 2503,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+
+// Set6 (wall type 10) -> VID 2503, dir 0-255
+inline constexpr int FLOOR_TYPE_AS2_SET6_RANDOM = 10;
+inline constexpr FloorProfile FLOOR_AS2_SET6 = {
+    .vid = 2503,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+
+// Set7 (wall type 11) -> VID 2643, dir 0-255
+inline constexpr int FLOOR_TYPE_AS2_SET7_RANDOM = 11;
+inline constexpr FloorProfile FLOOR_AS2_SET7 = {
+    .vid = 2643,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+
+// Set8 (wall type 12) -> VID 2643, dir 0-255
+inline constexpr int FLOOR_TYPE_AS2_SET8_RANDOM = 12;
+inline constexpr FloorProfile FLOOR_AS2_SET8 = {
+    .vid = 2643,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+
+// Set9 (wall type 13) -> VID 1724, dir {0,32,128,160,192,224}
+inline constexpr int FLOOR_TYPE_AS2_SET9_RANDOM = 13;
+inline constexpr FloorProfile FLOOR_AS2_SET9 = {
+    .vid = 1724,
+    .step_x = 80.0f,
+    .step_y = 56.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1
+};
+
 } // namespace auto_mapper::core

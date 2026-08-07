@@ -342,7 +342,7 @@ TEST(DoorBuilderTest, LabDoorIgnoresTwoTileSize) {
 }
 
 TEST(DoorBuilderTest, AS2WallSet1DoorVariantsUseTwoStatesWithoutLights) {
-    const std::string json_path = resolve_test_path("tests/golden/as2_wall_set1_door_variants.json");
+    const std::string json_path = resolve_test_path("tests/golden/AS2/as2_wall_set1_door_variants.json");
     TestScene scene = load_test_scene(json_path);
 
     ASSERT_FLOAT_EQ(scene.map_size_x, 5000.0f);

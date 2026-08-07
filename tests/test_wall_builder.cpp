@@ -1201,3 +1201,213 @@ TEST(FloorBuilderTest, FloorGoldenMap) {
 
     EXPECT_TRUE(files_match);
 }
+
+// ===========================================================================
+// AS2 per-Set 3x3 room floor tests (Set1 ~ Set9)
+//
+// Each test builds a 3-step grid room using build_room_segments(3, wall_type),
+// runs WallBuilder with gen_floor=true, then verifies:
+//   1. Expected wall VIDs exist (dir_a / dir_b / pillar)
+//   2. Expected floor VID exists and floor_count >= 9 (at least 3x3 tiles)
+//   3. Writes a .map preview file to test_output/ for visual inspection
+// Room size (grid) = 3, AS2 grid_divisor=2, so physical room spans
+// approx 270x192 which easily fits 9+ floor tiles of step 80x56.
+// ===========================================================================
+
+TEST(As2FloorTest, Set1Random3x3RoomUsesVid1783Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET1_RANDOM;
+    int expected_floor_vid = 1783;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET1_RANDOM.dir_a_vid);  // 1781
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET1_RANDOM.dir_b_vid);  // 1780
+    int wall_pillar = count_sprites_by_vid(sprites, WALL_AS2_SET1_RANDOM.pillar_vid); // 1782
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    EXPECT_GE(wall_pillar, 4);
+    EXPECT_GE(floor_count, 9) << "Set1 3x3 room should produce at least 9 floor tiles (VID 1783)";
+
+    std::string out_path = get_test_output_path("as2_floor_set1_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}
+
+TEST(As2FloorTest, Set2Random3x3RoomUsesVid1724Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET2_RANDOM;
+    int expected_floor_vid = 1724;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET2_RANDOM.dir_a_vid);  // 1701
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET2_RANDOM.dir_b_vid);  // 1700
+    int wall_pillar = count_sprites_by_vid(sprites, WALL_AS2_SET2_RANDOM.pillar_vid); // 1702
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    EXPECT_GE(wall_pillar, 4);
+    EXPECT_GE(floor_count, 9) << "Set2 3x3 room should produce at least 9 floor tiles (VID 1724)";
+
+    std::string out_path = get_test_output_path("as2_floor_set2_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}
+
+TEST(As2FloorTest, Set3Random3x3RoomUsesVid1121Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET3_RANDOM;
+    int expected_floor_vid = 1121;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET3_RANDOM.dir_a_vid);  // 1100
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET3_RANDOM.dir_b_vid);  // 1101
+    int wall_pillar = count_sprites_by_vid(sprites, WALL_AS2_SET3_RANDOM.pillar_vid); // 1102
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    EXPECT_GE(wall_pillar, 4);
+    EXPECT_GE(floor_count, 9) << "Set3 3x3 room should produce at least 9 floor tiles (VID 1121)";
+
+    std::string out_path = get_test_output_path("as2_floor_set3_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}
+
+TEST(As2FloorTest, Set4Random3x3RoomUsesVid1121Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET4_RANDOM;
+    int expected_floor_vid = 1121;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET4_RANDOM.dir_a_vid);  // 1131
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET4_RANDOM.dir_b_vid);  // 1130
+    int wall_pillar = count_sprites_by_vid(sprites, WALL_AS2_SET4_RANDOM.pillar_vid); // 1132
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    EXPECT_GE(wall_pillar, 4);
+    EXPECT_GE(floor_count, 9) << "Set4 3x3 room should produce at least 9 floor tiles (VID 1121)";
+
+    std::string out_path = get_test_output_path("as2_floor_set4_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}
+
+TEST(As2FloorTest, Set5Random3x3RoomUsesVid2503Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET5_RANDOM;
+    int expected_floor_vid = 2503;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET5_RANDOM.dir_a_vid);  // 2501
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET5_RANDOM.dir_b_vid);  // 2500
+    int wall_pillar = count_sprites_by_vid(sprites, WALL_AS2_SET5_RANDOM.pillar_vid); // 2502
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    EXPECT_GE(wall_pillar, 4);
+    EXPECT_GE(floor_count, 9) << "Set5 3x3 room should produce at least 9 floor tiles (VID 2503)";
+
+    std::string out_path = get_test_output_path("as2_floor_set5_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}
+
+TEST(As2FloorTest, Set6Random3x3RoomUsesVid2503Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET6_RANDOM;
+    int expected_floor_vid = 2503;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET6_RANDOM.dir_a_vid);  // 2601
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET6_RANDOM.dir_b_vid);  // 2600
+    int wall_pillar = count_sprites_by_vid(sprites, WALL_AS2_SET6_RANDOM.pillar_vid); // 2602
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    // Set6: skip_unmapped_pillars=true, only pillar_corner_up_left defined -> 1 pillar
+    EXPECT_GE(wall_pillar, 1);
+    EXPECT_GE(floor_count, 9) << "Set6 3x3 room should produce at least 9 floor tiles (VID 2503)";
+
+    std::string out_path = get_test_output_path("as2_floor_set6_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}
+
+TEST(As2FloorTest, Set7Random3x3RoomUsesVid2643Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET7_RANDOM;
+    int expected_floor_vid = 2643;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET7_RANDOM.dir_a_vid);  // 2621
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET7_RANDOM.dir_b_vid);  // 2620
+    int wall_pillar = count_sprites_by_vid(sprites, WALL_AS2_SET7_RANDOM.pillar_vid); // 2622
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    EXPECT_GE(wall_pillar, 4);
+    EXPECT_GE(floor_count, 9) << "Set7 3x3 room should produce at least 9 floor tiles (VID 2643)";
+
+    std::string out_path = get_test_output_path("as2_floor_set7_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}
+
+TEST(As2FloorTest, Set8Random3x3RoomUsesVid2643Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET8_RANDOM;
+    int expected_floor_vid = 2643;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET8_RANDOM.dir_a_vid);  // 2641
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET8_RANDOM.dir_b_vid);  // 2640
+    int wall_pillar = count_sprites_by_vid(sprites, WALL_AS2_SET8_RANDOM.pillar_vid); // 2642
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    EXPECT_GE(wall_pillar, 4);
+    EXPECT_GE(floor_count, 9) << "Set8 3x3 room should produce at least 9 floor tiles (VID 2643)";
+
+    std::string out_path = get_test_output_path("as2_floor_set8_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}
+
+TEST(As2FloorTest, Set9Random3x3RoomUsesVid1724Floor) {
+    WallBuilder builder(2000.0f, 2000.0f);
+    int wall_type = WALL_TYPE_AS2_WALL_SET9_RANDOM;
+    int expected_floor_vid = 1724;
+
+    std::vector<Segment> segments = build_room_segments(3, wall_type);
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+
+    int wall_dir_a = count_sprites_by_vid(sprites, WALL_AS2_SET9_RANDOM.dir_a_vid);  // 1721
+    int wall_dir_b = count_sprites_by_vid(sprites, WALL_AS2_SET9_RANDOM.dir_b_vid);  // 1720
+    // Set9 has pillar_vid=0 (no independent pillar), skip pillar check
+    int floor_count = count_sprites_by_vid(sprites, expected_floor_vid);
+
+    EXPECT_GE(wall_dir_a, 6);
+    EXPECT_GE(wall_dir_b, 6);
+    EXPECT_GE(floor_count, 9) << "Set9 3x3 room should produce at least 9 floor tiles (VID 1724)";
+
+    std::string out_path = get_test_output_path("as2_floor_set9_3x3.map");
+    io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
+}

@@ -100,6 +100,9 @@ struct FloorProfile {
     float step_y;
     float pos_z;
     int grid_divisor = 1;
+    // Per-floor gamma tint. Most floors use all-zero (no tint).
+    // Set2 uses (-80, -80, -80) to darken VID 1724 for its unique palette.
+    VidGamma gamma{};
 };
 
 struct CeilingProfile {
