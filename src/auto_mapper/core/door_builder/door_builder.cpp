@@ -131,6 +131,14 @@ static bool is_as2_door_family_wall(int wall_type) {
         return true;
     }
 
+    if (wall_type == WALL_TYPE_AS2_WALL_SET8_RANDOM) {
+        return true;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET9_RANDOM) {
+        return true;
+    }
+
     return false;
 }
 
@@ -165,6 +173,14 @@ static const As2DoorProfile& get_as2_door_profile(int wall_type) {
 
     if (wall_type == WALL_TYPE_AS2_WALL_SET7_RANDOM) {
         return DOOR_AS2_WALL_SET7;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET8_RANDOM) {
+        return DOOR_AS2_WALL_SET8;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET9_RANDOM) {
+        return DOOR_AS2_WALL_SET9;
     }
 
     if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_1) {

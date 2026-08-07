@@ -1099,6 +1099,103 @@ TEST(DoorBuilderTest, AS2WallSet7ClosedPanelUsesManualOffsets) {
     EXPECT_FLOAT_EQ(dir_b_sprites[1].posY - dir_b_sprites[0].posY, -5.0f);
 }
 
+TEST(DoorBuilderTest, AS2WallSet9UsesMonolithicDoorNoSeparateFrame) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    // 4 doors: dir_a closed, dir_a open, dir_b closed, dir_b open.
+    // Each door is a single monolithic sprite (no separate frame).
+    std::vector<DoorInstance> doors = {
+        {
+            {0, 0},
+            WALL_TYPE_AS2_WALL_SET9_RANDOM,
+            0,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {0, 4},
+            WALL_TYPE_AS2_WALL_SET9_RANDOM,
+            0,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        },
+        {
+            {4, 0},
+            WALL_TYPE_AS2_WALL_SET9_RANDOM,
+            1,
+            2,
+            DOOR_STATE_CLOSED,
+            LIGHT_STATE_RED,
+            0.0f
+        },
+        {
+            {8, 0},
+            WALL_TYPE_AS2_WALL_SET9_RANDOM,
+            1,
+            2,
+            DOOR_STATE_OPEN,
+            LIGHT_STATE_GREEN,
+            0.0f
+        }
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(doors);
+    ASSERT_EQ(sprites.size(), 4u);
+
+    std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
+    for (const io::Sprite& sprite : sprites) {
+        count_by_vid_and_direction[{sprite.vid, sprite.direction}] += 1;
+    }
+
+    // Closed door: VID 1731. Open door: VID 1732.
+    // dir_a (direction_type 0, "/") → direction 128.
+    // dir_b (direction_type 1, "\") → direction 0.
+    std::pair<int, uint32_t> closed_dir_a = {1731, 128u};
+    std::pair<int, uint32_t> open_dir_a   = {1732, 128u};
+    std::pair<int, uint32_t> closed_dir_b = {1731,   0u};
+    std::pair<int, uint32_t> open_dir_b   = {1732,   0u};
+
+    EXPECT_EQ(count_by_vid_and_direction[closed_dir_a], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_dir_a],   1);
+    EXPECT_EQ(count_by_vid_and_direction[closed_dir_b], 1);
+    EXPECT_EQ(count_by_vid_and_direction[open_dir_b],   1);
+}
+
+TEST(DoorBuilderTest, AS2WallSet9PanelOffsetsAreZeroRelativeToAnchor) {
+    DoorBuilder builder(5000.0f, 5000.0f);
+
+    DoorInstance dir_a_door = {
+        {0, 0},
+        WALL_TYPE_AS2_WALL_SET9_RANDOM,
+        0,
+        2,
+        DOOR_STATE_CLOSED,
+        LIGHT_STATE_RED,
+        0.0f
+    };
+
+    // Monolithic door: only one sprite, and its panel offsets are 0 relative
+    // to the door anchor (base_offset is absorbed into `pt` already).
+    std::vector<io::Sprite> sprites_a = builder.build({dir_a_door});
+    ASSERT_EQ(sprites_a.size(), 1u);
+    EXPECT_EQ(sprites_a[0].vid, 1731);
+    EXPECT_EQ(sprites_a[0].direction, 128u);
+    EXPECT_FLOAT_EQ(sprites_a[0].posZ, 0.0f);
+
+    DoorInstance dir_b_door = dir_a_door;
+    dir_b_door.direction_type = 1;
+
+    std::vector<io::Sprite> sprites_b = builder.build({dir_b_door});
+    ASSERT_EQ(sprites_b.size(), 1u);
+    EXPECT_EQ(sprites_b[0].vid, 1731);
+    EXPECT_EQ(sprites_b[0].direction, 0u);
+    EXPECT_FLOAT_EQ(sprites_b[0].posZ, 0.0f);
+}
+
 static void write_as2_manual_single_frame_large_door_map(int wall_type, const std::string& output_name) {
     const float map_size_x = 5000.0f;
     const float map_size_y = 5000.0f;
@@ -1205,5 +1302,19 @@ TEST(DoorBuilderTest, AS2WallSet6AndSet7LargeDoorVariantsWriteCompactLShapeMaps)
     write_as2_manual_single_frame_large_door_map(
         WALL_TYPE_AS2_WALL_SET7_RANDOM,
         "as2_wall_set7_door_variants.map"
+    );
+}
+
+TEST(DoorBuilderTest, AS2WallSet8LargeDoorVariantsWriteCompactLShapeMap) {
+    write_as2_manual_single_frame_large_door_map(
+        WALL_TYPE_AS2_WALL_SET8_RANDOM,
+        "as2_wall_set8_door_variants.map"
+    );
+}
+
+TEST(DoorBuilderTest, AS2WallSet9LargeDoorVariantsWriteCompactLShapeMap) {
+    write_as2_manual_single_frame_large_door_map(
+        WALL_TYPE_AS2_WALL_SET9_RANDOM,
+        "as2_wall_set9_door_variants.map"
     );
 }

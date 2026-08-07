@@ -345,14 +345,40 @@ inline constexpr As2DoorProfile DOOR_AS2_WALL_SET7 = make_as2_manual_single_fram
     0,
     128,
     51,
-    0.0f,
-    0.0f,
+    -11.0f,
+    11.0f,
     0.0f,
     0.0f,
     -79.0f,
     55.0f,
     6.0f,
     -5.0f
+);
+
+inline constexpr As2DoorProfile DOOR_AS2_WALL_SET8 = make_as2_manual_single_frame_large_door_profile(
+    2644,
+    2645,
+    0,
+    102,
+    0,
+    -12.0f,
+    8.0f,
+    0.0f,
+    0.0f,
+    -79.0f,
+    55.0f,
+    6.0f,
+    -5.0f
+);
+
+inline constexpr As2DoorProfile DOOR_AS2_WALL_SET9 = make_as2_manual_single_frame_large_door_profile(
+    0,
+    1731,
+    1732,
+    128,
+    0,
+    -12.0f,
+    9.0f
 );
 
 } // namespace auto_mapper::core
