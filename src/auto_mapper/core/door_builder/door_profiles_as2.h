@@ -102,7 +102,9 @@ inline constexpr As2DoorProfile make_as2_two_part_large_door_profile(
     uint32_t left_frame_dir_a,
     uint32_t right_frame_dir_a,
     uint32_t left_frame_dir_b,
-    uint32_t right_frame_dir_b
+    uint32_t right_frame_dir_b,
+    VidGamma frame_gamma = {},
+    VidGamma panel_gamma = {}
 ) {
     return {
         .small = {
@@ -111,7 +113,8 @@ inline constexpr As2DoorProfile make_as2_two_part_large_door_profile(
             .frame_part_count = 0,
             .panel = {
                 .vid_closed = 0,
-                .vid_open = 0
+                .vid_open = 0,
+                .gamma = panel_gamma
             },
             .panel_dir_map = {
                 .dir_a = 0,
@@ -132,7 +135,8 @@ inline constexpr As2DoorProfile make_as2_two_part_large_door_profile(
                     .offset_a_x = -45.0f,
                     .offset_a_y = 32.0f,
                     .offset_b_x = -45.0f,
-                    .offset_b_y = -32.0f
+                    .offset_b_y = -32.0f,
+                    .gamma = frame_gamma
                 },
                 {
                     .vid = frame_vid,
@@ -143,13 +147,15 @@ inline constexpr As2DoorProfile make_as2_two_part_large_door_profile(
                     .offset_a_x = 45.0f,
                     .offset_a_y = -32.0f,
                     .offset_b_x = 45.0f,
-                    .offset_b_y = 32.0f
+                    .offset_b_y = 32.0f,
+                    .gamma = frame_gamma
                 }
             },
             .frame_part_count = 2,
             .panel = {
                 .vid_closed = 1785,
-                .vid_open = 1786
+                .vid_open = 1786,
+                .gamma = panel_gamma
             },
             .panel_dir_map = {
                 .dir_a = 128,
@@ -169,13 +175,14 @@ inline constexpr As2DoorProfile DOOR_AS2_WALL_SET2 = make_as2_two_part_large_doo
     64
 );
 
-// TODO: need recolor vid
 inline constexpr As2DoorProfile DOOR_AS2_WALL_SET3_AND_SET4 = make_as2_two_part_large_door_profile(
     1103,
     64,
     192,
     0,
-    128
+    128,
+    {},
+    {.r = -140, .g = -150, .b = -180, .a = 0}
 );
 
 inline constexpr As2DoorProfile make_as2_manual_single_frame_large_door_profile(

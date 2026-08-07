@@ -333,13 +333,16 @@ static void push_as2_door_flank_parts(
         // Placed at (pt + offset) with z=0. These sprites are generated
         // AFTER WallBuilder excavations have run, so they are immune to
         // erasure from the door-opening pass (including neighboring doors).
-        door_sprites.push_back(io::Sprite(
+        io::Sprite spr(
             part.vid,
             pt.x + part.offset_x,
             pt.y + part.offset_y,
             0.0f,
             part.direction
-        ));
+        );
+        spr.gamma = part.gamma;
+        spr.scale = part.scale;
+        door_sprites.push_back(spr);
     }
 }
 
@@ -397,7 +400,10 @@ static void push_door_flank_walls(
         MapPoint pos = to_iso(flank_positions[i], w_prof.step_x, w_prof.step_y, shift);
         pos.x += asset.offset_x;
         pos.y += asset.offset_y;
-        door_sprites.push_back(io::Sprite(asset.vid, pos.x, pos.y, 0.0f, asset.direction));
+        io::Sprite spr(asset.vid, pos.x, pos.y, 0.0f, asset.direction);
+        spr.gamma = asset.gamma;
+        spr.scale = asset.scale;
+        door_sprites.push_back(spr);
     }
 }
 
@@ -433,25 +439,31 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
                 }
 
                 uint32_t frame_dir = get_sprite_dir(frame_part.dir_map, door.direction_type);
-                door_sprites.push_back(io::Sprite(
+                io::Sprite frame_spr(
                     frame_part.vid,
                     pt.x + get_as2_frame_offset_x(frame_part, door.direction_type),
                     pt.y + get_as2_frame_offset_y(frame_part, door.direction_type),
                     0.0f,
                     frame_dir
-                ));
+                );
+                frame_spr.gamma = frame_part.gamma;
+                frame_spr.scale = frame_part.scale;
+                door_sprites.push_back(frame_spr);
             }
 
             int panel_vid = get_as2_panel_id(variant, door);
             uint32_t panel_dir = get_sprite_dir(variant.panel_dir_map, door.direction_type);
             if (panel_vid > 0) {
-                door_sprites.push_back(io::Sprite(
+                io::Sprite panel_spr(
                     panel_vid,
                     pt.x + get_as2_panel_offset_x(variant, door.direction_type),
                     pt.y + get_as2_panel_offset_y(variant, door.direction_type),
                     door.z_offset,
                     panel_dir
-                ));
+                );
+                panel_spr.gamma = variant.panel.gamma;
+                panel_spr.scale = variant.panel.scale;
+                door_sprites.push_back(panel_spr);
             }
 
             push_as2_door_flank_parts(door_sprites, variant, door.direction_type, pt);

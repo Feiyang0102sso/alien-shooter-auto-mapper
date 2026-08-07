@@ -15,7 +15,43 @@ namespace {
 
 constexpr int32_t AS2_MAP_VERSION = 0x13;
 constexpr int32_t AS2R_MAP_VERSION = 0x14;
-constexpr float DEFAULT_AS2_SPRITE_SCALE = 1.0f;
+
+// Encode VidGamma into the 8-byte AS2 SpriteRecord layout.
+// Binary order: [negB, negG, negR, negA, posB, posG, posR, posA]
+// Negative values stored as absolute value in the negative block.
+// Positive values stored directly in the positive block.
+// See AS2_MAP.bt L184-202 for the reverse (decode) side.
+void append_vid_gamma(std::vector<uint8_t>& buffer, const core::VidGamma& gamma) {
+    uint8_t neg_b = 0;
+    uint8_t neg_g = 0;
+    uint8_t neg_r = 0;
+    uint8_t neg_a = 0;
+
+    if (gamma.b < 0) neg_b = static_cast<uint8_t>(-gamma.b);
+    if (gamma.g < 0) neg_g = static_cast<uint8_t>(-gamma.g);
+    if (gamma.r < 0) neg_r = static_cast<uint8_t>(-gamma.r);
+    if (gamma.a < 0) neg_a = static_cast<uint8_t>(-gamma.a);
+
+    buffer.push_back(neg_b);
+    buffer.push_back(neg_g);
+    buffer.push_back(neg_r);
+    buffer.push_back(neg_a);
+
+    uint8_t pos_b = 0;
+    uint8_t pos_g = 0;
+    uint8_t pos_r = 0;
+    uint8_t pos_a = 0;
+
+    if (gamma.b > 0) pos_b = static_cast<uint8_t>(gamma.b);
+    if (gamma.g > 0) pos_g = static_cast<uint8_t>(gamma.g);
+    if (gamma.r > 0) pos_r = static_cast<uint8_t>(gamma.r);
+    if (gamma.a > 0) pos_a = static_cast<uint8_t>(gamma.a);
+
+    buffer.push_back(pos_b);
+    buffer.push_back(pos_g);
+    buffer.push_back(pos_r);
+    buffer.push_back(pos_a);
+}
 
 void build_as2_spr_section(std::vector<uint8_t>& buffer, const std::vector<Sprite>& sprites) {
     std::vector<uint8_t> records;
@@ -29,14 +65,11 @@ void build_as2_spr_section(std::vector<uint8_t>& buffer, const std::vector<Sprit
         append_uint32(records, spr.direction);
         append_int32(records, spr.army);
 
-        // AS2 stores visual gamma as negative BGRA + positive BGRA.
-        for (int i = 0; i < 8; ++i) {
-            records.push_back(0);
-        }
-
-        append_float(records, DEFAULT_AS2_SPRITE_SCALE);
-        append_float(records, DEFAULT_AS2_SPRITE_SCALE);
-        append_float(records, DEFAULT_AS2_SPRITE_SCALE);
+        // AS2 SpriteRecord: VidGamma (8 bytes) + ScaleX/Y/Z (12 bytes)
+        append_vid_gamma(records, spr.gamma);
+        append_float(records, spr.scale.x);
+        append_float(records, spr.scale.y);
+        append_float(records, spr.scale.z);
     }
 
     uint32_t spr_info_size = static_cast<uint32_t>(records.size()) + 4;

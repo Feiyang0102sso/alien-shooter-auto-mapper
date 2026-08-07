@@ -5,6 +5,8 @@
 
 
 #pragma once
+#include "auto_mapper/core/vid_properties/vid_property_types.h"
+
 #include <vector>
 #include <string>
 #include <cstdint>
@@ -24,6 +26,11 @@ struct Sprite {
     float posZ = 0.0f;
     uint32_t direction = 32;
     int32_t army = 0;
+
+    // AS2 only: visual gamma and scale. AS1 SpriteRecord has no such fields.
+    // Defaults (gamma all-zero, scale 1.0) match the previous hard-coded behavior.
+    core::VidGamma gamma{};
+    core::VidScale scale{};
 
     Sprite() = default;
     Sprite(int32_t v, float x, float y, float z = 0.0f, uint32_t dir = 32)

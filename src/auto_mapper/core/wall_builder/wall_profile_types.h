@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "auto_mapper/core/vid_properties/vid_property_types.h"
+
 #include <cstdint>
 
 namespace auto_mapper::core {
@@ -29,6 +31,12 @@ struct WallPartAsset {
     uint32_t direction;
     float offset_x;
     float offset_y;
+
+    // Visual styling applied when this wall-part is emitted as a sprite.
+    // Used by both wall builder (rare variant paint) and door builder
+    // (flank compensation parts like Set1 pillars or Set5 air walls).
+    VidGamma gamma{};
+    VidScale scale{};
 };
 
 struct WallVariant {

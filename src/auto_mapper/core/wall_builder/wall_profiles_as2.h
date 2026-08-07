@@ -177,7 +177,9 @@ inline constexpr WallProfile WALL_AS2_SET3_RANDOM = {
     .randomize_wall_parts_independently = true,
     .rare_variant_index = 3,
     .rare_variant_min_interval = 3,
-    .rare_variant_max_interval = 7
+    .rare_variant_max_interval = 7,
+    .door_flank_clear = 1,
+    .door_flank_variant_index = 1
 };
 
 inline constexpr WallProfile WALL_AS2_SET4_RANDOM = {
@@ -213,7 +215,9 @@ inline constexpr WallProfile WALL_AS2_SET4_RANDOM = {
     .randomize_wall_parts_independently = true,
     .rare_variant_index = 4,
     .rare_variant_min_interval = 3,
-    .rare_variant_max_interval = 7
+    .rare_variant_max_interval = 7,
+    .door_flank_clear = 1,
+    .door_flank_variant_index = 1
 };
 
 inline constexpr WallProfile WALL_AS2_SET5_RANDOM = {

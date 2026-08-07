@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "auto_mapper/core/vid_properties/vid_property_types.h"
 #include "auto_mapper/core/wall_builder/wall_profile_types.h"
 #include <cstdint>
 
@@ -65,6 +66,11 @@ struct LabDecorationDoorProfile {
 struct As2DoorPanelAssets {
     int vid_closed;
     int vid_open;
+
+    // Visual styling applied to both closed and open panel sprites.
+    // Defaults (zero gamma, 1.0 scale) leave the sprites untouched.
+    VidGamma gamma{};
+    VidScale scale{};
 };
 
 struct As2DoorFramePart {
@@ -74,6 +80,10 @@ struct As2DoorFramePart {
     float offset_a_y;
     float offset_b_x;
     float offset_b_y;
+
+    // Visual styling applied to this frame sprite.
+    VidGamma gamma{};
+    VidScale scale{};
 };
 
 struct As2DoorSizeVariant {

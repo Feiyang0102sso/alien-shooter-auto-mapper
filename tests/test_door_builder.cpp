@@ -640,7 +640,7 @@ static void expect_as2_wall_set3_or_set4_large_door_parts(int wall_type) {
     };
 
     std::vector<io::Sprite> sprites = builder.build(doors);
-    ASSERT_EQ(sprites.size(), 12u);
+    ASSERT_EQ(sprites.size(), 20u);
 
     std::map<std::pair<int, uint32_t>, int> count_by_vid_and_direction;
     for (const io::Sprite& sprite : sprites) {
