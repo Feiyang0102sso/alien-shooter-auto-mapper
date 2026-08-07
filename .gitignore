@@ -56,7 +56,7 @@ dist-nuitka/
 tests/out/
 tests/output/
 test_output.map
-!tests/golden/*.map
+!tests/golden/**/*.map
 
 # --- some personal note ---
 _personal_note/

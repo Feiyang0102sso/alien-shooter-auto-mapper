@@ -641,14 +641,6 @@ std::vector<io::Sprite> WallBuilder::build(
                             break;
                         }
                     }
-                    // Erase pillar in range [ex.pos.y, ex.pos.y + ex.size]
-                    // (pillars are NOT extended by flank)
-                    if (rs.kind == WallPartKind::Pillar) {
-                        if (rs.gx == ex.pos.x && rs.gy >= ex.pos.y && rs.gy <= ex.pos.y + ex.size) {
-                            to_erase = true;
-                            break;
-                        }
-                    }
                 } else if (ex.direction_type == 1) {  // B direction (horizontal, along x axis)
                     // Erase wall segment in range [ex.pos.x, ex.pos.x + ex.size - 1]
                     // Extended by flank on each side for DirB segments only.
@@ -656,14 +648,6 @@ std::vector<io::Sprite> WallBuilder::build(
                         int min_gx = ex.pos.x - flank;
                         int max_gx = ex.pos.x + ex.size - 1 + flank;
                         if (rs.gy == ex.pos.y && rs.gx >= min_gx && rs.gx <= max_gx) {
-                            to_erase = true;
-                            break;
-                        }
-                    }
-                    // Erase pillar in range [ex.pos.x, ex.pos.x + ex.size]
-                    // (pillars are NOT extended by flank)
-                    if (rs.kind == WallPartKind::Pillar) {
-                        if (rs.gy == ex.pos.y && rs.gx >= ex.pos.x && rs.gx <= ex.pos.x + ex.size) {
                             to_erase = true;
                             break;
                         }

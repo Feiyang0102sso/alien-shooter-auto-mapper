@@ -128,11 +128,14 @@ class DrawingToolController:
             direction_type = 0
             raw_size = abs(end_y - start_y)
             pos_x = start_x
-            pos_y = min(start_y, end_y)
+            # Convert vertex coordinate to edge coordinate.
+            # C++ wall edges start at minY+1, so door pos must match.
+            pos_y = min(start_y, end_y) + 1
         else:
             direction_type = 1
             raw_size = abs(end_x - start_x)
-            pos_x = min(start_x, end_x)
+            # Convert vertex coordinate to edge coordinate.
+            pos_x = min(start_x, end_x) + 1
             pos_y = start_y
 
         size = self._get_door_size(raw_size)

@@ -1126,18 +1126,22 @@ class MapViewport(QWidget):
 
     def _get_door_grid_points(self, door: tuple) -> tuple:
         """
-        Return start and end grid points for a door tuple.
+        Return start and end grid points (vertex coordinates) for a door tuple.
+        Door pos is stored in edge coordinates, so we convert back to vertex
+        coordinates for UI drawing: vertex = edge_pos - 1 for the start.
         """
         pos_x = int(door[0])
         pos_y = int(door[1])
         direction_type = int(door[3])
         size = int(door[4])
 
-        start_point = (pos_x, pos_y)
+        # Edge-to-vertex conversion: start is one step before the first edge.
         if direction_type == 0:
-            end_point = (pos_x, pos_y + size)
+            start_point = (pos_x, pos_y - 1)
+            end_point = (pos_x, pos_y + size - 1)
         else:
-            end_point = (pos_x + size, pos_y)
+            start_point = (pos_x - 1, pos_y)
+            end_point = (pos_x + size - 1, pos_y)
 
         return start_point, end_point
 

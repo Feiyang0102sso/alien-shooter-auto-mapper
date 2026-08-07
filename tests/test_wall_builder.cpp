@@ -1411,3 +1411,28 @@ TEST(As2FloorTest, Set9Random3x3RoomUsesVid1724Floor) {
     std::string out_path = get_test_output_path("as2_floor_set9_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
+
+TEST(WallBuilderTest, DoorExcavationPreservesCornerPillars) {
+    WallBuilder builder(2000.0f, 2000.0f);
+
+    // L-shaped wall joining at corner (0, 0)
+    std::vector<Segment> segments = {
+        {{0, 0}, {5, 0}, WALL_TYPE_STANDARD},
+        {{0, 0}, {0, 5}, WALL_TYPE_STANDARD}
+    };
+
+    // Place a door right next to corner (0, 0) on the horizontal segment
+    std::vector<DoorExcavation> excavations = {
+        {{0, 0}, 1, 2, WALL_TYPE_STANDARD}
+    };
+
+    std::vector<io::Sprite> sprites_without_doors = builder.build(segments, false, false, {});
+    std::vector<io::Sprite> sprites_with_doors = builder.build(segments, false, false, excavations);
+
+    int pillars_without_doors = count_sprites_by_vid(sprites_without_doors, WALL_STANDARD.pillar_vid);
+    int pillars_with_doors = count_sprites_by_vid(sprites_with_doors, WALL_STANDARD.pillar_vid);
+
+    EXPECT_EQ(pillars_without_doors, 3);
+    EXPECT_EQ(pillars_with_doors, 3) << "Door excavation must preserve corner and endpoint pillars";
+}
+
