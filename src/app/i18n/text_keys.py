@@ -92,6 +92,7 @@ class TextKey:
 
     DIALOG_DLL_ERROR = "dialog.dll_error"
     DIALOG_CEILING = "dialog.ceiling"
+    DIALOG_DOOR_OPTION = "dialog.door_option"
     DIALOG_EXPORT_JSON = "dialog.export_json"
     DIALOG_IMPORT_JSON = "dialog.import_json"
     DIALOG_GENERATE_MAP = "dialog.generate_map"
@@ -111,6 +112,7 @@ class TextKey:
     ERROR_CPP_ENGINE = "error.cpp_engine"
     ERROR_CPP_ENGINE_GENERATE_FAILED = "error.cpp_engine_generate_failed"
     ERROR_CEILING_DISABLED = "error.ceiling_disabled"
+    ERROR_AS2_DOOR_OPTION_UNAVAILABLE = "error.as2_door_option_unavailable"
 
     STATUS_READY = "status.ready"
     STATUS_WALL_SET_SELECTED = "status.wall_set_selected"
@@ -129,6 +131,7 @@ class TextKey:
     STATUS_WALL_DRAWING_CANCELLED = "status.wall_drawing_cancelled"
     STATUS_MAP_SIZE_APPLIED = "status.map_size_applied"
     STATUS_CEILING_DISABLED = "status.ceiling_disabled"
+    STATUS_AS2_DOOR_OPTION_UNAVAILABLE = "status.as2_door_option_unavailable"
     STATUS_DRAWABLE_PART_SELECTED = "status.drawable_part_selected"
     STATUS_CANVAS_CLEARED = "status.canvas_cleared"
     STATUS_EXPORTED_PROJECT = "status.exported_project"

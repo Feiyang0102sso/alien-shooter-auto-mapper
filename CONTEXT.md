@@ -4,6 +4,10 @@
 
 Alien Shooter map file variant supported by the writer and binary templates.
 
+## Project Version
+
+The authoritative Map Format selected for an editor project and its generated `.map` output.
+
 ## AS1
 
 Alien Shooter 1 / Zombie Shooter 1 map format.
@@ -15,6 +19,19 @@ Alien Shooter 2 legacy map format. Its empty map template uses map version `0x13
 ## AS2R
 
 Unified name for Alien Shooter 2 Reloaded, Alien Shooter 2 Conscription, and Zombie Shooter 2 compatible map format. Its empty map template uses map version `0x14`.
+
+## AS2 Series
+
+The family of AS2 and AS2R map formats; AS2R is not an alias for the legacy AS2 map format.
+
+## Global Door State Override
+
+An AS1-only project option that forces supported active doors open or closed; AS2 Series map formats ignore it.
+
+## Project Format Relationships
+
+- A **Project Version** selects exactly one **Map Format**.
+- An AS2 Series **Project Version** ignores the **Global Door State Override**.
 
 ## Wall Set
 

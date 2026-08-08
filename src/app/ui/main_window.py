@@ -25,7 +25,12 @@ from app.config import ROOT_DIR
 from app.i18n.locale import LOCALE_EN_US, LOCALE_ZH_CN, get_locale, save_locale_preference, tr
 from app.i18n.text_keys import TextKey
 from app.logger import logger
-from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, ProjectData
+from app.project.data import (
+    DEFAULT_MAP_SIZE_X,
+    DEFAULT_MAP_SIZE_Y,
+    ProjectData,
+    supports_global_door_state,
+)
 from app.project.io import load_project_json, save_project_json
 from app.ui.canvas.viewport import MapViewport
 from app.ui.panels.decoration_shelf import DecorationShelfPanel
@@ -66,6 +71,7 @@ class MainWindow(QMainWindow):
         self._build_toolbar()
         self._build_docks()
         self._connect_signals()
+        self._sync_global_door_option(self.theme_shelf.get_project_version(), False)
 
         self.statusBar().showMessage(tr(TextKey.STATUS_READY))
         logger.debug("Main window initialized")
@@ -112,12 +118,14 @@ class MainWindow(QMainWindow):
         self.ceiling_check = QCheckBox(tr(TextKey.CHECK_CEILING))
         self.ceiling_check.setObjectName("disabledCeilingCheck")
         self.ceiling_check.setChecked(False)
+        self.ceiling_check.setProperty("unavailable", True)
         self.ceiling_check.setToolTip(tr(TextKey.TOOLTIP_CEILING))
         self.ceiling_check.clicked.connect(self._show_ceiling_warning)
 
         self.is_door_open_check = QCheckBox(tr(TextKey.CHECK_IS_DOOR_OPEN))
         self.is_door_open_check.setObjectName("isDoorOpenCheck")
         self.is_door_open_check.setChecked(False)
+        self.is_door_open_check.setProperty("unavailable", False)
         self.is_door_open_check.setToolTip(tr(TextKey.TOOLTIP_IS_DOOR_OPEN))
         self.is_door_open_check.clicked.connect(self._on_is_door_open_changed)
 
@@ -126,7 +134,7 @@ class MainWindow(QMainWindow):
         self.random_direction_check.setChecked(True)
         self.random_direction_check.setToolTip(tr(TextKey.TOOLTIP_RANDOM_DIRECTION))
 
-        new_action.triggered.connect(self._clear_canvas)
+        new_action.triggered.connect(self._new_project)
         import_action.triggered.connect(self._import_json)
         export_action.triggered.connect(self._export_json)
         generate_action.triggered.connect(self._generate_map)
@@ -182,7 +190,7 @@ class MainWindow(QMainWindow):
         """
         Connect first-pass panel interactions.
         """
-        self.theme_shelf.game_family_changed.connect(self._on_game_family_changed)
+        self.theme_shelf.project_version_changed.connect(self._on_project_version_changed)
         self.theme_shelf.wall_set_selected.connect(self._on_wall_set_selected)
         self.decoration_shelf.decoration_selected.connect(self._on_decoration_tool_selected)
         self.drawing_toolbar.drawing_mode_changed.connect(self._on_drawing_mode_changed)
@@ -223,12 +231,12 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(tr(TextKey.STATUS_WALL_SET_SELECTED, wall_name=variant_name))
         logger.info(f"Wall set variant selected: {wall_type}")
 
-    def _on_game_family_changed(self, game_family: str) -> None:
+    def _on_project_version_changed(self, project_version: str) -> None:
         """
-        Clear drawing state when switching between AS1 and AS2 wall entries.
+        Create an empty project after the user changes the project version.
         """
-        self._clear_canvas()
-        logger.info(f"Game family switched: {game_family}")
+        self._reset_empty_project()
+        logger.info(f"Project version switched: {project_version}")
 
     def _on_decoration_tool_selected(self, decoration_type: str, decoration_name: str) -> None:
         """
@@ -407,13 +415,18 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
         logger.info(f"Drawable part selected: {part_id}")
 
-    def _clear_canvas(self) -> None:
+    def _new_project(self) -> None:
         """
-        Clear the current in-memory drawing.
+        Create an empty project using the currently selected version.
         """
+        self._reset_empty_project()
+        logger.info(f"New project created: {self.theme_shelf.get_project_version()}")
+
+    def _reset_empty_project(self) -> None:
+        """Reset editor content while preserving the selected project version."""
         self.viewport.clear_segments()
-        self.is_door_open_check.setChecked(False)
-        self.viewport.set_is_door_open(False)
+        project_version = self.theme_shelf.get_project_version()
+        self._sync_global_door_option(project_version, False)
         self.inspector.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
         self.viewport.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
         profile = get_wall_profile(self.viewport.active_wall_type)
@@ -424,7 +437,7 @@ class MainWindow(QMainWindow):
 
     def _export_json(self) -> None:
         """
-        Export current wall segments as old UI compatible JSON.
+        Export the current editor project as JSON.
         """
         project_data = self._collect_project_data()
         if not project_data.segments and not project_data.doors and not project_data.decorations:
@@ -467,7 +480,7 @@ class MainWindow(QMainWindow):
 
     def _import_json(self) -> None:
         """
-        Import wall segments from old UI compatible JSON.
+        Replace the current editor project from JSON.
         """
         selected_path = QFileDialog.getOpenFileName(
             self,
@@ -507,14 +520,7 @@ class MainWindow(QMainWindow):
             logger.error(f"Invalid project data: {error}")
             return
 
-        self.viewport.set_segments(project_data.segments)
-        self.viewport.set_doors(project_data.doors)
-        self.viewport.set_decorations(project_data.decorations)
-        self.is_door_open_check.setChecked(project_data.is_door_open)
-        self.viewport.set_is_door_open(project_data.is_door_open)
-        self.inspector.set_map_size(project_data.map_size_x, project_data.map_size_y)
-        self.viewport.set_map_size(project_data.map_size_x, project_data.map_size_y)
-        self.inspector.clear_decoration_selection()
+        self._replace_project(project_data)
 
         message = tr(
             TextKey.STATUS_IMPORTED_PROJECT,
@@ -600,6 +606,7 @@ class MainWindow(QMainWindow):
         """
         map_size = self.inspector.get_map_size()
         project_data = ProjectData(
+            version=self.theme_shelf.get_project_version(),
             map_size_x=map_size[0],
             map_size_y=map_size[1],
             segments=self.viewport.get_segments(),
@@ -608,6 +615,36 @@ class MainWindow(QMainWindow):
             is_door_open=self.is_door_open_check.isChecked(),
         )
         return project_data
+
+    def _replace_project(self, project_data: ProjectData) -> None:
+        """Replace all editor state with one imported project."""
+        self.theme_shelf.set_project_version(project_data.version)
+        self.viewport.set_segments(project_data.segments)
+        self.viewport.set_doors(project_data.doors)
+        self.viewport.set_decorations(project_data.decorations)
+        self._sync_global_door_option(project_data.version, project_data.is_door_open)
+        self.inspector.set_map_size(project_data.map_size_x, project_data.map_size_y)
+        self.viewport.set_map_size(project_data.map_size_x, project_data.map_size_y)
+        self.inspector.clear_decoration_selection()
+
+    def _sync_global_door_option(self, project_version: str, is_door_open: bool) -> None:
+        """Apply version support rules to the global door option and viewport."""
+        option_supported = supports_global_door_state(project_version)
+        effective_is_open = False
+        if option_supported:
+            effective_is_open = is_door_open
+
+        self.is_door_open_check.setChecked(effective_is_open)
+        self.is_door_open_check.setEnabled(True)
+        self._set_checkbox_unavailable(self.is_door_open_check, not option_supported)
+        self.viewport.set_is_door_open(effective_is_open)
+
+    def _set_checkbox_unavailable(self, checkbox: QCheckBox, unavailable: bool) -> None:
+        """Apply a gray but clickable unavailable state to one checkbox."""
+        checkbox.setProperty("unavailable", unavailable)
+        checkbox.style().unpolish(checkbox)
+        checkbox.style().polish(checkbox)
+        checkbox.update()
 
     def _show_not_ready(self) -> None:
         """
@@ -624,6 +661,19 @@ class MainWindow(QMainWindow):
 
     def _on_is_door_open_changed(self, checked: bool) -> None:
         """Update the viewport open door state and redraw."""
+        project_version = self.theme_shelf.get_project_version()
+        if not supports_global_door_state(project_version):
+            self.is_door_open_check.setChecked(False)
+            self.viewport.set_is_door_open(False)
+            QMessageBox.warning(
+                self,
+                tr(TextKey.DIALOG_DOOR_OPTION),
+                tr(TextKey.ERROR_AS2_DOOR_OPTION_UNAVAILABLE),
+            )
+            self.statusBar().showMessage(tr(TextKey.STATUS_AS2_DOOR_OPTION_UNAVAILABLE))
+            logger.info(f"Global door option unavailable: {project_version}")
+            return
+
         self.viewport.set_is_door_open(checked)
         logger.info(f"Global is_door_open changed: {checked}")
 

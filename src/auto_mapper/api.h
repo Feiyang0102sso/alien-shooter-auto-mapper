@@ -18,6 +18,15 @@ extern "C" {
 AUTO_MAPPER_API int get_auto_mapper_api_version();
 
 /**
+ * @brief Stable map format values accepted by the C API.
+ */
+enum CMapFormat {
+    C_MAP_FORMAT_AS1 = 0,
+    C_MAP_FORMAT_AS2 = 1,
+    C_MAP_FORMAT_AS2R = 2
+};
+
+/**
  * @brief Represents a single coordinate segment with its wall type.
  */
 struct CSegment {
@@ -142,6 +151,7 @@ AUTO_MAPPER_API int get_incubator_array_preview_points(
  */
 AUTO_MAPPER_API bool generate_map_from_segments(
     const char* output_path,
+    int map_format,
     const CSegment* segments,
     int num_segments,
     const CDoor* doors,

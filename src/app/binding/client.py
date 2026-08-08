@@ -18,10 +18,20 @@ from app.binding.structures import (
 )
 from app.config import DLL_PATH
 from app.logger import logger
-from app.project.data import DECORATION_TYPE_DESK_ARRAY, DECORATION_TYPE_INCUBATOR_ARRAY, ProjectData
+from app.project.data import (
+    DECORATION_TYPE_DESK_ARRAY,
+    DECORATION_TYPE_INCUBATOR_ARRAY,
+    PROJECT_VERSION_AS1,
+    PROJECT_VERSION_AS2,
+    PROJECT_VERSION_AS2R,
+    ProjectData,
+)
 
 
-REQUIRED_API_VERSION = 5
+REQUIRED_API_VERSION = 6
+C_MAP_FORMAT_AS1 = 0
+C_MAP_FORMAT_AS2 = 1
+C_MAP_FORMAT_AS2R = 2
 
 
 class AutoMapperLibClient:
@@ -59,6 +69,7 @@ class AutoMapperLibClient:
 
         self.lib.generate_map_from_segments.argtypes = [
             ctypes.c_char_p,
+            ctypes.c_int,
             ctypes.POINTER(CSegment),
             ctypes.c_int,
             ctypes.POINTER(CDoor),
@@ -347,9 +358,11 @@ class AutoMapperLibClient:
         incubator_array = self._build_incubator_array(incubator_decorations)
         desk_array = self._build_desk_array(desk_decorations)
         output_path_bytes = str(output_path).encode("utf-8")
+        map_format = self._get_map_format(project_data.version)
 
         success = self.lib.generate_map_from_segments(
             output_path_bytes,
+            map_format,
             segment_array,
             len(project_data.segments),
             door_array,
@@ -365,6 +378,19 @@ class AutoMapperLibClient:
             random_direction,
         )
         return bool(success)
+
+    def _get_map_format(self, project_version: str) -> int:
+        """Map a project version to the stable C API format value."""
+        if project_version == PROJECT_VERSION_AS1:
+            return C_MAP_FORMAT_AS1
+
+        if project_version == PROJECT_VERSION_AS2:
+            return C_MAP_FORMAT_AS2
+
+        if project_version == PROJECT_VERSION_AS2R:
+            return C_MAP_FORMAT_AS2R
+
+        raise ValueError(f"Unsupported project version: {project_version}")
 
     def _build_segment_array(self, segments: list):
         """

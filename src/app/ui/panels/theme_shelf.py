@@ -23,6 +23,7 @@ from app.editor.drawable_parts import AS2_SET1_WALL_TYPES, PART_WALL_BODY, get_w
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile, get_wall_profiles
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
+from app.project.data import PROJECT_VERSION_AS1, PROJECT_VERSION_AS2R, validate_project_version
 from app.ui.colors import (
     DOOR_AS2_DOT,
     DOOR_AS2_LINE,
@@ -67,8 +68,6 @@ WALL_SET_ORDER = {
 
 AS1_WALL_TYPES = {0, 1, 2}
 AS2_WALL_TYPES = {3, 6, 7, 8, 9, 10, 11, 12, 13}
-GAME_FAMILY_AS1 = "AS1"
-GAME_FAMILY_AS2 = "AS2"
 LEGEND_SYMBOL_WIDTH = 52
 LEGEND_SYMBOL_HEIGHT = 18
 LEGEND_LINE_START_X = 3
@@ -90,17 +89,17 @@ LEGEND_DOOR_STYLES = {
 
 class ThemeShelfPanel(QWidget):
     """
-    Wall set selector grouped by game family.
+    Wall set selector grouped by project version.
     """
 
     wall_set_selected = Signal(int, str)
-    game_family_changed = Signal(str)
+    project_version_changed = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("themeShelfPanel")
         self.selected_wall_type = get_default_wall_type()
-        self.current_game_family = self._get_game_family_for_wall_type(self.selected_wall_type)
+        self.current_project_version = self._get_project_version_for_wall_type(self.selected_wall_type)
         self.profiles = self._load_sorted_profiles()
 
         layout = QVBoxLayout(self)
@@ -117,10 +116,10 @@ class ThemeShelfPanel(QWidget):
 
         self.family_button_group = QButtonGroup(self)
         self.family_button_group.setExclusive(True)
-        self.as1_button = self._create_family_button(GAME_FAMILY_AS1)
-        self.as2_button = self._create_family_button(GAME_FAMILY_AS2)
+        self.as1_button = self._create_version_button(PROJECT_VERSION_AS1)
+        self.as2r_button = self._create_version_button(PROJECT_VERSION_AS2R)
         family_layout.addWidget(self.as1_button)
-        family_layout.addWidget(self.as2_button)
+        family_layout.addWidget(self.as2r_button)
         layout.addLayout(family_layout)
 
         scroll_area = QScrollArea()
@@ -137,18 +136,18 @@ class ThemeShelfPanel(QWidget):
         scroll_area.setWidget(self.content)
         layout.addWidget(scroll_area)
 
-        self._sync_family_buttons()
+        self._sync_version_buttons()
         self._populate_wall_cards()
 
-    def _create_family_button(self, game_family: str) -> QPushButton:
+    def _create_version_button(self, project_version: str) -> QPushButton:
         """
-        Create one AS family toggle button.
+        Create one project version toggle button.
         """
-        button = QPushButton(game_family)
+        button = QPushButton(project_version)
         button.setObjectName("gameFamilyButton")
         button.setCheckable(True)
-        button.setProperty("game_family", game_family)
-        button.clicked.connect(self._on_family_button_clicked)
+        button.setProperty("project_version", project_version)
+        button.clicked.connect(self._on_version_button_clicked)
         self.family_button_group.addButton(button)
         return button
 
@@ -184,7 +183,7 @@ class ThemeShelfPanel(QWidget):
 
         for profile in self.profiles:
             wall_type = profile["wall_type"]
-            if not self._profile_belongs_to_current_family(wall_type):
+            if not self._profile_belongs_to_current_version(wall_type):
                 continue
 
             preview_key = profile["preview_key"]
@@ -326,26 +325,35 @@ class ThemeShelfPanel(QWidget):
 
         image.setText(tr(TextKey.LABEL_PREVIEW_MISSING))
 
-    def _on_family_button_clicked(self) -> None:
+    def _on_version_button_clicked(self) -> None:
         """
-        Switch between AS1 and AS2 wall entries.
+        Switch between project format wall entries.
         """
         sender = self.sender()
         if sender is None:
             return
 
-        game_family = sender.property("game_family")
-        if not game_family:
+        project_version = sender.property("project_version")
+        if not project_version:
             return
 
-        if game_family == self.current_game_family:
+        if project_version == self.current_project_version:
             return
 
-        self.current_game_family = game_family
-        self._sync_family_buttons()
-        self.game_family_changed.emit(game_family)
+        self.set_project_version(str(project_version))
+        self.project_version_changed.emit(str(project_version))
+
+    def set_project_version(self, project_version: str) -> None:
+        """Select a project version without emitting a user-change signal."""
+        validated_version = validate_project_version(project_version)
+        self.current_project_version = validated_version
+        self._sync_version_buttons()
         self._populate_wall_cards()
         self._select_first_wall_set()
+
+    def get_project_version(self) -> str:
+        """Return the currently selected project version."""
+        return self.current_project_version
 
     def _on_select_button_clicked(self) -> None:
         """
@@ -368,7 +376,7 @@ class ThemeShelfPanel(QWidget):
         """
         for profile in self.profiles:
             wall_type = profile["wall_type"]
-            if self._profile_belongs_to_current_family(wall_type):
+            if self._profile_belongs_to_current_version(wall_type):
                 self._select_wall_set(wall_type, profile["short_label"])
                 return
 
@@ -376,28 +384,28 @@ class ThemeShelfPanel(QWidget):
         self.selected_wall_type = wall_type
         self.wall_set_selected.emit(wall_type, wall_name)
 
-    def _sync_family_buttons(self) -> None:
+    def _sync_version_buttons(self) -> None:
         """
-        Keep the AS family toggle buttons checked without triggering selection.
+        Keep the project version buttons checked without triggering selection.
         """
         self.as1_button.blockSignals(True)
-        self.as2_button.blockSignals(True)
-        self.as1_button.setChecked(self.current_game_family == GAME_FAMILY_AS1)
-        self.as2_button.setChecked(self.current_game_family == GAME_FAMILY_AS2)
+        self.as2r_button.blockSignals(True)
+        self.as1_button.setChecked(self.current_project_version == PROJECT_VERSION_AS1)
+        self.as2r_button.setChecked(self.current_project_version == PROJECT_VERSION_AS2R)
         self.as1_button.blockSignals(False)
-        self.as2_button.blockSignals(False)
+        self.as2r_button.blockSignals(False)
 
-    def _profile_belongs_to_current_family(self, wall_type: int) -> bool:
-        if self.current_game_family == GAME_FAMILY_AS1:
+    def _profile_belongs_to_current_version(self, wall_type: int) -> bool:
+        if self.current_project_version == PROJECT_VERSION_AS1:
             return wall_type in AS1_WALL_TYPES
 
         return wall_type in AS2_WALL_TYPES
 
-    def _get_game_family_for_wall_type(self, wall_type: int) -> str:
+    def _get_project_version_for_wall_type(self, wall_type: int) -> str:
         if wall_type in AS2_WALL_TYPES or wall_type in AS2_SET1_WALL_TYPES:
-            return GAME_FAMILY_AS2
+            return PROJECT_VERSION_AS2R
 
-        return GAME_FAMILY_AS1
+        return PROJECT_VERSION_AS1
 
     def _clear_layout(self, layout: QVBoxLayout) -> None:
         """

@@ -11,7 +11,7 @@
 
 extern "C" {
 
-static constexpr int AUTO_MAPPER_API_VERSION = 5;
+static constexpr int AUTO_MAPPER_API_VERSION = 6;
 static constexpr int MIN_SPRITE_DIRECTION = 0;
 static constexpr int MAX_SPRITE_DIRECTION = 255;
 
@@ -109,32 +109,23 @@ static bool is_six_pool_floor_vid(int vid) {
     return false;
 }
 
-static bool is_as2_wall_type(int wall_type) {
-    if (wall_type >= auto_mapper::core::WALL_TYPE_AS2_WALL_SET1_FIXED_0 &&
-        wall_type <= auto_mapper::core::WALL_TYPE_AS2_WALL_SET9_RANDOM) {
+static bool parse_map_format(int map_format, auto_mapper::io::MapFormat& parsed_format) {
+    if (map_format == C_MAP_FORMAT_AS1) {
+        parsed_format = auto_mapper::io::MapFormat::AS1;
+        return true;
+    }
+
+    if (map_format == C_MAP_FORMAT_AS2) {
+        parsed_format = auto_mapper::io::MapFormat::AS2;
+        return true;
+    }
+
+    if (map_format == C_MAP_FORMAT_AS2R) {
+        parsed_format = auto_mapper::io::MapFormat::AS2R;
         return true;
     }
 
     return false;
-}
-
-static auto_mapper::io::MapFormat select_output_map_format(
-    const std::vector<auto_mapper::core::Segment>& segments,
-    const std::vector<auto_mapper::core::DoorInstance>& doors
-) {
-    for (const auto& segment : segments) {
-        if (is_as2_wall_type(segment.wall_type)) {
-            return auto_mapper::io::MapFormat::AS2R;
-        }
-    }
-
-    for (const auto& door : doors) {
-        if (is_as2_wall_type(door.wall_type)) {
-            return auto_mapper::io::MapFormat::AS2R;
-        }
-    }
-
-    return auto_mapper::io::MapFormat::AS1;
 }
 
 static void randomize_floor_directions(
@@ -477,6 +468,7 @@ AUTO_MAPPER_API bool get_wall_drawable_part_at(
 
 AUTO_MAPPER_API bool generate_map_from_segments(
     const char* output_path,
+    int map_format,
     const CSegment* segments,
     int num_segments,
     const CDoor* doors,
@@ -491,6 +483,11 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     bool gen_ceiling,
     bool random_direction
 ) {
+    auto_mapper::io::MapFormat output_format;
+    if (!parse_map_format(map_format, output_format)) {
+        return false;
+    }
+
     std::string out_path(output_path);
     std::vector<auto_mapper::core::Segment> cpp_segments;
     cpp_segments.reserve(num_segments);
@@ -607,7 +604,6 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
     sprites.insert(sprites.end(), decoration_sprites.begin(), decoration_sprites.end());
 
-    auto_mapper::io::MapFormat output_format = select_output_map_format(cpp_segments, cpp_doors);
     if (auto_mapper::io::write_map(sprites, out_path, output_format, map_size_x, map_size_y)) {
         return true;
     } else {

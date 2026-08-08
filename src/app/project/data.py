@@ -6,6 +6,18 @@ from dataclasses import dataclass, field
 
 DEFAULT_MAP_SIZE_X = 600.0
 DEFAULT_MAP_SIZE_Y = 600.0
+PROJECT_VERSION_AS1 = "AS1"
+PROJECT_VERSION_AS2 = "AS2"
+PROJECT_VERSION_AS2R = "AS2R"
+DEFAULT_PROJECT_VERSION = PROJECT_VERSION_AS1
+SUPPORTED_PROJECT_VERSIONS = {
+    PROJECT_VERSION_AS1,
+    PROJECT_VERSION_AS2R,
+}
+AS2_SERIES_PROJECT_VERSIONS = {
+    PROJECT_VERSION_AS2,
+    PROJECT_VERSION_AS2R,
+}
 DECORATION_TYPE_INCUBATOR_ARRAY = "incubator_array"
 DECORATION_TYPE_DESK_ARRAY = "desk_array"
 
@@ -48,12 +60,40 @@ class DeskDecoration:
 @dataclass
 class ProjectData:
     """
-    Editor project data in the old JSON-compatible shape.
+    Editor project data shared by JSON, UI, and DLL binding layers.
     """
 
+    version: str = DEFAULT_PROJECT_VERSION
     map_size_x: float = DEFAULT_MAP_SIZE_X
     map_size_y: float = DEFAULT_MAP_SIZE_Y
     segments: list = field(default_factory=list)
     doors: list = field(default_factory=list)
     decorations: list = field(default_factory=list)
     is_door_open: bool = False
+
+
+def validate_project_version(version: str) -> str:
+    """Return a supported project version or reject an unknown value."""
+    if not isinstance(version, str):
+        raise ValueError("Project JSON 'version' must be a string.")
+
+    if version not in SUPPORTED_PROJECT_VERSIONS:
+        raise ValueError(f"Unsupported project version: {version}")
+
+    return version
+
+
+def is_as2_series_project_version(version: str) -> bool:
+    """Return whether a project version belongs to the AS2 series."""
+    return version in AS2_SERIES_PROJECT_VERSIONS
+
+
+def supports_global_door_state(version: str) -> bool:
+    """Return whether the project format supports the global door override."""
+    if version == PROJECT_VERSION_AS1:
+        return True
+
+    if is_as2_series_project_version(version):
+        return False
+
+    raise ValueError(f"Unsupported project version: {version}")

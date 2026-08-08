@@ -6,17 +6,20 @@ from pathlib import Path
 
 from app.editor.wall_profiles import get_default_wall_type
 from app.project.data import (
+    DEFAULT_PROJECT_VERSION,
     DECORATION_TYPE_DESK_ARRAY,
     DECORATION_TYPE_INCUBATOR_ARRAY,
     DeskDecoration,
     IncubatorDecoration,
     ProjectData,
+    supports_global_door_state,
+    validate_project_version,
 )
 
 
 def build_project_json_data(project_data: ProjectData) -> dict:
     """
-    Build the JSON-compatible project data used by the old Tkinter UI.
+    Build JSON-compatible data for one editor project.
     """
     segment_items = []
 
@@ -75,14 +78,19 @@ def build_project_json_data(project_data: ProjectData) -> dict:
         }
         decoration_items.append(decoration_item)
 
+    version = validate_project_version(project_data.version)
     data = {
+        "version": version,
         "map_size_x": project_data.map_size_x,
         "map_size_y": project_data.map_size_y,
         "segments": segment_items,
         "doors": door_items,
         "decorations": decoration_items,
-        "is_door_open": project_data.is_door_open,
     }
+
+    if supports_global_door_state(version):
+        data["is_door_open"] = project_data.is_door_open
+
     return data
 
 
@@ -106,19 +114,21 @@ def load_project_json(file_path: Path) -> ProjectData:
 
 def parse_project_data(data: dict) -> ProjectData:
     """
-    Parse old UI compatible JSON data into project state.
+    Parse JSON-compatible data into project state.
     """
     if not isinstance(data, dict):
         raise ValueError("Project JSON root must be an object.")
 
+    version = ensure_project_version(data)
     map_size_x = float(data.get("map_size_x", 600.0))
     map_size_y = float(data.get("map_size_y", 600.0))
-    is_door_open = bool(data.get("is_door_open", False))
+    is_door_open = parse_global_door_state(data, version)
     segments = parse_segments(data)
     doors = parse_doors(data)
     decorations = parse_decorations(data)
 
     project_data = ProjectData(
+        version=version,
         map_size_x=map_size_x,
         map_size_y=map_size_y,
         segments=segments,
@@ -127,6 +137,22 @@ def parse_project_data(data: dict) -> ProjectData:
         is_door_open=is_door_open,
     )
     return project_data
+
+
+def ensure_project_version(data: dict) -> str:
+    """Add the AS1 default to legacy project data and validate the result."""
+    if "version" not in data:
+        data["version"] = DEFAULT_PROJECT_VERSION
+
+    return validate_project_version(data["version"])
+
+
+def parse_global_door_state(data: dict, version: str) -> bool:
+    """Read the AS1-only global door state from project JSON."""
+    if not supports_global_door_state(version):
+        return False
+
+    return bool(data.get("is_door_open", False))
 
 
 def parse_segments(data: dict) -> list:

@@ -69,7 +69,7 @@ Standard Dark 墙：
 Python UI 依赖 C++ DLL 的 C API。当前 Python 绑定要求：
 
 ```python
-REQUIRED_API_VERSION = 4
+REQUIRED_API_VERSION = 6
 ```
 
 只要改了这些内容，就必须同步检查 C++ API、Python ctypes 结构体和客户端签名：

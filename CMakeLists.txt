@@ -87,6 +87,7 @@ file(GLOB TEST_SOURCES CONFIGURE_DEPENDS "tests/test_*.cpp")
 
 add_executable(auto_mapper_tests ${TEST_SOURCES})
 target_link_libraries(auto_mapper_tests PRIVATE
+    auto_mapper
     auto_mapper_core 
     auto_mapper_io 
     auto_mapper_common 
