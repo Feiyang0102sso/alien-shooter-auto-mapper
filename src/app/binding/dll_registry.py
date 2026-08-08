@@ -139,6 +139,8 @@ DRAWABLE_PART_LABELS = {
     "lab_laser_closed": TextKey.DRAWABLE_LAB_LASER_CLOSED,
     "lab_laser_open": TextKey.DRAWABLE_LAB_LASER_OPEN,
     "lab_decoration_door": TextKey.DRAWABLE_LAB_DECORATION_DOOR,
+    "as2_door_closed": TextKey.DRAWABLE_AS2_DOOR_CLOSED,
+    "as2_door_open": TextKey.DRAWABLE_AS2_DOOR_OPEN,
 }
 
 

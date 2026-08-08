@@ -16,6 +16,8 @@ PART_DEAD_DOOR_OPEN = "dead_door_open"
 PART_LAB_LASER_CLOSED = "lab_laser_closed"
 PART_LAB_LASER_OPEN = "lab_laser_open"
 PART_LAB_DECORATION_DOOR = "lab_decoration_door"
+PART_AS2_DOOR_CLOSED = "as2_door_closed"
+PART_AS2_DOOR_OPEN = "as2_door_open"
 
 
 class DrawingToolController:
@@ -170,6 +172,12 @@ class DrawingToolController:
             door_state = DOOR_STATE_CLOSED
             light_state = LIGHT_STATE_BROKEN
             size = 1
+        elif part_id == PART_AS2_DOOR_CLOSED:
+            door_state = DOOR_STATE_CLOSED
+            light_state = LIGHT_STATE_RED
+        elif part_id == PART_AS2_DOOR_OPEN:
+            door_state = DOOR_STATE_OPEN
+            light_state = LIGHT_STATE_RED
         else:
             return None
 

@@ -53,6 +53,8 @@
   "drawable.lab_laser_closed": "激光门（激光启用）",
   "drawable.lab_laser_open": "激光门（激光关闭）",
   "drawable.lab_decoration_door": "装饰门",
+  "drawable.as2_door_closed": "门（关闭）",
+  "drawable.as2_door_open": "门（打开）",
   "drawing.polyline": "折线",
   "drawing.line": "直线",
   "drawing.rect": "矩形",

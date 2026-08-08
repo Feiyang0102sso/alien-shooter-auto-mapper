@@ -259,12 +259,15 @@ class InspectorPanel(QWidget):
             return
 
         part_id = self._drawable_part_ids[index]
-        wall_type = self._drawable_wall_types[index]
 
-        if wall_type != self.current_wall_type:
-            self.current_wall_type = wall_type
-            variant_label = self.component_combo.currentText()
-            self.wall_set_variant_changed.emit(wall_type, variant_label)
+        if part_id == "wall_body":
+            wall_type = self._drawable_wall_types[index]
+            if wall_type != self.current_wall_type:
+                self.current_wall_type = wall_type
+                variant_label = self.component_combo.currentText()
+                self.wall_set_variant_changed.emit(wall_type, variant_label)
+        else:
+            wall_type = self.current_wall_type
 
         self._update_preview(wall_type, part_id)
         self.drawable_part_changed.emit(part_id)
@@ -293,10 +296,21 @@ class InspectorPanel(QWidget):
         self._drawable_wall_types = []
 
         if wall_type in AS2_SET1_WALL_TYPES:
+            # Set1 variants: three wall body choices that switch the active wall type.
             for variant_wall_type, variant_label in AS2_SET1_VARIANTS:
                 self._drawable_part_ids.append("wall_body")
                 self._drawable_wall_types.append(variant_wall_type)
                 self.component_combo.addItem(variant_label)
+
+            # Append door parts from DLL (as2_door_closed / as2_door_open).
+            # Use the canonical Set1 wall type for all door entries so the door
+            # auto-adapts to whichever variant is active via wall_type on the segment.
+            for part_id, label in get_drawable_parts(wall_type):
+                if part_id == "wall_body":
+                    continue
+                self._drawable_part_ids.append(part_id)
+                self._drawable_wall_types.append(wall_type)
+                self.component_combo.addItem(label)
         else:
             for part_id, label in get_drawable_parts(wall_type):
                 self._drawable_part_ids.append(part_id)
@@ -408,8 +422,33 @@ class InspectorPanel(QWidget):
                     nvids = ["423", "424", "605", "607", "623", "624"]
                 elif part_id in ("dead_door_closed", "dead_door_jammed", "dead_door_open"):
                     nvids = ["425", "611", "617", "623", "624"]
+            elif part_id in ("as2_door_closed", "as2_door_open"):
+                nvids = self._get_as2_door_nvids(wall_type)
 
         if nvids:
             self.nvid_label.setText("nvid=" + "; ".join(nvids) + ";")
         else:
             self.nvid_label.clear()
+
+    # Key door VIDs for each AS2 wall set, sourced from door_profiles_as2.h.
+    # Format: [frame_vid(s), panel_closed_vid, panel_open_vid]
+    # Set1 variants (3/4/5) share the same door VIDs.
+    AS2_DOOR_NVID_MAP = {
+        3:  ["1779", "1788", "1777", "1778", "1785", "1786"],
+        4:  ["1779", "1788", "1777", "1778", "1785", "1786"],
+        5:  ["1779", "1788", "1777", "1778", "1785", "1786"],
+        6:  ["1703", "1785", "1786"],
+        7:  ["1103", "1785", "1786"],
+        8:  ["1103", "1785", "1786"],
+        9:  ["2504", "2506", "2505"],
+        10: ["2604", "2605", "2606"],
+        11: ["2624", "2645"],
+        12: ["2644", "2645"],
+        13: ["1731", "1732"],
+    }
+
+    def _get_as2_door_nvids(self, wall_type: int) -> list:
+        """
+        Return key door VIDs for the given AS2 wall type.
+        """
+        return list(self.AS2_DOOR_NVID_MAP.get(wall_type, []))

@@ -80,6 +80,8 @@ class TextKey:
     DRAWABLE_LAB_LASER_CLOSED = "drawable.lab_laser_closed"
     DRAWABLE_LAB_LASER_OPEN = "drawable.lab_laser_open"
     DRAWABLE_LAB_DECORATION_DOOR = "drawable.lab_decoration_door"
+    DRAWABLE_AS2_DOOR_CLOSED = "drawable.as2_door_closed"
+    DRAWABLE_AS2_DOOR_OPEN = "drawable.as2_door_open"
 
     DRAWING_POLYLINE = "drawing.polyline"
     DRAWING_LINE = "drawing.line"

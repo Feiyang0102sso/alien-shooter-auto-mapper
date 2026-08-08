@@ -34,6 +34,12 @@ static constexpr CDrawablePart LAB_DRAWABLE_PARTS[] = {
     {"lab_decoration_door"}
 };
 
+static constexpr CDrawablePart AS2_DRAWABLE_PARTS[] = {
+    {"wall_body"},
+    {"as2_door_closed"},
+    {"as2_door_open"}
+};
+
 static constexpr int STANDARD_DOOR_SIZES[] = {
     auto_mapper::core::DOOR_STANDARD.small.span_steps,
     auto_mapper::core::DOOR_STANDARD.large.span_steps
@@ -270,6 +276,15 @@ static const CDrawablePart* get_drawable_parts(int wall_type, int& count) {
     if (wall_type == auto_mapper::core::WALL_TYPE_LAB) {
         count = static_cast<int>(sizeof(LAB_DRAWABLE_PARTS) / sizeof(LAB_DRAWABLE_PARTS[0]));
         return LAB_DRAWABLE_PARTS;
+    }
+
+    // All AS2 wall types share the same drawable parts: wall body + door closed/open.
+    if (is_supported_wall_type(wall_type) &&
+        wall_type != auto_mapper::core::WALL_TYPE_STANDARD &&
+        wall_type != auto_mapper::core::WALL_TYPE_STANDARD_DARK &&
+        wall_type != auto_mapper::core::WALL_TYPE_LAB) {
+        count = static_cast<int>(sizeof(AS2_DRAWABLE_PARTS) / sizeof(AS2_DRAWABLE_PARTS[0]));
+        return AS2_DRAWABLE_PARTS;
     }
 
     count = 0;

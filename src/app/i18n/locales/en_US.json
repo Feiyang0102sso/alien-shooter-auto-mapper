@@ -62,6 +62,8 @@
   "drawable.lab_laser_closed": "Laser Door (Laser Enabled)",
   "drawable.lab_laser_open": "Laser Door (Laser Disabled)",
   "drawable.lab_decoration_door": "Decoration Door",
+  "drawable.as2_door_closed": "Door (Closed)",
+  "drawable.as2_door_open": "Door (Open)",
   "drawing.polyline": "Polyline",
   "drawing.line": "Line",
   "drawing.rect": "Rect",
