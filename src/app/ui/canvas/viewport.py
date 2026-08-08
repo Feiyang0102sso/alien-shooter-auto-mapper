@@ -61,6 +61,7 @@ MAX_ZOOM = 30.0
 MIN_GRID_COLUMNS = 1
 MIN_GRID_ROWS = 1
 DOOR_STATE_CLOSED = 0
+DOOR_STATE_OPEN = 1
 LIGHT_STATE_GREEN = 0
 LIGHT_STATE_RED = 1
 LIGHT_STATE_BROKEN = 2
@@ -1169,11 +1170,19 @@ class MapViewport(QWidget):
             # Laser Door without Laser (Open)
             return DOOR_LAB_LASER_WITHOUT_LINE, DOOR_LAB_LASER_WITHOUT_DOT, True
 
-        # --- 2. Standard Wall Set (Base wall is Deep Blue) ---
+        # --- 2. AS2 Wall Sets (wall_type >= 3) ---
+        if wall_type >= 3:
+            is_open = (door_state == DOOR_STATE_OPEN) or self.is_door_open
+            if is_open:
+                return DOOR_STD_ACTIVE_LINE, DOOR_STD_ACTIVE_DOT_OPEN, True
+            return DOOR_STD_ACTIVE_LINE, DOOR_STD_ACTIVE_DOT_CLOSED, False
+
+        # --- 3. Standard Wall Set (Base wall is Deep Blue) ---
         is_active_door = (light_state != LIGHT_STATE_BROKEN)
         if is_active_door:
-            # Active Door (State controlled by global is_door_open)
-            if self.is_door_open:
+            # Active Door (State controlled by door_state or global is_door_open)
+            is_open = (door_state == DOOR_STATE_OPEN) or self.is_door_open
+            if is_open:
                 return DOOR_STD_ACTIVE_LINE, DOOR_STD_ACTIVE_DOT_OPEN, True
             else:
                 return DOOR_STD_ACTIVE_LINE, DOOR_STD_ACTIVE_DOT_CLOSED, False

@@ -140,7 +140,8 @@ class DrawingToolController:
             pos_x = min(start_x, end_x) + 1
             pos_y = start_y
 
-        size = self._get_door_size(raw_size)
+        wall_type = self.viewport.active_wall_type
+        size = self._get_door_size(raw_size, wall_type)
         door_state = DOOR_STATE_CLOSED
         light_state = LIGHT_STATE_BROKEN
         z_offset = 0.0
@@ -181,9 +182,9 @@ class DrawingToolController:
         else:
             return None
 
-        return pos_x, pos_y, self.viewport.active_wall_type, direction_type, size, door_state, light_state, z_offset
+        return pos_x, pos_y, wall_type, direction_type, size, door_state, light_state, z_offset
 
-    def _get_door_size(self, raw_size: int) -> int:
+    def _get_door_size(self, raw_size: int, wall_type: int) -> int:
         """Clamp a drawn door length to the DLL-supported size range."""
         if raw_size < 1:
             raw_size = 1
@@ -194,6 +195,11 @@ class DrawingToolController:
             PART_LAB_DECORATION_DOOR,
         ):
             return 1
+
+        # AS2 Set2 ~ Set9 only support 2-step large doors (span_steps = 2)
+        AS2_LARGE_ONLY_WALL_TYPES = {6, 7, 8, 9, 10, 11, 12, 13}
+        if wall_type in AS2_LARGE_ONLY_WALL_TYPES:
+            return 2
 
         return dll_registry.clamp_standard_door_size(raw_size)
 

@@ -481,11 +481,47 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     excavations.reserve(num_doors);
 
     for (int i = 0; i < num_doors; ++i) {
+        int door_wall_type = doors[i].wall_type;
+
+        // Auto-sync Set1 door wall_type to the segment wall_type on the same grid line
+        if (door_wall_type == 3 || door_wall_type == 4 || door_wall_type == 5) {
+            for (int s = 0; s < num_segments; ++s) {
+                int seg_wall_type = segments[s].wall_type;
+                if (seg_wall_type == 3 || seg_wall_type == 4 || seg_wall_type == 5) {
+                    int dx = doors[i].x;
+                    int dy = doors[i].y;
+                    int dir = doors[i].direction_type;
+                    int min_x = std::min(segments[s].x1, segments[s].x2);
+                    int max_x = std::max(segments[s].x1, segments[s].x2);
+                    int min_y = std::min(segments[s].y1, segments[s].y2);
+                    int max_y = std::max(segments[s].y1, segments[s].y2);
+
+                    if (dir == 0 && segments[s].x1 == segments[s].x2 && dx == segments[s].x1) {
+                        if (dy >= min_y - 1 && dy <= max_y + 1) {
+                            door_wall_type = seg_wall_type;
+                            break;
+                        }
+                    } else if (dir == 1 && segments[s].y1 == segments[s].y2 && dy == segments[s].y1) {
+                        if (dx >= min_x - 1 && dx <= max_x + 1) {
+                            door_wall_type = seg_wall_type;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        int door_size = doors[i].size;
+        // AS2 Set2 ~ Set9 only have 2-step large doors
+        if (door_wall_type >= 6 && door_wall_type <= 13) {
+            door_size = 2;
+        }
+
         auto_mapper::core::DoorInstance di = {
             {doors[i].x, doors[i].y},
-            doors[i].wall_type,
+            door_wall_type,
             doors[i].direction_type,
-            doors[i].size,
+            door_size,
             doors[i].door_state,
             doors[i].light_state,
             doors[i].z_offset
