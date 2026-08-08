@@ -4,6 +4,8 @@
 
 `auto_mapper` 是一个 Alien Shooter 风格 `.map` 自动生成器。
 
+@CONTEXT.md
+
 项目分成两层：
 
 - `src/auto_mapper/`：C++20 核心与 DLL，对外暴露 C API。

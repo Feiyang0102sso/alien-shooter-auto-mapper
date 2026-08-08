@@ -294,7 +294,11 @@ inline constexpr WallProfile WALL_AS2_SET6_RANDOM = {
     .randomize_wall_parts_independently = true,
     .use_corner_pillar_assets = true,
     .skip_unmapped_pillars = true,
+    .pillar_corner_down_right = make_wall_part_asset(2602, 128, 84.0f, 82.0f),
+    .pillar_corner_down_left = make_wall_part_asset(2602, 64, -4.0f, 74.0f),
     .pillar_corner_up_left = make_wall_part_asset(2602, 0, 0.0f, 0.0f),
+    .pillar_corner_up_right = make_wall_part_asset(2602, 192, 102.0f, 18.0f)
+
 };
 
 inline constexpr WallProfile WALL_AS2_SET7_RANDOM = {

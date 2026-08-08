@@ -188,3 +188,44 @@ TEST(MapWriterTest, WritesAS2SpriteRecordsWithVersionTwoLayout) {
     EXPECT_EQ(output[PLAY_OFFSET - 1], 0u);
     EXPECT_EQ(read_magic_at(output, PLAY_OFFSET), "PLAY");
 }
+
+TEST(MapWriterTest, WritesAS2SpriteGammaIntoSpriteRecord) {
+    io::Sprite sprite;
+    sprite.vid = 1785;
+    sprite.posX = 300.0f;
+    sprite.posY = 238.0f;
+    sprite.direction = 128;
+    sprite.gamma = {
+        -140,
+        -150,
+        -180,
+        0
+    };
+
+    std::string output_file = get_test_output_path("single_sprite_as2_gamma_output.map");
+
+    bool success = io::write_map(
+        {sprite},
+        output_file,
+        io::MapFormat::AS2,
+        640.0f,
+        480.0f
+    );
+
+    ASSERT_TRUE(success);
+
+    std::vector<uint8_t> output = load_binary_file(output_file);
+
+    constexpr size_t SPR_OFFSET = 104;
+    constexpr size_t SPR_RECORD_OFFSET = SPR_OFFSET + 24;
+    constexpr size_t SPR_RECORD_GAMMA_OFFSET = SPR_RECORD_OFFSET + 28;
+
+    EXPECT_EQ(output[SPR_RECORD_GAMMA_OFFSET], 180u);
+    EXPECT_EQ(output[SPR_RECORD_GAMMA_OFFSET + 1], 150u);
+    EXPECT_EQ(output[SPR_RECORD_GAMMA_OFFSET + 2], 140u);
+    EXPECT_EQ(output[SPR_RECORD_GAMMA_OFFSET + 3], 0u);
+    EXPECT_EQ(output[SPR_RECORD_GAMMA_OFFSET + 4], 0u);
+    EXPECT_EQ(output[SPR_RECORD_GAMMA_OFFSET + 5], 0u);
+    EXPECT_EQ(output[SPR_RECORD_GAMMA_OFFSET + 6], 0u);
+    EXPECT_EQ(output[SPR_RECORD_GAMMA_OFFSET + 7], 0u);
+}

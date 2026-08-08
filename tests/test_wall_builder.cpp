@@ -83,6 +83,32 @@ TEST(WallBuilderTest, StandardDarkWallUsesDarkProfileVids) {
     EXPECT_TRUE(found_floor);
 }
 
+TEST(WallBuilderTest, As2Set2FloorSpritesCarryProfileGamma) {
+    WallBuilder builder(600.0f, 600.0f);
+
+    std::vector<Segment> segments = {
+        {{0, 0}, {2, 0}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{2, 0}, {2, 2}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{2, 2}, {0, 2}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+        {{0, 2}, {0, 0}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+    bool found_floor = false;
+
+    for (const auto& sprite : sprites) {
+        if (sprite.vid == FLOOR_AS2_SET2.vid) {
+            found_floor = true;
+            EXPECT_EQ(sprite.gamma.r, -80);
+            EXPECT_EQ(sprite.gamma.g, -80);
+            EXPECT_EQ(sprite.gamma.b, -80);
+            EXPECT_EQ(sprite.gamma.a, 0);
+        }
+    }
+
+    EXPECT_TRUE(found_floor);
+}
+
 static bool is_as2_set1_random_wall_direction(uint32_t direction) {
     if (direction == 102u) {
         return true;
@@ -732,10 +758,10 @@ TEST(WallBuilderTest, As2WallSet6BuildsRoomWithRandomDirectionsAndSingleCornerPi
     int dir_a_count = count_sprites_by_vid(room_sprites, 2601);
     int dir_b_count = count_sprites_by_vid(room_sprites, 2600);
 
-    EXPECT_EQ(room_sprites.size(), 37u);
+    EXPECT_EQ(room_sprites.size(), 40u);
     EXPECT_EQ(dir_a_count, room_size * 2);
     EXPECT_EQ(dir_b_count, room_size * 2);
-    EXPECT_EQ(count_sprites_by_vid(room_sprites, 2602), 1);
+    EXPECT_EQ(count_sprites_by_vid(room_sprites, 2602), 4);
     EXPECT_EQ(count_sprites_by_vid_and_direction(room_sprites, 2602, 0u), 1);
     std::vector<io::Sprite> preview_sprites = room_sprites;
 
@@ -1435,4 +1461,3 @@ TEST(WallBuilderTest, DoorExcavationPreservesCornerPillars) {
     EXPECT_EQ(pillars_without_doors, 3);
     EXPECT_EQ(pillars_with_doors, 3) << "Door excavation must preserve corner and endpoint pillars";
 }
-

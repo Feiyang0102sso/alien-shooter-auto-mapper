@@ -109,6 +109,34 @@ static bool is_six_pool_floor_vid(int vid) {
     return false;
 }
 
+static bool is_as2_wall_type(int wall_type) {
+    if (wall_type >= auto_mapper::core::WALL_TYPE_AS2_WALL_SET1_FIXED_0 &&
+        wall_type <= auto_mapper::core::WALL_TYPE_AS2_WALL_SET9_RANDOM) {
+        return true;
+    }
+
+    return false;
+}
+
+static auto_mapper::io::MapFormat select_output_map_format(
+    const std::vector<auto_mapper::core::Segment>& segments,
+    const std::vector<auto_mapper::core::DoorInstance>& doors
+) {
+    for (const auto& segment : segments) {
+        if (is_as2_wall_type(segment.wall_type)) {
+            return auto_mapper::io::MapFormat::AS2R;
+        }
+    }
+
+    for (const auto& door : doors) {
+        if (is_as2_wall_type(door.wall_type)) {
+            return auto_mapper::io::MapFormat::AS2R;
+        }
+    }
+
+    return auto_mapper::io::MapFormat::AS1;
+}
+
 static void randomize_floor_directions(
     std::vector<auto_mapper::io::Sprite>& sprites
 ) {
@@ -579,7 +607,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
     sprites.insert(sprites.end(), decoration_sprites.begin(), decoration_sprites.end());
 
-    if (auto_mapper::io::write_map(sprites, out_path, map_size_x, map_size_y)) {
+    auto_mapper::io::MapFormat output_format = select_output_map_format(cpp_segments, cpp_doors);
+    if (auto_mapper::io::write_map(sprites, out_path, output_format, map_size_x, map_size_y)) {
         return true;
     } else {
         return false;

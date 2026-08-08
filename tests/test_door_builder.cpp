@@ -62,6 +62,56 @@ TEST(DoorBuilderTest, DoorSceneGolden) {
     EXPECT_TRUE(files_match);
 }
 
+TEST(DoorBuilderTest, As2Set3AndSet4DoorPanelsCarryProfileGamma) {
+    DoorBuilder builder(600.0f, 600.0f);
+
+    int wall_types[] = {
+        WALL_TYPE_AS2_WALL_SET3_RANDOM,
+        WALL_TYPE_AS2_WALL_SET4_RANDOM,
+    };
+
+    int door_states[] = {
+        DOOR_STATE_CLOSED,
+        DOOR_STATE_OPEN,
+    };
+
+    int expected_vids[] = {
+        1785,
+        1786,
+    };
+
+    for (int wall_type : wall_types) {
+        int state_index = 0;
+        while (state_index < 2) {
+            DoorInstance door = {
+                {2, 2},
+                wall_type,
+                0,
+                2,
+                door_states[state_index],
+                LIGHT_STATE_RED,
+                0.0f
+            };
+
+            std::vector<io::Sprite> sprites = builder.build({door});
+            bool found_panel = false;
+
+            for (const auto& sprite : sprites) {
+                if (sprite.vid == expected_vids[state_index]) {
+                    found_panel = true;
+                    EXPECT_EQ(sprite.gamma.r, -140);
+                    EXPECT_EQ(sprite.gamma.g, -150);
+                    EXPECT_EQ(sprite.gamma.b, -180);
+                    EXPECT_EQ(sprite.gamma.a, 0);
+                }
+            }
+
+            EXPECT_TRUE(found_panel);
+            state_index += 1;
+        }
+    }
+}
+
 TEST(DoorBuilderTest, StandardActiveDoorUsesOpenPanelVid) {
     DoorBuilder builder(600.0f, 600.0f);
 
