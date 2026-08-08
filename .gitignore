@@ -65,3 +65,4 @@ _prep_for_img/
 #*.png
 AutoMapper.cfg
 auto_mapper_project.json
+color_palette_preview.html

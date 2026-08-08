@@ -12,19 +12,23 @@ CANVAS_LABEL_TEXT = "#d9e8e2"
 WALL_PROFILE_STANDARD = "#4f7fbf"
 WALL_PROFILE_LAB = "#2aa879"
 WALL_PROFILE_STANDARD_DARK = "#4dd0e1"
-WALL_PROFILE_AS2_SET1 = "#b96f47"
-WALL_PROFILE_AS2_SET1_V1 = "#b96f47"  # Terracotta Base (Variant 1)
-WALL_PROFILE_AS2_SET1_V2 = "#d88b5c"  # Amber Terracotta (Variant 2)
-WALL_PROFILE_AS2_SET1_V3 = "#985333"  # Deep Terracotta (Variant 3)
-WALL_PROFILE_AS2_SET2 = "#b35a4b"
-WALL_PROFILE_AS2_SET3 = "#8f7a52"
-WALL_PROFILE_AS2_SET4 = "#6f8796"
-WALL_PROFILE_AS2_SET5 = "#a6769b"
-WALL_PROFILE_AS2_SET6 = "#78996f"
-WALL_PROFILE_AS2_SET7 = "#9a8d63"
-WALL_PROFILE_AS2_SET8 = "#7c8db3"
-WALL_PROFILE_AS2_SET9 = "#b07f5f"
+# AS2
+WALL_PROFILE_AS2_SET1 = "#D97706"
+WALL_PROFILE_AS2_SET1_V1 = "#D97706"  # Base Terracotta
+WALL_PROFILE_AS2_SET1_V2 = "#F59E0B"  # Light Amber Gold
+WALL_PROFILE_AS2_SET1_V3 = "#92400E"  # Dark Red Bronze
+WALL_PROFILE_AS2_SET2 = "#FACC15"     # Tactical Yellow
+WALL_PROFILE_AS2_SET3 = "#10B981"     # Emerald Green
+WALL_PROFILE_AS2_SET4 = "#06B6D4"     # Electric Cyan
+WALL_PROFILE_AS2_SET5 = "#3B82F6"     # Sky Blue
+WALL_PROFILE_AS2_SET6 = "#8B5CF6"     # Violet Purple
+WALL_PROFILE_AS2_SET7 = "#FFB8DB"     # Neon Magenta
+WALL_PROFILE_AS2_SET8 = "#CBD5E1"     # Platinum Steel Gray
+WALL_PROFILE_AS2_SET9 = "#84CC16"     # Toxic Lime Green
 WALL_PROFILE_FALLBACK = "#c0a05a"
+# AS2 unified door lines
+DOOR_AS2_LINE = "#FF3333"  # Tactical Red Door
+DOOR_AS2_DOT = "#FF0000"
 
 # === Standard Wall Set (Base wall is Deep Blue #4f7fbf) ===
 # 1. Active Door (Single line color, dot color changes by global 'is_door_open' property)

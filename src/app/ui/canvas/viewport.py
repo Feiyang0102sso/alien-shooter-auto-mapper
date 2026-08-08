@@ -32,6 +32,8 @@ from app.ui.colors import (
     DECORATION_AREA_FILL_ALPHA,
     DECORATION_AREA_PREVIEW_BORDER,
     DECORATION_AREA_SELECTED_BORDER,
+    DOOR_AS2_DOT,
+    DOOR_AS2_LINE,
     DOOR_STD_ACTIVE_LINE,
     DOOR_STD_ACTIVE_DOT_OPEN,
     DOOR_STD_ACTIVE_DOT_CLOSED,
@@ -1174,8 +1176,8 @@ class MapViewport(QWidget):
         if wall_type >= 3:
             is_open = (door_state == DOOR_STATE_OPEN) or self.is_door_open
             if is_open:
-                return DOOR_STD_ACTIVE_LINE, DOOR_STD_ACTIVE_DOT_OPEN, True
-            return DOOR_STD_ACTIVE_LINE, DOOR_STD_ACTIVE_DOT_CLOSED, False
+                return DOOR_AS2_LINE, DOOR_AS2_DOT, True
+            return DOOR_AS2_LINE, DOOR_AS2_DOT, False
 
         # --- 3. Standard Wall Set (Base wall is Deep Blue) ---
         is_active_door = (light_state != LIGHT_STATE_BROKEN)
