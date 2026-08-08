@@ -20,6 +20,10 @@ Unified name for Alien Shooter 2 Reloaded, Alien Shooter 2 Conscription, and Zom
 
 A group of wall sprites that share the same physical grid step and visual style.
 
+## Wall Set Legend
+
+A non-interactive summary of every drawable part available in one wall set.
+
 ## Wall Variant
 
 A visual asset choice inside a wall set. A wall set may have different variant counts for direction parts and pillar parts.

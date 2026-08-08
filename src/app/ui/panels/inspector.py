@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.config import APP_RESOURCE_DIR
-from app.editor.drawable_parts import get_drawable_parts
+from app.editor.drawable_parts import AS2_SET1_WALL_TYPES, get_wall_set_drawable_parts
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
@@ -27,14 +27,6 @@ IMAGE_ROOT = APP_RESOURCE_DIR / "images" / "preview" / "AS1"
 INSPECTOR_MAX_WIDTH = 320
 COMPONENT_PREVIEW_WIDTH = 260
 COMPONENT_PREVIEW_HEIGHT = 190
-AS2_SET1_VARIANTS = [
-    (3, "墙体主体1"),
-    (4, "墙体主体2"),
-    (5, "墙体主体3"),
-]
-AS2_SET1_WALL_TYPES = {3, 4, 5}
-
-
 class InspectorPanel(QWidget):
     """
     First-pass right panel for component selection and VID display.
@@ -295,32 +287,15 @@ class InspectorPanel(QWidget):
         self._drawable_part_ids = []
         self._drawable_wall_types = []
 
-        if wall_type in AS2_SET1_WALL_TYPES:
-            # Set1 variants: three wall body choices that switch the active wall type.
-            for variant_wall_type, variant_label in AS2_SET1_VARIANTS:
-                self._drawable_part_ids.append("wall_body")
-                self._drawable_wall_types.append(variant_wall_type)
-                self.component_combo.addItem(variant_label)
+        for drawable_wall_type, part_id, label in get_wall_set_drawable_parts(wall_type):
+            self._drawable_part_ids.append(part_id)
+            self._drawable_wall_types.append(drawable_wall_type)
+            self.component_combo.addItem(label)
 
-            # Append door parts from DLL (as2_door_closed / as2_door_open).
-            # Use the canonical Set1 wall type for all door entries so the door
-            # auto-adapts to whichever variant is active via wall_type on the segment.
-            for part_id, label in get_drawable_parts(wall_type):
-                if part_id == "wall_body":
-                    continue
-                self._drawable_part_ids.append(part_id)
-                self._drawable_wall_types.append(wall_type)
-                self.component_combo.addItem(label)
-        else:
-            for part_id, label in get_drawable_parts(wall_type):
-                self._drawable_part_ids.append(part_id)
-                self._drawable_wall_types.append(wall_type)
-                self.component_combo.addItem(label)
-
-            if not self._drawable_part_ids:
-                self._drawable_part_ids.append("wall_body")
-                self._drawable_wall_types.append(wall_type)
-                self.component_combo.addItem(tr(TextKey.DRAWABLE_WALL_BODY))
+        if not self._drawable_part_ids:
+            self._drawable_part_ids.append("wall_body")
+            self._drawable_wall_types.append(wall_type)
+            self.component_combo.addItem(tr(TextKey.DRAWABLE_WALL_BODY))
 
         selected_index = self._find_drawable_wall_type_index(wall_type)
         self.component_combo.setCurrentIndex(selected_index)
