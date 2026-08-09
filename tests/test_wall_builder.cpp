@@ -426,8 +426,112 @@ static void expect_as2_set2_wall_directions_are_allowed(const std::vector<io::Sp
     }
 }
 
+TEST(WallBuilderTest, DisabledAs1DirectionsUseZeroForWallsPillarsAndFloors) {
+    const int wall_types[] = {
+        WALL_TYPE_STANDARD,
+        WALL_TYPE_LAB,
+        WALL_TYPE_STANDARD_DARK
+    };
+    const int floor_vids[] = {
+        FLOOR_STANDARD.vid,
+        FLOOR_LAB.vid,
+        FLOOR_STANDARD_DARK.vid
+    };
+
+    for (int index = 0; index < 3; ++index) {
+        WallBuilder builder(2000.0f, 2000.0f, false);
+        const WallProfile& profile = WallBuilder::get_wall_profile(wall_types[index]);
+        std::vector<io::Sprite> sprites = builder.build(
+            build_room_segments(8, wall_types[index]),
+            true,
+            false
+        );
+
+        for (const io::Sprite& sprite : sprites) {
+            bool is_wall = sprite.vid == profile.dir_a_vid || sprite.vid == profile.dir_b_vid;
+            bool is_pillar = sprite.vid == profile.pillar_vid;
+            bool is_floor = sprite.vid == floor_vids[index];
+
+            if (is_wall || is_pillar || is_floor) {
+                EXPECT_EQ(sprite.direction, 0u);
+            }
+        }
+    }
+}
+
+TEST(WallBuilderTest, EnabledAs1DirectionsRandomizeEachEligibleSprite) {
+    const int wall_types[] = {
+        WALL_TYPE_STANDARD,
+        WALL_TYPE_LAB,
+        WALL_TYPE_STANDARD_DARK
+    };
+    const int floor_vids[] = {
+        FLOOR_STANDARD.vid,
+        FLOOR_LAB.vid,
+        FLOOR_STANDARD_DARK.vid
+    };
+
+    for (int index = 0; index < 3; ++index) {
+        WallBuilder builder(2000.0f, 2000.0f, true);
+        const WallProfile& profile = WallBuilder::get_wall_profile(wall_types[index]);
+        std::vector<io::Sprite> sprites = builder.build(
+            build_room_segments(12, wall_types[index]),
+            true,
+            false
+        );
+        std::set<uint32_t> directions;
+
+        for (const io::Sprite& sprite : sprites) {
+            bool is_wall = sprite.vid == profile.dir_a_vid || sprite.vid == profile.dir_b_vid;
+            bool is_pillar = sprite.vid == profile.pillar_vid;
+            bool is_floor = sprite.vid == floor_vids[index];
+
+            if (is_wall || is_pillar || is_floor) {
+                directions.insert(sprite.direction);
+                EXPECT_LE(sprite.direction, 255u);
+            }
+        }
+
+        EXPECT_GT(directions.size(), 1u);
+    }
+}
+
+TEST(WallBuilderTest, DisabledAs2DirectionsUseDefaultsAndSuppressRareWalls) {
+    WallBuilder builder(3000.0f, 3000.0f, false);
+
+    std::vector<io::Sprite> set1_sprites = builder.build(
+        build_room_segments(12, WALL_TYPE_AS2_WALL_SET1_RANDOM),
+        true,
+        false
+    );
+    EXPECT_EQ(count_sprites_by_vid(set1_sprites, 1781), count_sprites_by_vid_and_direction(set1_sprites, 1781, 102u));
+    EXPECT_EQ(count_sprites_by_vid(set1_sprites, 1780), count_sprites_by_vid_and_direction(set1_sprites, 1780, 102u));
+    EXPECT_EQ(count_sprites_by_vid(set1_sprites, 1782), count_sprites_by_vid_and_direction(set1_sprites, 1782, 170u));
+    EXPECT_EQ(count_sprites_by_vid(set1_sprites, 1783), count_sprites_by_vid_and_direction(set1_sprites, 1783, 0u));
+
+    std::vector<io::Sprite> set3_sprites = builder.build(
+        build_room_segments(20, WALL_TYPE_AS2_WALL_SET3_RANDOM),
+        true,
+        false
+    );
+    EXPECT_EQ(count_sprites_by_vid(set3_sprites, 1100), count_sprites_by_vid_and_direction(set3_sprites, 1100, 0u));
+    EXPECT_EQ(count_sprites_by_vid(set3_sprites, 1101), count_sprites_by_vid_and_direction(set3_sprites, 1101, 0u));
+    EXPECT_EQ(count_sprites_by_vid(set3_sprites, 1102), count_sprites_by_vid_and_direction(set3_sprites, 1102, 0u));
+    EXPECT_EQ(count_sprites_by_vid(set3_sprites, 1121), count_sprites_by_vid_and_direction(set3_sprites, 1121, 0u));
+
+    std::vector<io::Sprite> set7_sprites = builder.build(
+        build_room_segments(20, WALL_TYPE_AS2_WALL_SET7_RANDOM),
+        true,
+        false
+    );
+    EXPECT_EQ(count_sprites_by_vid(set7_sprites, 2621), count_sprites_by_vid_and_direction(set7_sprites, 2621, 51u));
+    EXPECT_EQ(count_sprites_by_vid(set7_sprites, 2620), count_sprites_by_vid_and_direction(set7_sprites, 2620, 51u));
+    EXPECT_EQ(count_sprites_by_vid(set7_sprites, 2622), count_sprites_by_vid_and_direction(set7_sprites, 2622, 204u));
+    EXPECT_EQ(count_sprites_by_vid(set7_sprites, 2643), count_sprites_by_vid_and_direction(set7_sprites, 2643, 0u));
+}
+
 TEST(WallBuilderTest, As2WallSet1FixedProfilesUseFixedDirections) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
 
     io::Sprite fixed0_dir_a = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET1_FIXED_0, WallPartKind::DirA);
     io::Sprite fixed0_dir_b = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET1_FIXED_0, WallPartKind::DirB);
@@ -453,7 +557,7 @@ TEST(WallBuilderTest, As2WallSet1FixedProfilesUseFixedDirections) {
 }
 
 TEST(WallBuilderTest, As2WallSet2BuildsRoomWithDirectionalPillarSlices) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
 
     std::vector<io::Sprite> sprites = builder.build(
         build_room_segments(3, WALL_TYPE_AS2_WALL_SET2_RANDOM),
@@ -475,7 +579,7 @@ TEST(WallBuilderTest, As2WallSet2BuildsRoomWithDirectionalPillarSlices) {
 }
 
 TEST(WallBuilderTest, As2WallSet2BuildsOpenLShapeWithEndpointAndCornerSlices) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
 
     std::vector<Segment> segments = {
         {{0, 0}, {3, 0}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
@@ -498,7 +602,7 @@ TEST(WallBuilderTest, As2WallSet2BuildsOpenLShapeWithEndpointAndCornerSlices) {
 }
 
 TEST(WallBuilderTest, As2WallSet2BuildsCrossWithFourCenterSlices) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
 
     std::vector<Segment> segments = {
         {{-2, 0}, {2, 0}, WALL_TYPE_AS2_WALL_SET2_RANDOM},
@@ -521,7 +625,7 @@ TEST(WallBuilderTest, As2WallSet2BuildsCrossWithFourCenterSlices) {
 }
 
 TEST(WallBuilderTest, As2WallSet2WritesManualPreviewMap) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
 
     std::vector<Segment> segments;
     std::vector<Segment> room_segments = build_room_segments_at(0, 0, 3, WALL_TYPE_AS2_WALL_SET2_RANDOM);
@@ -554,7 +658,7 @@ TEST(WallBuilderTest, As2WallSet2WritesManualPreviewMap) {
 }
 
 TEST(WallBuilderTest, As2WallSet3BuildsLargeRoomWithBoundedRareVariants) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 40;
 
     io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET3_RANDOM, WallPartKind::DirA);
@@ -618,7 +722,7 @@ TEST(WallBuilderTest, As2WallSet3BuildsLargeRoomWithBoundedRareVariants) {
 }
 
 TEST(WallBuilderTest, As2WallSet4BuildsLargeRoomWithBoundedRareVariants) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 40;
 
     io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET4_RANDOM, WallPartKind::DirA);
@@ -682,7 +786,7 @@ TEST(WallBuilderTest, As2WallSet4BuildsLargeRoomWithBoundedRareVariants) {
 }
 
 TEST(WallBuilderTest, As2WallSet5BuildsRoomWithFixedRareCadenceAndCornerPillars) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 9;
 
     io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET5_RANDOM, WallPartKind::DirA);
@@ -737,7 +841,7 @@ TEST(WallBuilderTest, As2WallSet5BuildsRoomWithFixedRareCadenceAndCornerPillars)
 }
 
 TEST(WallBuilderTest, As2WallSet6BuildsRoomWithRandomDirectionsAndSingleCornerPillar) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 9;
 
     io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET6_RANDOM, WallPartKind::DirA);
@@ -784,7 +888,7 @@ TEST(WallBuilderTest, As2WallSet6BuildsRoomWithRandomDirectionsAndSingleCornerPi
 }
 
 TEST(WallBuilderTest, As2WallSet7BuildsRoomWithFixedRareCadenceAndFixedPillars) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 9;
 
     io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET7_RANDOM, WallPartKind::DirA);
@@ -843,7 +947,7 @@ TEST(WallBuilderTest, As2WallSet7BuildsRoomWithFixedRareCadenceAndFixedPillars) 
 }
 
 TEST(WallBuilderTest, As2WallSet8BuildsRoomWithRandomDirectionsAndPerCornerPillars) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 9;
 
     io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET8_RANDOM, WallPartKind::DirA);
@@ -896,7 +1000,7 @@ TEST(WallBuilderTest, As2WallSet8BuildsRoomWithRandomDirectionsAndPerCornerPilla
 }
 
 TEST(WallBuilderTest, As2WallSet9BuildsRoomWithCornerWallDirectionsAndNoPillars) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 9;
 
     io::Sprite dir_a_sample = builder.place_single_wall(0, 0, WALL_TYPE_AS2_WALL_SET9_RANDOM, WallPartKind::DirA);
@@ -951,7 +1055,7 @@ TEST(WallBuilderTest, As2WallSet9BuildsRoomWithCornerWallDirectionsAndNoPillars)
 }
 
 TEST(WallBuilderTest, As2WallSet1RandomProfileUsesAllowedVariantPool) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
 
     std::vector<Segment> segments = {
         {{0, 0}, {3, 0}, WALL_TYPE_AS2_WALL_SET1_RANDOM},
@@ -975,7 +1079,7 @@ TEST(WallBuilderTest, As2WallSet1RandomProfileUsesAllowedVariantPool) {
 }
 
 TEST(WallBuilderTest, As2WallSet1BuildsFixedRoomsAndRandomLargeRoom) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
 
     std::vector<io::Sprite> fixed0_sprites = builder.build(
         build_room_segments(3, WALL_TYPE_AS2_WALL_SET1_FIXED_0),
@@ -1241,7 +1345,7 @@ TEST(FloorBuilderTest, FloorGoldenMap) {
 // ===========================================================================
 
 TEST(As2FloorTest, Set1Random3x3RoomUsesVid1783Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET1_RANDOM;
     int expected_floor_vid = 1783;
 
@@ -1258,12 +1362,20 @@ TEST(As2FloorTest, Set1Random3x3RoomUsesVid1783Floor) {
     EXPECT_GE(wall_pillar, 4);
     EXPECT_GE(floor_count, 9) << "Set1 3x3 room should produce at least 9 floor tiles (VID 1783)";
 
+    std::set<uint32_t> floor_directions;
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid == expected_floor_vid) {
+            floor_directions.insert(sprite.direction);
+        }
+    }
+    EXPECT_GT(floor_directions.size(), 1u);
+
     std::string out_path = get_test_output_path("as2_floor_set1_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
 TEST(As2FloorTest, Set2Random3x3RoomUsesVid1724Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET2_RANDOM;
     int expected_floor_vid = 1724;
 
@@ -1280,12 +1392,26 @@ TEST(As2FloorTest, Set2Random3x3RoomUsesVid1724Floor) {
     EXPECT_GE(wall_pillar, 4);
     EXPECT_GE(floor_count, 9) << "Set2 3x3 room should produce at least 9 floor tiles (VID 1724)";
 
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != expected_floor_vid) {
+            continue;
+        }
+
+        bool direction_is_allowed = false;
+        for (int index = 0; index < AS2_SIX_DIRECTION_RANDOMIZATION.allowed_value_count; ++index) {
+            if (sprite.direction == AS2_SIX_DIRECTION_RANDOMIZATION.allowed_values[index]) {
+                direction_is_allowed = true;
+            }
+        }
+        EXPECT_TRUE(direction_is_allowed);
+    }
+
     std::string out_path = get_test_output_path("as2_floor_set2_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
 TEST(As2FloorTest, Set3Random3x3RoomUsesVid1121Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET3_RANDOM;
     int expected_floor_vid = 1121;
 
@@ -1307,7 +1433,7 @@ TEST(As2FloorTest, Set3Random3x3RoomUsesVid1121Floor) {
 }
 
 TEST(As2FloorTest, Set4Random3x3RoomUsesVid1121Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET4_RANDOM;
     int expected_floor_vid = 1121;
 
@@ -1329,7 +1455,7 @@ TEST(As2FloorTest, Set4Random3x3RoomUsesVid1121Floor) {
 }
 
 TEST(As2FloorTest, Set5Random3x3RoomUsesVid2503Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET5_RANDOM;
     int expected_floor_vid = 2503;
 
@@ -1351,7 +1477,7 @@ TEST(As2FloorTest, Set5Random3x3RoomUsesVid2503Floor) {
 }
 
 TEST(As2FloorTest, Set6Random3x3RoomUsesVid2503Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET6_RANDOM;
     int expected_floor_vid = 2503;
 
@@ -1374,7 +1500,7 @@ TEST(As2FloorTest, Set6Random3x3RoomUsesVid2503Floor) {
 }
 
 TEST(As2FloorTest, Set7Random3x3RoomUsesVid2643Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET7_RANDOM;
     int expected_floor_vid = 2643;
 
@@ -1396,7 +1522,7 @@ TEST(As2FloorTest, Set7Random3x3RoomUsesVid2643Floor) {
 }
 
 TEST(As2FloorTest, Set8Random3x3RoomUsesVid2643Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET8_RANDOM;
     int expected_floor_vid = 2643;
 
@@ -1418,7 +1544,7 @@ TEST(As2FloorTest, Set8Random3x3RoomUsesVid2643Floor) {
 }
 
 TEST(As2FloorTest, Set9Random3x3RoomUsesVid1724Floor) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, true);
     int wall_type = WALL_TYPE_AS2_WALL_SET9_RANDOM;
     int expected_floor_vid = 1724;
 
@@ -1439,7 +1565,7 @@ TEST(As2FloorTest, Set9Random3x3RoomUsesVid1724Floor) {
 }
 
 TEST(WallBuilderTest, DoorExcavationPreservesCornerPillars) {
-    WallBuilder builder(2000.0f, 2000.0f);
+    WallBuilder builder(2000.0f, 2000.0f, false);
 
     // L-shaped wall joining at corner (0, 0)
     std::vector<Segment> segments = {

@@ -2,7 +2,6 @@
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "core/door_builder/door_builder.h"
 #include "core/door_builder/door_profiles_as1.h"
-#include "auto_mapper/core/randomizer.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
 #include "auto_mapper/io/map_writer.h"
@@ -12,8 +11,6 @@
 extern "C" {
 
 static constexpr int AUTO_MAPPER_API_VERSION = 6;
-static constexpr int MIN_SPRITE_DIRECTION = 0;
-static constexpr int MAX_SPRITE_DIRECTION = 255;
 
 AUTO_MAPPER_API int get_auto_mapper_api_version() {
     return AUTO_MAPPER_API_VERSION;
@@ -45,70 +42,6 @@ static constexpr int STANDARD_DOOR_SIZES[] = {
     auto_mapper::core::DOOR_STANDARD.large.span_steps
 };
 
-// ---------------------------------------------------------------------------
-// Floor direction randomization rules
-//
-// VIDs with 0-255 full range: use Random::get(min, max)
-// VIDs with a discrete direction set: use Random::get(vector<int>)
-//
-// AS1 floors (500, 502, 503): always 0-255
-// AS2 Set1 VID 1783:          0-255
-// AS2 Set5 VID 2503:          0-255
-// AS2 Set6 VID 2503:          0-255 (same VID as Set5)
-// AS2 Set7 VID 2643:          0-255
-// AS2 Set8 VID 2643:          0-255 (same VID as Set7)
-// AS2 Set2 VID 1724:          {0, 32, 128, 160, 192, 224}
-// AS2 Set9 VID 1724:          {0, 32, 128, 160, 192, 224} (same VID as Set2)
-// AS2 Set3 VID 1121:          {0, 32, 128, 160, 192, 224}
-// AS2 Set4 VID 1121:          {0, 32, 128, 160, 192, 224} (same VID as Set3)
-// ---------------------------------------------------------------------------
-
-// Shared 6-direction pool for VIDs 1724 and 1121 (Set2, Set9, Set3, Set4).
-static const std::vector<int> FLOOR_DIR_POOL_SIX = {
-    0, 32, 128, 160, 192, 224
-};
-
-static bool is_as1_floor_vid(int vid) {
-    if (vid == auto_mapper::core::FLOOR_STANDARD.vid) {
-        return true;
-    }
-    if (vid == auto_mapper::core::FLOOR_LAB.vid) {
-        return true;
-    }
-    if (vid == auto_mapper::core::FLOOR_STANDARD_DARK.vid) {
-        return true;
-    }
-    return false;
-}
-
-static bool is_full_range_floor_vid(int vid) {
-    // 1783 Set1
-    if (vid == auto_mapper::core::FLOOR_AS2_SET1.vid) {
-        return true;
-    }
-    // 2503 Set5 / Set6
-    if (vid == auto_mapper::core::FLOOR_AS2_SET5.vid) {
-        return true;
-    }
-    // 2643 Set7 / Set8
-    if (vid == auto_mapper::core::FLOOR_AS2_SET7.vid) {
-        return true;
-    }
-    return false;
-}
-
-static bool is_six_pool_floor_vid(int vid) {
-    // 1724 Set2 / Set9
-    if (vid == auto_mapper::core::FLOOR_AS2_SET2.vid) {
-        return true;
-    }
-    // 1121 Set3 / Set4
-    if (vid == auto_mapper::core::FLOOR_AS2_SET3.vid) {
-        return true;
-    }
-    return false;
-}
-
 static bool parse_map_format(int map_format, auto_mapper::io::MapFormat& parsed_format) {
     if (map_format == C_MAP_FORMAT_AS1) {
         parsed_format = auto_mapper::io::MapFormat::AS1;
@@ -126,33 +59,6 @@ static bool parse_map_format(int map_format, auto_mapper::io::MapFormat& parsed_
     }
 
     return false;
-}
-
-static void randomize_floor_directions(
-    std::vector<auto_mapper::io::Sprite>& sprites
-) {
-    using auto_mapper::core::Random;
-
-    for (auto_mapper::io::Sprite& sprite : sprites) {
-        int vid = sprite.vid;
-
-        // AS1 + full-range AS2 floors: 0-255
-        if (is_as1_floor_vid(vid) || is_full_range_floor_vid(vid)) {
-            int direction = Random::get(
-                MIN_SPRITE_DIRECTION,
-                MAX_SPRITE_DIRECTION
-            );
-            sprite.direction = static_cast<uint32_t>(direction);
-            continue;
-        }
-
-        // Six-option pool floors: pick one from the list via Random::get(vector)
-        if (is_six_pool_floor_vid(vid)) {
-            int direction = Random::get(FLOOR_DIR_POOL_SIX);
-            sprite.direction = static_cast<uint32_t>(direction);
-            continue;
-        }
-    }
 }
 
 AUTO_MAPPER_API bool get_incubator_array_profile(
@@ -570,12 +476,12 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     // API logging is intentionally disabled for UI-driven DLL calls.
 
     // 1. Build walls with excavations
-    auto_mapper::core::WallBuilder wall_builder(map_size_x, map_size_y);
+    auto_mapper::core::WallBuilder wall_builder(
+        map_size_x,
+        map_size_y,
+        random_direction
+    );
     std::vector<auto_mapper::io::Sprite> sprites = wall_builder.build(cpp_segments, gen_floor, gen_ceiling, excavations);
-
-    if (random_direction) {
-        randomize_floor_directions(sprites);
-    }
 
     // 2. Build doors
     auto_mapper::core::DoorBuilder door_builder(map_size_x, map_size_y);

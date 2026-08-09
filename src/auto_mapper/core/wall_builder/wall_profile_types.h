@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "auto_mapper/core/randomizer.h"
 #include "auto_mapper/core/vid_properties/vid_property_types.h"
 
 #include <cstdint>
@@ -92,6 +93,9 @@ struct WallProfile {
     int door_flank_clear = 0;
     // Variant index to use when re-placing flank walls. -1 = no flank walls.
     int door_flank_variant_index = -1;
+    // AS1 wall parts use the full 0-255 range. AS2 wall directions are
+    // selected through variant pools, while their pillars stay fixed.
+    DirectionRandomizationRule part_direction_randomization{};
 };
 
 struct FloorProfile {
@@ -103,6 +107,8 @@ struct FloorProfile {
     // Per-floor gamma tint. Most floors use all-zero (no tint).
     // Set2 uses (-80, -80, -80) to darken VID 1724 for its unique palette.
     VidGamma gamma{};
+    uint32_t direction = 0;
+    DirectionRandomizationRule direction_randomization{};
 };
 
 struct CeilingProfile {

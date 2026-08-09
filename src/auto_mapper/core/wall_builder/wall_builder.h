@@ -51,7 +51,11 @@ struct DoorExcavation {
 
 class WallBuilder {
 public:
-    WallBuilder(float map_size_x = 600.0f, float map_size_y = 600.0f);
+    WallBuilder(
+        float map_size_x = 600.0f,
+        float map_size_y = 600.0f,
+        bool randomize_directions = false
+    );
 
     // Look up profiles (Moved to public for door_builder.cpp access)
     static const WallProfile& get_wall_profile(int wall_type);
@@ -110,10 +114,10 @@ private:
     // Look up profiles
     static const FloorProfile& get_floor_profile(int floor_type);
     static const CeilingProfile& get_ceiling_profile(int ceiling_type);
-    static const WallVariant& select_wall_variant(const WallProfile& profile);
-    static int select_wall_variant_index(const WallProfile& profile);
+    const WallVariant& select_wall_variant(const WallProfile& profile) const;
+    int select_wall_variant_index(const WallProfile& profile) const;
     static bool has_rare_wall_variant(const WallProfile& profile);
-    static int reset_rare_wall_variant_interval(const WallProfile& profile);
+    int reset_rare_wall_variant_interval(const WallProfile& profile) const;
     static const WallPartAsset* select_corner_pillar_asset(const WallProfile& profile, const RawSprite& raw_sprite);
     io::Sprite place_single_wall_with_variant(int gx, int gy, int wall_type, WallPartKind kind, int variant_index) const;
     io::Sprite place_wall_part_asset(int gx, int gy, int wall_type, const WallPartAsset& asset) const;
@@ -121,6 +125,7 @@ private:
 
     float map_size_x_;
     float map_size_y_;
+    DirectionRandomizer direction_randomizer_;
 };
 
 } // namespace auto_mapper::core

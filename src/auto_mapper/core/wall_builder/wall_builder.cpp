@@ -21,8 +21,10 @@
 
 namespace auto_mapper::core {
 
-WallBuilder::WallBuilder(float map_size_x, float map_size_y)
-    : map_size_x_(map_size_x), map_size_y_(map_size_y) {}
+WallBuilder::WallBuilder(float map_size_x, float map_size_y, bool randomize_directions)
+    : map_size_x_(map_size_x),
+      map_size_y_(map_size_y),
+      direction_randomizer_(randomize_directions) {}
 
 const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
     if (wall_type == WALL_TYPE_STANDARD) {
@@ -480,6 +482,10 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
                 if (should_place_floor) {
                     io::Sprite floor_sprite = place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor);
                     floor_sprite.gamma = f_prof.gamma;
+                    floor_sprite.direction = direction_randomizer_.select_direction(
+                        f_prof.direction,
+                        f_prof.direction_randomization
+                    );
                     floor_sprites.push_back(floor_sprite);
                 }
             }
@@ -569,7 +575,7 @@ std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<R
 
         int variant_index = select_wall_variant_index(profile);
         bool is_wall_part = rs.kind == WallPartKind::DirA || rs.kind == WallPartKind::DirB;
-        if (is_wall_part && has_rare_wall_variant(profile)) {
+        if (direction_randomizer_.is_enabled() && is_wall_part && has_rare_wall_variant(profile)) {
             std::pair<int, WallPartKind> rare_variant_key = {rs.wall_type, rs.kind};
             if (rare_variant_remaining_by_wall_part.find(rare_variant_key) == rare_variant_remaining_by_wall_part.end()) {
                 rare_variant_remaining_by_wall_part[rare_variant_key] = reset_rare_wall_variant_interval(profile);
@@ -700,7 +706,7 @@ io::Sprite WallBuilder::place_single_floor_celling(int gx, int gy, int vid, floa
     return io::Sprite(vid, pt.x, pt.y, pos_z, 0);
 }
 
-int WallBuilder::select_wall_variant_index(const WallProfile& profile) {
+int WallBuilder::select_wall_variant_index(const WallProfile& profile) const {
     if (profile.variant_count <= 0) {
         return 0;
     }
@@ -719,12 +725,18 @@ int WallBuilder::select_wall_variant_index(const WallProfile& profile) {
         return 0;
     }
 
-    int selected_pool_item = 0;
+    int variant_index = pool.variant_indices[0];
     if (pool.randomize) {
-        selected_pool_item = Random::get(0, pool.variant_count - 1);
+        std::span<const int> variant_indices(
+            pool.variant_indices,
+            static_cast<std::size_t>(pool.variant_count)
+        );
+        variant_index = direction_randomizer_.select(
+            variant_index,
+            variant_indices
+        );
     }
 
-    int variant_index = pool.variant_indices[selected_pool_item];
     if (variant_index < 0 || variant_index >= profile.variant_count) {
         return 0;
     }
@@ -732,7 +744,7 @@ int WallBuilder::select_wall_variant_index(const WallProfile& profile) {
     return variant_index;
 }
 
-const WallVariant& WallBuilder::select_wall_variant(const WallProfile& profile) {
+const WallVariant& WallBuilder::select_wall_variant(const WallProfile& profile) const {
     int variant_index = select_wall_variant_index(profile);
     return profile.variants[variant_index];
 }
@@ -757,8 +769,12 @@ bool WallBuilder::has_rare_wall_variant(const WallProfile& profile) {
     return true;
 }
 
-int WallBuilder::reset_rare_wall_variant_interval(const WallProfile& profile) {
-    return Random::get(profile.rare_variant_min_interval, profile.rare_variant_max_interval);
+int WallBuilder::reset_rare_wall_variant_interval(const WallProfile& profile) const {
+    return direction_randomizer_.select(
+        profile.rare_variant_min_interval,
+        profile.rare_variant_min_interval,
+        profile.rare_variant_max_interval
+    );
 }
 
 const WallPartAsset& WallBuilder::select_wall_part_asset(const WallVariant& variant, WallPartKind kind) {
@@ -849,7 +865,12 @@ io::Sprite WallBuilder::place_wall_part_asset(int gx, int gy, int wall_type, con
     pos.x += asset.offset_x;
     pos.y += asset.offset_y;
 
-    return io::Sprite(asset.vid, pos.x, pos.y, 0.0f, asset.direction);
+    uint32_t direction = direction_randomizer_.select_direction(
+        asset.direction,
+        profile.part_direction_randomization
+    );
+
+    return io::Sprite(asset.vid, pos.x, pos.y, 0.0f, direction);
 }
 
 std::vector<io::Sprite> WallBuilder::place_pillar_slices(const RawSprite& raw_sprite) const {

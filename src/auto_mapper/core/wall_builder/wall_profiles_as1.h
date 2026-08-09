@@ -27,14 +27,15 @@ inline constexpr WallProfile WALL_STANDARD = {
     .offset_p_y = 0.0f,
     .grid_divisor = 1,
     .variants = {
-        make_wall_variant(601, 32, 0.0f, 0.0f, 602, 32, -40.0f, 0.0f, 604, 32, 0.0f, 0.0f)
+        make_wall_variant(601, 0, 0.0f, 0.0f, 602, 0, -40.0f, 0.0f, 604, 0, 0.0f, 0.0f)
     },
     .variant_count = 1,
     .variant_pools = {
         make_fixed_wall_variant_pool(0)
     },
     .variant_pool_count = 1,
-    .active_variant_pool = 0
+    .active_variant_pool = 0,
+    .part_direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
 };
 
 inline constexpr WallProfile WALL_LAB = {
@@ -51,14 +52,15 @@ inline constexpr WallProfile WALL_LAB = {
     .offset_p_y = 0.0f,
     .grid_divisor = 2,
     .variants = {
-        make_wall_variant(651, 32, 90.0f, 0.0f, 650, 32, 0.0f, 0.0f, 652, 32, 0.0f, 0.0f)
+        make_wall_variant(651, 0, 90.0f, 0.0f, 650, 0, 0.0f, 0.0f, 652, 0, 0.0f, 0.0f)
     },
     .variant_count = 1,
     .variant_pools = {
         make_fixed_wall_variant_pool(0)
     },
     .variant_pool_count = 1,
-    .active_variant_pool = 0
+    .active_variant_pool = 0,
+    .part_direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
 };
 
 inline constexpr WallProfile WALL_STANDARD_DARK = {
@@ -75,14 +77,15 @@ inline constexpr WallProfile WALL_STANDARD_DARK = {
     .offset_p_y = 0.0f,
     .grid_divisor = 1,
     .variants = {
-        make_wall_variant(620, 32, 0.0f, 0.0f, 621, 32, -40.0f, 0.0f, 622, 32, 0.0f, 0.0f)
+        make_wall_variant(620, 0, 0.0f, 0.0f, 621, 0, -40.0f, 0.0f, 622, 0, 0.0f, 0.0f)
     },
     .variant_count = 1,
     .variant_pools = {
         make_fixed_wall_variant_pool(0)
     },
     .variant_pool_count = 1,
-    .active_variant_pool = 0
+    .active_variant_pool = 0,
+    .part_direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
 };
 
 inline constexpr int FLOOR_TYPE_STANDARD = 0;
@@ -94,7 +97,8 @@ inline constexpr FloorProfile FLOOR_STANDARD = {
     .step_x = 40.0f,
     .step_y = 28.0f,
     .pos_z = 0.0f,
-    .grid_divisor = 1
+    .grid_divisor = 1,
+    .direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
 };
 
 inline constexpr FloorProfile FLOOR_LAB = {
@@ -102,7 +106,8 @@ inline constexpr FloorProfile FLOOR_LAB = {
     .step_x = 80.0f,
     .step_y = 56.0f,
     .pos_z = 0.0f,
-    .grid_divisor = 1
+    .grid_divisor = 1,
+    .direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
 };
 
 inline constexpr FloorProfile FLOOR_STANDARD_DARK = {
@@ -110,7 +115,8 @@ inline constexpr FloorProfile FLOOR_STANDARD_DARK = {
     .step_x = 40.0f,
     .step_y = 28.0f,
     .pos_z = 0.0f,
-    .grid_divisor = 1
+    .grid_divisor = 1,
+    .direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
 };
 
 inline constexpr int CEILING_TYPE_STANDARD = 0;

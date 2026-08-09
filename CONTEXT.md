@@ -32,6 +32,8 @@ An AS1-only project option that forces supported active doors open or closed; AS
 
 - A **Project Version** selects exactly one **Map Format**.
 - An AS2 Series **Project Version** ignores the **Global Door State Override**.
+- **Direction Randomization** affects eligible walls and floors in every **Map Format**, plus AS1 pillars.
+- AS2 pillars, **Door Flank Parts**, and topology-locked wall parts are **Fixed-Direction Parts**.
 
 ## Wall Set
 
@@ -56,6 +58,22 @@ The same VID may appear in multiple wall variants when its sprite `direction` va
 The numeric `direction` field stored on a `.map` sprite record.
 
 Wall Direction Value is not Direction A or Direction B. Direction A/B names describe wall axes; Wall Direction Value controls sprite orientation or animation state inside the game map data.
+
+## Direction Randomization
+
+An output option that varies eligible Wall Direction Values when enabled and uses each eligible part's default direction when disabled.
+
+Each eligible sprite chooses its direction independently; a wall segment or room does not share one random direction.
+
+A fixed Wall Variant remains fixed regardless of this option; a random Wall Variant uses its first allowed direction as the default when the option is disabled.
+
+Rare wall variants participate in Direction Randomization: they keep their configured cadence when randomization is enabled and do not appear when it is disabled.
+
+AS2 pillars, Door Flank Parts, and topology-locked wall parts are Fixed-Direction Parts and never participate in Direction Randomization.
+
+## Fixed-Direction Part
+
+A sprite part whose Wall Direction Value is prescribed by its wall or door topology and is unaffected by Direction Randomization.
 
 ## Locked Wall Variant Group
 
