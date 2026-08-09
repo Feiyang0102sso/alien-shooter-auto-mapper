@@ -7,6 +7,7 @@
 #include "auto_mapper/core/door_builder/door_profiles_as1.h"
 #include "auto_mapper/core/door_builder/door_profiles_as2.h"
 #include "auto_mapper/core/randomizer.h"
+#include "auto_mapper/core/vid_properties/vid_armies_as2.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 
 namespace auto_mapper::core {
@@ -340,6 +341,7 @@ static void push_as2_door_flank_parts(
             0.0f,
             part.direction
         );
+        spr.army = get_as2_wall_set_asset_army(part.vid);
         spr.gamma = part.gamma;
         spr.scale = part.scale;
         door_sprites.push_back(spr);
@@ -401,6 +403,7 @@ static void push_door_flank_walls(
         pos.x += asset.offset_x;
         pos.y += asset.offset_y;
         io::Sprite spr(asset.vid, pos.x, pos.y, 0.0f, asset.direction);
+        spr.army = get_as2_wall_set_asset_army(asset.vid);
         spr.gamma = asset.gamma;
         spr.scale = asset.scale;
         door_sprites.push_back(spr);
@@ -446,6 +449,7 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
                     0.0f,
                     frame_dir
                 );
+                frame_spr.army = get_as2_wall_set_asset_army(frame_part.vid);
                 frame_spr.gamma = frame_part.gamma;
                 frame_spr.scale = frame_part.scale;
                 door_sprites.push_back(frame_spr);
@@ -461,6 +465,7 @@ std::vector<io::Sprite> DoorBuilder::build(const std::vector<DoorInstance>& door
                     door.z_offset,
                     panel_dir
                 );
+                panel_spr.army = get_as2_wall_set_asset_army(panel_vid);
                 panel_spr.gamma = variant.panel.gamma;
                 panel_spr.scale = variant.panel.scale;
                 door_sprites.push_back(panel_spr);

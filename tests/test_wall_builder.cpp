@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "auto_mapper/core/wall_builder/wall_builder.h"
+#include "auto_mapper/core/vid_properties/vid_armies_as2.h"
 #include "auto_mapper/io/map_writer.h"
 #include "utils/test_utils.h"
 #include <vector>
@@ -107,6 +108,36 @@ TEST(WallBuilderTest, As2Set2FloorSpritesCarryProfileGamma) {
     }
 
     EXPECT_TRUE(found_floor);
+}
+
+TEST(WallBuilderTest, As2WallAndFloorSpritesUseVidArmyBindings) {
+    WallBuilder builder(600.0f, 600.0f);
+
+    std::vector<Segment> segments = {
+        {{0, 0}, {2, 0}, WALL_TYPE_AS2_WALL_SET3_RANDOM},
+        {{2, 0}, {2, 2}, WALL_TYPE_AS2_WALL_SET3_RANDOM},
+        {{2, 2}, {0, 2}, WALL_TYPE_AS2_WALL_SET3_RANDOM},
+        {{0, 2}, {0, 0}, WALL_TYPE_AS2_WALL_SET3_RANDOM},
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments, true, false);
+    bool found_army_zero = false;
+    bool found_army_two = false;
+
+    for (const io::Sprite& sprite : sprites) {
+        VidArmy expected_army = get_as2_wall_set_asset_army(sprite.vid);
+        EXPECT_EQ(sprite.army, expected_army) << "Incorrect Army for VID " << sprite.vid;
+
+        if (sprite.army == 0) {
+            found_army_zero = true;
+        }
+        if (sprite.army == 2) {
+            found_army_two = true;
+        }
+    }
+
+    EXPECT_TRUE(found_army_zero);
+    EXPECT_TRUE(found_army_two);
 }
 
 static bool is_as2_set1_random_wall_direction(uint32_t direction) {

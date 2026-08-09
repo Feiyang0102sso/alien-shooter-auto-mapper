@@ -155,6 +155,7 @@ TEST(MapWriterTest, WritesAS2SpriteRecordsWithVersionTwoLayout) {
     sprite.posX = 300.0f;
     sprite.posY = 238.0f;
     sprite.direction = 64;
+    sprite.army = 2;
 
     std::string output_file = get_test_output_path("single_sprite_as2_writer_output.map");
 
@@ -181,6 +182,7 @@ TEST(MapWriterTest, WritesAS2SpriteRecordsWithVersionTwoLayout) {
     EXPECT_EQ(read_uint32_at(output, SPR_INFO_SIZE_OFFSET), 52u);
     EXPECT_EQ(read_uint32_at(output, SPR_RECORD_OFFSET), 1u);
     EXPECT_EQ(read_uint32_at(output, SPR_RECORD_OFFSET + 4), 601u);
+    EXPECT_EQ(read_uint32_at(output, SPR_RECORD_OFFSET + 24), 2u);
 
     EXPECT_EQ(read_magic_at(output, SPRD_OFFSET), "SPRD");
     EXPECT_EQ(read_uint32_at(output, SPRD_OFFSET + 4), 41u);

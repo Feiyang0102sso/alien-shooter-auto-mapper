@@ -34,10 +34,21 @@ An AS1-only project option that forces supported active doors open or closed; AS
 - An AS2 Series **Project Version** ignores the **Global Door State Override**.
 - **Direction Randomization** affects eligible walls and floors in every **Map Format**, plus AS1 pillars.
 - AS2 pillars, **Door Flank Parts**, and topology-locked wall parts are **Fixed-Direction Parts**.
+- Every **AS2 Wall Set Asset** has an explicit **Sprite Army Value**, including assets whose value is zero.
+- An **AS2 Wall Set Asset** keeps the same **Sprite Army Value** everywhere its VID is used.
+- **Sprite Army Value** is independent of **Map Format**; AS1 support may use the same VID binding in a separate implementation step.
 
 ## Wall Set
 
 A group of wall sprites that share the same physical grid step and visual style.
+
+## AS2 Wall Set Asset
+
+Any sprite asset belonging to an AS2 wall set's walls, door assembly, Door Flank Parts, or matching floor.
+
+## Sprite Army Value
+
+The game-defined numeric allegiance bound to an asset's VID across Map Formats and stored on its `.map` sprite record.
 
 ## Wall Set Legend
 

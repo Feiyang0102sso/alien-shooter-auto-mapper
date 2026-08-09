@@ -25,7 +25,7 @@ struct Sprite {
     float posY{};
     float posZ = 0.0f;
     uint32_t direction = 32;
-    int32_t army = 0;
+    core::VidArmy army = 0;
 
     // AS2 only: visual gamma and scale. AS1 SpriteRecord has no such fields.
     // Defaults (gamma all-zero, scale 1.0) match the previous hard-coded behavior.

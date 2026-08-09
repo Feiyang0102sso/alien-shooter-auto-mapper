@@ -1,15 +1,14 @@
 /**
  * @file vid_property_types.h
- * @brief Per-sprite visual property value types: gamma and scale.
+ * @brief Per-sprite property value types: army, gamma, and scale.
  *
  * These are user-facing values, not the raw binary layout stored in .map
- * files. The IO writer encodes them into the SpriteRecord format described
- * in AS2_MAP.bt (VidGamma as two BGRA blocks, scale as three floats).
+ * files. The IO writer stores Army directly and encodes VidGamma as two BGRA
+ * blocks plus scale as three floats, matching AS2_MAP.bt.
  *
- * Properties are NOT globally bound to a VID. The same VID can carry
- * different gamma/scale depending on context (wall set, door state,
- * decoration type, etc.). Lookup tables that pair (context, vid) to
- * these values live in separate profile headers.
+ * Army is globally bound to a VID. Gamma and scale are contextual: the same
+ * VID can use different visual values for a wall set, door state, decoration
+ * type, or another placement context.
  */
 
 #pragma once
@@ -17,6 +16,13 @@
 #include <cstdint>
 
 namespace auto_mapper::core {
+
+/**
+ * Army allegiance stored on a sprite record.
+ *
+ * The value is defined by the sprite VID and is shared across map formats.
+ */
+using VidArmy = int32_t;
 
 /**
  * Visual gamma for a single sprite.

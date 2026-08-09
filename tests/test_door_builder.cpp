@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "../src/auto_mapper/core/door_builder/door_builder.h"
 #include "../src/auto_mapper/core/door_builder/door_profiles_as1.h"
+#include "auto_mapper/core/vid_properties/vid_armies_as2.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include "utils/test_utils.h"
@@ -110,6 +111,38 @@ TEST(DoorBuilderTest, As2Set3AndSet4DoorPanelsCarryProfileGamma) {
             state_index += 1;
         }
     }
+}
+
+TEST(DoorBuilderTest, As2DoorSpritesUseVidArmyBindings) {
+    DoorBuilder builder(600.0f, 600.0f);
+
+    std::vector<DoorInstance> doors = {
+        {{2, 2}, WALL_TYPE_AS2_WALL_SET1_RANDOM, 0, 1, DOOR_STATE_CLOSED, LIGHT_STATE_RED, 0.0f},
+        {{4, 2}, WALL_TYPE_AS2_WALL_SET1_RANDOM, 1, 1, DOOR_STATE_OPEN, LIGHT_STATE_RED, 0.0f},
+        {{6, 2}, WALL_TYPE_AS2_WALL_SET5_RANDOM, 0, 2, DOOR_STATE_CLOSED, LIGHT_STATE_RED, 0.0f},
+        {{8, 2}, WALL_TYPE_AS2_WALL_SET7_RANDOM, 1, 2, DOOR_STATE_CLOSED, LIGHT_STATE_RED, 0.0f},
+        {{10, 2}, WALL_TYPE_AS2_WALL_SET8_RANDOM, 0, 2, DOOR_STATE_CLOSED, LIGHT_STATE_RED, 0.0f},
+        {{12, 2}, WALL_TYPE_AS2_WALL_SET9_RANDOM, 1, 2, DOOR_STATE_OPEN, LIGHT_STATE_RED, 0.0f},
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(doors);
+    bool found_army_zero = false;
+    bool found_army_two = false;
+
+    for (const io::Sprite& sprite : sprites) {
+        VidArmy expected_army = get_as2_wall_set_asset_army(sprite.vid);
+        EXPECT_EQ(sprite.army, expected_army) << "Incorrect Army for VID " << sprite.vid;
+
+        if (sprite.army == 0) {
+            found_army_zero = true;
+        }
+        if (sprite.army == 2) {
+            found_army_two = true;
+        }
+    }
+
+    EXPECT_TRUE(found_army_zero);
+    EXPECT_TRUE(found_army_two);
 }
 
 TEST(DoorBuilderTest, StandardActiveDoorUsesOpenPanelVid) {

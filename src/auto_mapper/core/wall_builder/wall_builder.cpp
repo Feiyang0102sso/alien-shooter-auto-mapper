@@ -10,6 +10,7 @@
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/core/geometry.h"
 #include "auto_mapper/core/randomizer.h"
+#include "auto_mapper/core/vid_properties/vid_armies_as2.h"
 #include "auto_mapper/common/logger.h"
 #include <algorithm>
 #include <cmath>
@@ -20,6 +21,11 @@
 #include <unordered_map>
 
 namespace auto_mapper::core {
+
+static bool is_as2_wall_set_type(int wall_type) {
+    return wall_type >= WALL_TYPE_AS2_WALL_SET1_FIXED_0
+        && wall_type <= WALL_TYPE_AS2_WALL_SET9_RANDOM;
+}
 
 WallBuilder::WallBuilder(float map_size_x, float map_size_y, bool randomize_directions)
     : map_size_x_(map_size_x),
@@ -481,6 +487,9 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
 
                 if (should_place_floor) {
                     io::Sprite floor_sprite = place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor);
+                    if (is_as2_wall_set_type(ft)) {
+                        floor_sprite.army = get_as2_wall_set_asset_army(f_prof.vid);
+                    }
                     floor_sprite.gamma = f_prof.gamma;
                     floor_sprite.direction = direction_randomizer_.select_direction(
                         f_prof.direction,
@@ -870,7 +879,12 @@ io::Sprite WallBuilder::place_wall_part_asset(int gx, int gy, int wall_type, con
         profile.part_direction_randomization
     );
 
-    return io::Sprite(asset.vid, pos.x, pos.y, 0.0f, direction);
+    io::Sprite sprite(asset.vid, pos.x, pos.y, 0.0f, direction);
+    if (is_as2_wall_set_type(wall_type)) {
+        sprite.army = get_as2_wall_set_asset_army(asset.vid);
+    }
+
+    return sprite;
 }
 
 std::vector<io::Sprite> WallBuilder::place_pillar_slices(const RawSprite& raw_sprite) const {
