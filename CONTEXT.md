@@ -100,13 +100,43 @@ Direction A, Direction B, and Pillar may all participate in random selection. If
 
 Some wall sets expose only one random profile when their compatible wall sprites can be freely selected from one visual series.
 
-## Rare Wall Variant Cadence
+## Rare Wall Variant Density
 
-An optional spacing rule for a wall set that inserts a rare wall variant after a random number of ordinary wall parts.
+An optional scarcity rule that limits how many eligible wall parts may receive a rare wall variant.
 
-The cadence is direction-aware: Direction A and Direction B can each receive the rare variant without relying on the other direction's wall count.
+Rare wall variant density is direction-aware: Direction A and Direction B receive separate placement budgets.
+
+The density is a target proportion rather than a guaranteed result; spatial placement constraints may reduce the number of rare wall variants.
+
+Each Direction budget rounds down the post-excavation wall-part count multiplied by the target density, before feature-placement constraints are applied.
 
 Rare wall variants are used for visually strong wall sprites that should appear, but not dominate the wall set.
+
+_Avoid_: Rare Wall Variant Cadence, because rare variants are not inserted at traversal intervals.
+
+## Straight Wall Run
+
+A maximal uninterrupted sequence of wall parts in one wall direction, bounded by an endpoint, corner, junction, or door opening.
+
+## Rare Wall Feature Placement
+
+A spatial rule that treats a rare wall variant as a visual focal part placed within a continuous straight wall run and kept away from wall endpoints, corners, and doors.
+
+An eligible rare wall position has at least two neighboring wall parts on both sides within the same Straight Wall Run.
+
+Rare wall feature placement constrains candidates from both Direction A and Direction B within the same Wall Set so independently budgeted rare variants do not visually cluster.
+
+Rare wall feature placement does not impose spatial separation between different Wall Sets.
+
+Rare wall feature placement measures visual separation in Map Coordinates rather than Grid Coordinates.
+
+Eligible Straight Wall Runs receive rare wall placement opportunities in rounds before any one run receives an additional opportunity.
+
+Each randomized generation may select different eligible rare wall positions while preserving the same density and spatial constraints.
+
+Eligible positions within a Straight Wall Run are selected uniformly without preference for the run center.
+
+If no candidate satisfies the spatial rule, the wall run contains no rare wall variant; placement constraints are not relaxed to force one.
 
 ## Grid Coordinate
 

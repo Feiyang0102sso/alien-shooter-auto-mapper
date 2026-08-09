@@ -103,7 +103,7 @@ WALL_PROFILE_UI_METADATA = {
     },
     WALL_TYPE_AS2_SET5_RANDOM: {
         "short_label": "AS2 Wall Set 5",
-        "description": "Random AS2 wall set with fixed rare direction cadence.",
+        "description": "Random AS2 wall set with spatially distributed rare variants.",
         "color": WALL_PROFILE_AS2_SET5,
         "preview_key": "",
     },
@@ -115,7 +115,7 @@ WALL_PROFILE_UI_METADATA = {
     },
     WALL_TYPE_AS2_SET7_RANDOM: {
         "short_label": "AS2 Wall Set 7",
-        "description": "Random AS2 wall set with fixed rare direction cadence.",
+        "description": "Random AS2 wall set with spatially distributed rare variants.",
         "color": WALL_PROFILE_AS2_SET7,
         "preview_key": "",
     },

@@ -10,6 +10,7 @@
 #include "auto_mapper/core/wall_builder/wall_profiles_as1.h"
 #include "auto_mapper/core/wall_builder/wall_profiles_as2.h"
 #include "auto_mapper/io/map_writer.h"
+#include <set>
 #include <vector>
 
 namespace auto_mapper::core {
@@ -103,12 +104,32 @@ private:
         std::vector<int> floor_type_grid;
     };
 
+    struct RareWallPosition {
+        int wall_type;
+        WallPartKind kind;
+        int gx;
+        int gy;
+
+        bool operator<(const RareWallPosition& other) const;
+    };
+
+    struct StraightWallRun {
+        int wall_type;
+        WallPartKind kind;
+        std::vector<RawSprite> candidates;
+        std::size_t next_candidate_index = 0;
+    };
+
     // Helper methods for each stage
     MapPoint get_phys(int lx, int ly, int w_type) const;
     std::vector<RawSprite> process_wall_sprites(const std::vector<Segment>& segments, const std::vector<DoorExcavation>& excavations) const;
     PhysicalGridContext build_physical_grid(const std::vector<Segment>& segments) const;
     std::vector<io::Sprite> place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
     std::vector<io::Sprite> place_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
+
+    // Select rare wall positions after door excavation. The method owns all
+    // density, straight-run, fairness, and physical-distance placement rules.
+    std::set<RareWallPosition> select_rare_wall_positions(const std::vector<RawSprite>& raw_sprites) const;
     std::vector<io::Sprite> convert_to_wall_sprites(const std::vector<RawSprite>& raw_sprites) const;
 
     // Look up profiles
@@ -117,7 +138,6 @@ private:
     const WallVariant& select_wall_variant(const WallProfile& profile) const;
     int select_wall_variant_index(const WallProfile& profile) const;
     static bool has_rare_wall_variant(const WallProfile& profile);
-    int reset_rare_wall_variant_interval(const WallProfile& profile) const;
     static const WallPartAsset* select_corner_pillar_asset(const WallProfile& profile, const RawSprite& raw_sprite);
     io::Sprite place_single_wall_with_variant(int gx, int gy, int wall_type, WallPartKind kind, int variant_index) const;
     io::Sprite place_wall_part_asset(int gx, int gy, int wall_type, const WallPartAsset& asset) const;

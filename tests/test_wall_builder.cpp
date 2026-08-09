@@ -447,6 +447,68 @@ static bool has_sprite_at(
     return false;
 }
 
+static bool is_rare_wall_sprite(const io::Sprite& sprite, const WallProfile& profile) {
+    const WallVariant& rare_variant = profile.variants[profile.rare_variant_index];
+
+    bool matches_dir_a = sprite.vid == rare_variant.dir_a.vid &&
+        sprite.direction == rare_variant.dir_a.direction;
+    if (matches_dir_a) {
+        return true;
+    }
+
+    return sprite.vid == rare_variant.dir_b.vid &&
+        sprite.direction == rare_variant.dir_b.direction;
+}
+
+static std::vector<io::Sprite> get_rare_wall_sprites(
+    const std::vector<io::Sprite>& sprites,
+    const WallProfile& profile
+) {
+    std::vector<io::Sprite> rare_sprites;
+
+    for (const io::Sprite& sprite : sprites) {
+        if (is_rare_wall_sprite(sprite, profile)) {
+            rare_sprites.push_back(sprite);
+        }
+    }
+
+    return rare_sprites;
+}
+
+static void expect_rare_wall_min_distance(
+    const std::vector<io::Sprite>& sprites,
+    const WallProfile& profile
+) {
+    std::vector<io::Sprite> rare_sprites = get_rare_wall_sprites(sprites, profile);
+    float wall_step_length = std::hypot(profile.step_x, profile.step_y);
+    float min_distance = wall_step_length * profile.rare_min_distance_steps;
+
+    for (std::size_t first_index = 0; first_index < rare_sprites.size(); ++first_index) {
+        for (std::size_t second_index = first_index + 1;
+             second_index < rare_sprites.size();
+             ++second_index) {
+            float distance_x = rare_sprites[first_index].posX - rare_sprites[second_index].posX;
+            float distance_y = rare_sprites[first_index].posY - rare_sprites[second_index].posY;
+            float distance = std::hypot(distance_x, distance_y);
+            EXPECT_GE(distance + 0.01f, min_distance);
+        }
+    }
+}
+
+static MapPoint get_wall_asset_position(
+    float map_size_x,
+    int gx,
+    int gy,
+    const WallProfile& profile,
+    const WallPartAsset& asset
+) {
+    MapPoint shift = WallBuilder::get_wall_shift(map_size_x, profile);
+    MapPoint position = to_iso({gx, gy}, profile.step_x, profile.step_y, shift);
+    position.x += asset.offset_x;
+    position.y += asset.offset_y;
+    return position;
+}
+
 static void expect_as2_set2_wall_directions_are_allowed(const std::vector<io::Sprite>& sprites) {
     for (const io::Sprite& sprite : sprites) {
         if (sprite.vid != 1700 && sprite.vid != 1701) {
@@ -721,10 +783,15 @@ TEST(WallBuilderTest, As2WallSet3BuildsLargeRoomWithBoundedRareVariants) {
     EXPECT_GE(dir_a_rare_count, 1);
     EXPECT_GE(dir_b_rare_count, 1);
 
-    int max_dir_a_rare_count = dir_a_count / (WALL_AS2_SET3_RANDOM.rare_variant_min_interval + 1) + 1;
-    int max_dir_b_rare_count = dir_b_count / (WALL_AS2_SET3_RANDOM.rare_variant_min_interval + 1) + 1;
+    int max_dir_a_rare_count = static_cast<int>(std::floor(
+        static_cast<float>(dir_a_count) * WALL_AS2_SET3_RANDOM.rare_target_density
+    ));
+    int max_dir_b_rare_count = static_cast<int>(std::floor(
+        static_cast<float>(dir_b_count) * WALL_AS2_SET3_RANDOM.rare_target_density
+    ));
     EXPECT_LE(dir_a_rare_count, max_dir_a_rare_count);
     EXPECT_LE(dir_b_rare_count, max_dir_b_rare_count);
+    expect_rare_wall_min_distance(sprites, WALL_AS2_SET3_RANDOM);
 
     for (const io::Sprite& sprite : sprites) {
         if (sprite.vid == 1100) {
@@ -785,10 +852,15 @@ TEST(WallBuilderTest, As2WallSet4BuildsLargeRoomWithBoundedRareVariants) {
     EXPECT_GE(dir_a_rare_count, 1);
     EXPECT_GE(dir_b_rare_count, 1);
 
-    int max_dir_a_rare_count = dir_a_count / (WALL_AS2_SET4_RANDOM.rare_variant_min_interval + 1) + 1;
-    int max_dir_b_rare_count = dir_b_count / (WALL_AS2_SET4_RANDOM.rare_variant_min_interval + 1) + 1;
+    int max_dir_a_rare_count = static_cast<int>(std::floor(
+        static_cast<float>(dir_a_count) * WALL_AS2_SET4_RANDOM.rare_target_density
+    ));
+    int max_dir_b_rare_count = static_cast<int>(std::floor(
+        static_cast<float>(dir_b_count) * WALL_AS2_SET4_RANDOM.rare_target_density
+    ));
     EXPECT_LE(dir_a_rare_count, max_dir_a_rare_count);
     EXPECT_LE(dir_b_rare_count, max_dir_b_rare_count);
+    expect_rare_wall_min_distance(sprites, WALL_AS2_SET4_RANDOM);
 
     for (const io::Sprite& sprite : sprites) {
         if (sprite.vid == 1131) {
@@ -816,7 +888,201 @@ TEST(WallBuilderTest, As2WallSet4BuildsLargeRoomWithBoundedRareVariants) {
     ASSERT_TRUE(write_success);
 }
 
-TEST(WallBuilderTest, As2WallSet5BuildsRoomWithFixedRareCadenceAndCornerPillars) {
+TEST(WallBuilderTest, As2RareWallsRequireDensityBudgetAndStraightRunBuffer) {
+    WallBuilder builder(2000.0f, 2000.0f, true);
+
+    std::vector<Segment> below_density_segments = {
+        {{0, 0}, {5, 0}, WALL_TYPE_AS2_WALL_SET4_RANDOM}
+    };
+    std::vector<io::Sprite> below_density_sprites = builder.build(
+        below_density_segments,
+        false,
+        false
+    );
+    EXPECT_EQ(get_rare_wall_sprites(below_density_sprites, WALL_AS2_SET4_RANDOM).size(), 0u);
+
+    std::vector<Segment> too_short_segments = {
+        {{0, 0}, {4, 0}, WALL_TYPE_AS2_WALL_SET5_RANDOM}
+    };
+    std::vector<io::Sprite> too_short_sprites = builder.build(
+        too_short_segments,
+        false,
+        false
+    );
+    EXPECT_EQ(get_rare_wall_sprites(too_short_sprites, WALL_AS2_SET5_RANDOM).size(), 0u);
+
+    std::vector<Segment> minimum_run_segments = {
+        {{0, 0}, {5, 0}, WALL_TYPE_AS2_WALL_SET5_RANDOM}
+    };
+    std::vector<io::Sprite> minimum_run_sprites = builder.build(
+        minimum_run_segments,
+        false,
+        false
+    );
+    std::vector<io::Sprite> minimum_run_rare_sprites = get_rare_wall_sprites(
+        minimum_run_sprites,
+        WALL_AS2_SET5_RANDOM
+    );
+    ASSERT_EQ(minimum_run_rare_sprites.size(), 1u);
+
+    const WallVariant& rare_variant =
+        WALL_AS2_SET5_RANDOM.variants[WALL_AS2_SET5_RANDOM.rare_variant_index];
+    MapPoint expected_position = get_wall_asset_position(
+        2000.0f,
+        3,
+        0,
+        WALL_AS2_SET5_RANDOM,
+        rare_variant.dir_b
+    );
+    EXPECT_TRUE(has_sprite_at(
+        minimum_run_sprites,
+        rare_variant.dir_b.vid,
+        expected_position.x,
+        expected_position.y,
+        rare_variant.dir_b.direction
+    ));
+}
+
+TEST(WallBuilderTest, As2RareWallsSharePhysicalExclusionAcrossDirections) {
+    WallBuilder builder(2000.0f, 2000.0f, true);
+    std::vector<Segment> segments = {
+        {{0, 0}, {5, 0}, WALL_TYPE_AS2_WALL_SET5_RANDOM},
+        {{5, 0}, {5, 5}, WALL_TYPE_AS2_WALL_SET5_RANDOM}
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments, false, false);
+    std::vector<io::Sprite> rare_sprites = get_rare_wall_sprites(
+        sprites,
+        WALL_AS2_SET5_RANDOM
+    );
+
+    // Both directions have one candidate and one budget slot, but their rare
+    // anchors are closer than three wall steps, so only one may be selected.
+    EXPECT_EQ(rare_sprites.size(), 1u);
+}
+
+TEST(WallBuilderTest, As2RareWallsTreatDoorExcavationAsStraightRunBoundary) {
+    WallBuilder builder(2000.0f, 2000.0f, true);
+    std::vector<Segment> segments = {
+        {{0, 0}, {12, 0}, WALL_TYPE_AS2_WALL_SET5_RANDOM}
+    };
+    std::vector<DoorExcavation> excavations = {
+        {{6, 0}, 1, 2, WALL_TYPE_AS2_WALL_SET5_RANDOM}
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(
+        segments,
+        false,
+        false,
+        excavations
+    );
+    std::vector<io::Sprite> rare_sprites = get_rare_wall_sprites(
+        sprites,
+        WALL_AS2_SET5_RANDOM
+    );
+    ASSERT_EQ(rare_sprites.size(), 2u);
+
+    const WallVariant& rare_variant =
+        WALL_AS2_SET5_RANDOM.variants[WALL_AS2_SET5_RANDOM.rare_variant_index];
+    MapPoint left_run_position = get_wall_asset_position(
+        2000.0f,
+        3,
+        0,
+        WALL_AS2_SET5_RANDOM,
+        rare_variant.dir_b
+    );
+    MapPoint right_run_position = get_wall_asset_position(
+        2000.0f,
+        10,
+        0,
+        WALL_AS2_SET5_RANDOM,
+        rare_variant.dir_b
+    );
+
+    EXPECT_TRUE(has_sprite_at(
+        sprites,
+        rare_variant.dir_b.vid,
+        left_run_position.x,
+        left_run_position.y,
+        rare_variant.dir_b.direction
+    ));
+    EXPECT_TRUE(has_sprite_at(
+        sprites,
+        rare_variant.dir_b.vid,
+        right_run_position.x,
+        right_run_position.y,
+        rare_variant.dir_b.direction
+    ));
+}
+
+TEST(WallBuilderTest, As2RareWallsGiveEachStraightRunOneOpportunityPerRound) {
+    WallBuilder builder(5000.0f, 5000.0f, true);
+    std::vector<Segment> segments = {
+        {{0, 0}, {8, 0}, WALL_TYPE_AS2_WALL_SET3_RANDOM},
+        {{20, 20}, {28, 20}, WALL_TYPE_AS2_WALL_SET3_RANDOM}
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments, false, false);
+    std::vector<io::Sprite> rare_sprites = get_rare_wall_sprites(
+        sprites,
+        WALL_AS2_SET3_RANDOM
+    );
+    ASSERT_EQ(rare_sprites.size(), 2u);
+
+    const WallVariant& rare_variant =
+        WALL_AS2_SET3_RANDOM.variants[WALL_AS2_SET3_RANDOM.rare_variant_index];
+    int first_run_rare_count = 0;
+    int second_run_rare_count = 0;
+
+    for (const io::Sprite& rare_sprite : rare_sprites) {
+        for (int gx = 3; gx <= 6; ++gx) {
+            MapPoint candidate_position = get_wall_asset_position(
+                5000.0f,
+                gx,
+                0,
+                WALL_AS2_SET3_RANDOM,
+                rare_variant.dir_b
+            );
+            bool x_matches = std::abs(rare_sprite.posX - candidate_position.x) < 0.01f;
+            bool y_matches = std::abs(rare_sprite.posY - candidate_position.y) < 0.01f;
+            if (x_matches && y_matches) {
+                first_run_rare_count += 1;
+            }
+        }
+
+        for (int gx = 23; gx <= 26; ++gx) {
+            MapPoint candidate_position = get_wall_asset_position(
+                5000.0f,
+                gx,
+                20,
+                WALL_AS2_SET3_RANDOM,
+                rare_variant.dir_b
+            );
+            bool x_matches = std::abs(rare_sprite.posX - candidate_position.x) < 0.01f;
+            bool y_matches = std::abs(rare_sprite.posY - candidate_position.y) < 0.01f;
+            if (x_matches && y_matches) {
+                second_run_rare_count += 1;
+            }
+        }
+    }
+
+    EXPECT_EQ(first_run_rare_count, 1);
+    EXPECT_EQ(second_run_rare_count, 1);
+}
+
+TEST(WallBuilderTest, As2RareWallsDoNotSharePhysicalExclusionAcrossWallSets) {
+    WallBuilder builder(2000.0f, 2000.0f, true);
+    std::vector<Segment> segments = {
+        {{0, 0}, {5, 0}, WALL_TYPE_AS2_WALL_SET5_RANDOM},
+        {{0, 0}, {5, 0}, WALL_TYPE_AS2_WALL_SET7_RANDOM}
+    };
+
+    std::vector<io::Sprite> sprites = builder.build(segments, false, false);
+    EXPECT_EQ(get_rare_wall_sprites(sprites, WALL_AS2_SET5_RANDOM).size(), 1u);
+    EXPECT_EQ(get_rare_wall_sprites(sprites, WALL_AS2_SET7_RANDOM).size(), 1u);
+}
+
+TEST(WallBuilderTest, As2WallSet5BuildsRoomWithRareDensityAndCornerPillars) {
     WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 9;
 
@@ -843,8 +1109,17 @@ TEST(WallBuilderTest, As2WallSet5BuildsRoomWithFixedRareCadenceAndCornerPillars)
     EXPECT_EQ(room_sprites.size(), 40u);
     EXPECT_EQ(dir_a_count, room_size * 2);
     EXPECT_EQ(dir_b_count, room_size * 2);
-    EXPECT_EQ(dir_a_rare_count, dir_a_count / 4);
-    EXPECT_EQ(dir_b_rare_count, dir_b_count / 4);
+    int max_dir_a_rare_count = static_cast<int>(std::floor(
+        static_cast<float>(dir_a_count) * WALL_AS2_SET5_RANDOM.rare_target_density
+    ));
+    int max_dir_b_rare_count = static_cast<int>(std::floor(
+        static_cast<float>(dir_b_count) * WALL_AS2_SET5_RANDOM.rare_target_density
+    ));
+    EXPECT_GE(dir_a_rare_count, 1);
+    EXPECT_GE(dir_b_rare_count, 1);
+    EXPECT_LE(dir_a_rare_count, max_dir_a_rare_count);
+    EXPECT_LE(dir_b_rare_count, max_dir_b_rare_count);
+    expect_rare_wall_min_distance(room_sprites, WALL_AS2_SET5_RANDOM);
     EXPECT_EQ(count_sprites_by_vid(room_sprites, 2502), 4);
     EXPECT_EQ(count_sprites_by_vid_and_direction(room_sprites, 2502, 0u), 1);
     EXPECT_EQ(count_sprites_by_vid_and_direction(room_sprites, 2502, 51u), 1);
@@ -918,7 +1193,7 @@ TEST(WallBuilderTest, As2WallSet6BuildsRoomWithRandomDirectionsAndSingleCornerPi
     ASSERT_TRUE(write_success);
 }
 
-TEST(WallBuilderTest, As2WallSet7BuildsRoomWithFixedRareCadenceAndFixedPillars) {
+TEST(WallBuilderTest, As2WallSet7BuildsRoomWithRareDensityAndFixedPillars) {
     WallBuilder builder(2000.0f, 2000.0f, true);
     int room_size = 9;
 
@@ -950,8 +1225,17 @@ TEST(WallBuilderTest, As2WallSet7BuildsRoomWithFixedRareCadenceAndFixedPillars) 
     EXPECT_EQ(sprites.size(), 40u);
     EXPECT_EQ(dir_a_count, room_size * 2);
     EXPECT_EQ(dir_b_count, room_size * 2);
-    EXPECT_EQ(dir_a_rare_count, dir_a_count / 4);
-    EXPECT_EQ(dir_b_rare_count, dir_b_count / 4);
+    int max_dir_a_rare_count = static_cast<int>(std::floor(
+        static_cast<float>(dir_a_count) * WALL_AS2_SET7_RANDOM.rare_target_density
+    ));
+    int max_dir_b_rare_count = static_cast<int>(std::floor(
+        static_cast<float>(dir_b_count) * WALL_AS2_SET7_RANDOM.rare_target_density
+    ));
+    EXPECT_GE(dir_a_rare_count, 1);
+    EXPECT_GE(dir_b_rare_count, 1);
+    EXPECT_LE(dir_a_rare_count, max_dir_a_rare_count);
+    EXPECT_LE(dir_b_rare_count, max_dir_b_rare_count);
+    expect_rare_wall_min_distance(sprites, WALL_AS2_SET7_RANDOM);
     EXPECT_EQ(count_sprites_by_vid(sprites, 2622), 4);
     EXPECT_EQ(count_sprites_by_vid_and_direction(sprites, 2622, 204u), 4);
     EXPECT_TRUE(has_sprite_at(sprites, 2622, 1012.0f, 144.0f, 204u));

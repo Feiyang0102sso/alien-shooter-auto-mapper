@@ -32,6 +32,22 @@ WallBuilder::WallBuilder(float map_size_x, float map_size_y, bool randomize_dire
       map_size_y_(map_size_y),
       direction_randomizer_(randomize_directions) {}
 
+bool WallBuilder::RareWallPosition::operator<(const RareWallPosition& other) const {
+    if (wall_type != other.wall_type) {
+        return wall_type < other.wall_type;
+    }
+
+    if (kind != other.kind) {
+        return kind < other.kind;
+    }
+
+    if (gx != other.gx) {
+        return gx < other.gx;
+    }
+
+    return gy < other.gy;
+}
+
 const WallProfile& WallBuilder::get_wall_profile(int wall_type) {
     if (wall_type == WALL_TYPE_STANDARD) {
         return WALL_STANDARD;
@@ -552,11 +568,222 @@ std::vector<io::Sprite> WallBuilder::place_ceilings(const std::vector<Segment>& 
     return ceiling_sprites;
 }
 
+std::set<WallBuilder::RareWallPosition> WallBuilder::select_rare_wall_positions(
+    const std::vector<RawSprite>& raw_sprites
+) const {
+    std::set<RareWallPosition> selected_positions;
+    if (!direction_randomizer_.is_enabled()) {
+        return selected_positions;
+    }
+
+    using DirectionBudgetKey = std::pair<int, WallPartKind>;
+    using LineKey = std::tuple<int, WallPartKind, int>;
+    using VertexKey = std::tuple<int, int, int>;
+
+    std::map<DirectionBudgetKey, int> wall_part_counts;
+    std::map<LineKey, std::vector<RawSprite>> wall_parts_by_line;
+    std::set<VertexKey> corner_vertices;
+
+    // Collect post-excavation wall counts, axis-aligned lines, and topology
+    // vertices that split one logical line into separate straight runs.
+    for (const RawSprite& raw_sprite : raw_sprites) {
+        const WallProfile& profile = get_wall_profile(raw_sprite.wall_type);
+        if (!has_rare_wall_variant(profile)) {
+            continue;
+        }
+
+        bool is_wall_part = raw_sprite.kind == WallPartKind::DirA ||
+            raw_sprite.kind == WallPartKind::DirB;
+        if (is_wall_part) {
+            DirectionBudgetKey budget_key = {raw_sprite.wall_type, raw_sprite.kind};
+            wall_part_counts[budget_key] += 1;
+
+            int fixed_coordinate = raw_sprite.gx;
+            if (raw_sprite.kind == WallPartKind::DirB) {
+                fixed_coordinate = raw_sprite.gy;
+            }
+
+            LineKey line_key = {raw_sprite.wall_type, raw_sprite.kind, fixed_coordinate};
+            wall_parts_by_line[line_key].push_back(raw_sprite);
+            continue;
+        }
+
+        bool has_dir_a_connection = raw_sprite.connects_up || raw_sprite.connects_down;
+        bool has_dir_b_connection = raw_sprite.connects_left || raw_sprite.connects_right;
+        if (has_dir_a_connection && has_dir_b_connection) {
+            corner_vertices.insert({raw_sprite.wall_type, raw_sprite.gx, raw_sprite.gy});
+        }
+    }
+
+    // Density is an upper budget. Spatial rules may intentionally leave part
+    // of the budget unused when no visually safe candidate remains.
+    std::map<DirectionBudgetKey, int> remaining_budgets;
+    for (const auto& [budget_key, wall_part_count] : wall_part_counts) {
+        const WallProfile& profile = get_wall_profile(budget_key.first);
+        float raw_budget = static_cast<float>(wall_part_count) * profile.rare_target_density;
+        int budget = static_cast<int>(std::floor(raw_budget));
+        if (budget > 0) {
+            remaining_budgets[budget_key] = budget;
+        }
+    }
+
+    // Split each axis-aligned line at gaps and corners, then keep only the
+    // middle candidates that satisfy the configured straight-wall buffer.
+    std::vector<StraightWallRun> straight_runs;
+    for (auto& [line_key, line_wall_parts] : wall_parts_by_line) {
+        int wall_type = std::get<0>(line_key);
+        WallPartKind kind = std::get<1>(line_key);
+        const WallProfile& profile = get_wall_profile(wall_type);
+
+        std::sort(line_wall_parts.begin(), line_wall_parts.end(), [kind](const RawSprite& left, const RawSprite& right) {
+            if (kind == WallPartKind::DirA) {
+                return left.gy < right.gy;
+            }
+
+            return left.gx < right.gx;
+        });
+
+        std::size_t run_start_index = 0;
+        for (std::size_t wall_index = 0; wall_index < line_wall_parts.size(); ++wall_index) {
+            bool split_after_current = wall_index + 1 == line_wall_parts.size();
+            if (!split_after_current) {
+                const RawSprite& current_wall = line_wall_parts[wall_index];
+                const RawSprite& next_wall = line_wall_parts[wall_index + 1];
+
+                int current_coordinate = current_wall.gy;
+                int next_coordinate = next_wall.gy;
+                if (kind == WallPartKind::DirB) {
+                    current_coordinate = current_wall.gx;
+                    next_coordinate = next_wall.gx;
+                }
+
+                bool coordinates_are_contiguous = next_coordinate == current_coordinate + 1;
+                VertexKey shared_vertex = {wall_type, current_wall.gx, current_wall.gy};
+                bool shared_vertex_is_corner = corner_vertices.contains(shared_vertex);
+                split_after_current = !coordinates_are_contiguous || shared_vertex_is_corner;
+            }
+
+            if (!split_after_current) {
+                continue;
+            }
+
+            std::size_t run_end_index = wall_index + 1;
+            std::size_t run_length = run_end_index - run_start_index;
+            int required_run_length = profile.rare_straight_buffer * 2 + 1;
+            if (run_length >= static_cast<std::size_t>(required_run_length)) {
+                StraightWallRun run = {
+                    .wall_type = wall_type,
+                    .kind = kind
+                };
+
+                std::size_t first_candidate_index = run_start_index + profile.rare_straight_buffer;
+                std::size_t last_candidate_index = run_end_index - profile.rare_straight_buffer;
+                for (std::size_t candidate_index = first_candidate_index;
+                     candidate_index < last_candidate_index;
+                     ++candidate_index) {
+                    run.candidates.push_back(line_wall_parts[candidate_index]);
+                }
+
+                for (std::size_t remaining = run.candidates.size(); remaining > 1; --remaining) {
+                    int random_index = Random::get(0, static_cast<int>(remaining) - 1);
+                    std::swap(run.candidates[remaining - 1], run.candidates[static_cast<std::size_t>(random_index)]);
+                }
+
+                straight_runs.push_back(std::move(run));
+            }
+
+            run_start_index = run_end_index;
+        }
+    }
+
+    // Give every active straight run one randomized opportunity per round.
+    // Selected positions are shared by both directions of the same wall set.
+    std::map<int, std::vector<MapPoint>> selected_map_positions_by_wall_type;
+    bool placed_in_previous_round = true;
+    while (placed_in_previous_round) {
+        placed_in_previous_round = false;
+        std::vector<std::size_t> active_run_indices;
+
+        for (std::size_t run_index = 0; run_index < straight_runs.size(); ++run_index) {
+            StraightWallRun& run = straight_runs[run_index];
+            DirectionBudgetKey budget_key = {run.wall_type, run.kind};
+            bool has_budget = remaining_budgets[budget_key] > 0;
+            bool has_candidates = run.next_candidate_index < run.candidates.size();
+            if (has_budget && has_candidates) {
+                active_run_indices.push_back(run_index);
+            }
+        }
+
+        for (std::size_t remaining = active_run_indices.size(); remaining > 1; --remaining) {
+            int random_index = Random::get(0, static_cast<int>(remaining) - 1);
+            std::swap(
+                active_run_indices[remaining - 1],
+                active_run_indices[static_cast<std::size_t>(random_index)]
+            );
+        }
+
+        for (std::size_t run_index : active_run_indices) {
+            StraightWallRun& run = straight_runs[run_index];
+            DirectionBudgetKey budget_key = {run.wall_type, run.kind};
+            if (remaining_budgets[budget_key] <= 0) {
+                continue;
+            }
+
+            const WallProfile& profile = get_wall_profile(run.wall_type);
+            const WallVariant& rare_variant = profile.variants[profile.rare_variant_index];
+            const WallPartAsset& rare_asset = select_wall_part_asset(rare_variant, run.kind);
+            float wall_step_length = std::hypot(profile.step_x, profile.step_y);
+            float min_distance = wall_step_length * profile.rare_min_distance_steps;
+            float min_distance_squared = min_distance * min_distance;
+
+            while (run.next_candidate_index < run.candidates.size()) {
+                const RawSprite& candidate = run.candidates[run.next_candidate_index];
+                run.next_candidate_index += 1;
+
+                MapPoint candidate_position = get_phys(candidate.gx, candidate.gy, candidate.wall_type);
+                candidate_position.x += rare_asset.offset_x;
+                candidate_position.y += rare_asset.offset_y;
+
+                bool is_far_enough = true;
+                const std::vector<MapPoint>& selected_map_positions =
+                    selected_map_positions_by_wall_type[run.wall_type];
+                for (const MapPoint& selected_map_position : selected_map_positions) {
+                    float distance_x = candidate_position.x - selected_map_position.x;
+                    float distance_y = candidate_position.y - selected_map_position.y;
+                    float distance_squared = distance_x * distance_x + distance_y * distance_y;
+                    if (distance_squared < min_distance_squared) {
+                        is_far_enough = false;
+                        break;
+                    }
+                }
+
+                if (!is_far_enough) {
+                    continue;
+                }
+
+                RareWallPosition selected_position = {
+                    .wall_type = candidate.wall_type,
+                    .kind = candidate.kind,
+                    .gx = candidate.gx,
+                    .gy = candidate.gy
+                };
+                selected_positions.insert(selected_position);
+                selected_map_positions_by_wall_type[run.wall_type].push_back(candidate_position);
+                remaining_budgets[budget_key] -= 1;
+                placed_in_previous_round = true;
+                break;
+            }
+        }
+    }
+
+    return selected_positions;
+}
+
 std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<RawSprite>& raw_sprites) const {
     std::vector<io::Sprite> wall_sprites;
     wall_sprites.reserve(raw_sprites.size());
     std::map<std::tuple<int, int, int>, int> selected_variant_indices;
-    std::map<std::pair<int, WallPartKind>, int> rare_variant_remaining_by_wall_part;
+    std::set<RareWallPosition> rare_wall_positions = select_rare_wall_positions(raw_sprites);
 
     for (const auto& rs : raw_sprites) {
         const WallProfile& profile = get_wall_profile(rs.wall_type);
@@ -584,19 +811,14 @@ std::vector<io::Sprite> WallBuilder::convert_to_wall_sprites(const std::vector<R
 
         int variant_index = select_wall_variant_index(profile);
         bool is_wall_part = rs.kind == WallPartKind::DirA || rs.kind == WallPartKind::DirB;
-        if (direction_randomizer_.is_enabled() && is_wall_part && has_rare_wall_variant(profile)) {
-            std::pair<int, WallPartKind> rare_variant_key = {rs.wall_type, rs.kind};
-            if (rare_variant_remaining_by_wall_part.find(rare_variant_key) == rare_variant_remaining_by_wall_part.end()) {
-                rare_variant_remaining_by_wall_part[rare_variant_key] = reset_rare_wall_variant_interval(profile);
-            }
-
-            int rare_variant_remaining = rare_variant_remaining_by_wall_part[rare_variant_key];
-            if (rare_variant_remaining <= 0) {
-                variant_index = profile.rare_variant_index;
-                rare_variant_remaining_by_wall_part[rare_variant_key] = reset_rare_wall_variant_interval(profile);
-            } else {
-                rare_variant_remaining_by_wall_part[rare_variant_key] = rare_variant_remaining - 1;
-            }
+        RareWallPosition rare_wall_position = {
+            .wall_type = rs.wall_type,
+            .kind = rs.kind,
+            .gx = rs.gx,
+            .gy = rs.gy
+        };
+        if (is_wall_part && rare_wall_positions.contains(rare_wall_position)) {
+            variant_index = profile.rare_variant_index;
         }
 
         if (!profile.randomize_wall_parts_independently) {
@@ -767,23 +989,19 @@ bool WallBuilder::has_rare_wall_variant(const WallProfile& profile) {
         return false;
     }
 
-    if (profile.rare_variant_min_interval <= 0) {
+    if (profile.rare_target_density <= 0.0f) {
         return false;
     }
 
-    if (profile.rare_variant_max_interval < profile.rare_variant_min_interval) {
+    if (profile.rare_straight_buffer < 0) {
+        return false;
+    }
+
+    if (profile.rare_min_distance_steps <= 0.0f) {
         return false;
     }
 
     return true;
-}
-
-int WallBuilder::reset_rare_wall_variant_interval(const WallProfile& profile) const {
-    return direction_randomizer_.select(
-        profile.rare_variant_min_interval,
-        profile.rare_variant_min_interval,
-        profile.rare_variant_max_interval
-    );
 }
 
 const WallPartAsset& WallBuilder::select_wall_part_asset(const WallVariant& variant, WallPartKind kind) {
