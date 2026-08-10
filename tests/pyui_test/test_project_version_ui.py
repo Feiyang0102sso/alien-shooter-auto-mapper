@@ -46,13 +46,11 @@ class ProjectVersionUiTest(unittest.TestCase):
                 "wall_type": 0,
                 "short_label": "AS1 Wall",
                 "description": "AS1 test wall",
-                "preview_key": "missing",
             },
             {
                 "wall_type": 3,
                 "short_label": "AS2R Wall",
                 "description": "AS2R test wall",
-                "preview_key": "missing",
             },
         ]
         changed_versions = []

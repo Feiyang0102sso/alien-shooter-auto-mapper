@@ -51,85 +51,71 @@ WALL_PROFILE_UI_METADATA = {
         "short_label_key": TextKey.WALL_STANDARD_SHORT_LABEL,
         "description_key": TextKey.WALL_STANDARD_DESCRIPTION,
         "color": WALL_PROFILE_STANDARD,
-        "preview_key": "base",
     },
     WALL_TYPE_LAB: {
         "short_label_key": TextKey.WALL_LAB_SHORT_LABEL,
         "description_key": TextKey.WALL_LAB_DESCRIPTION,
         "color": WALL_PROFILE_LAB,
-        "preview_key": "lab",
     },
     WALL_TYPE_STANDARD_DARK: {
         "short_label_key": TextKey.WALL_STANDARD_DARK_SHORT_LABEL,
         "description_key": TextKey.WALL_STANDARD_DARK_DESCRIPTION,
         "color": WALL_PROFILE_STANDARD_DARK,
-        "preview_key": "standard_dark",
     },
     WALL_TYPE_AS2_SET1_FIXED_0: {
         "short_label": "AS2 Wall Set 1 - Variant 1",
         "description": "AS2 wall set 1 fixed variant 1.",
         "color": WALL_PROFILE_AS2_SET1_V1,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET1_FIXED_1: {
         "short_label": "AS2 Wall Set 1 - Variant 2",
         "description": "AS2 wall set 1 fixed variant 2.",
         "color": WALL_PROFILE_AS2_SET1_V2,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET1_RANDOM: {
         "short_label": "AS2 Wall Set 1 - Random",
         "description": "AS2 wall set 1 random variant pool.",
         "color": WALL_PROFILE_AS2_SET1_V3,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET2_RANDOM: {
         "short_label": "AS2 Wall Set 2",
         "description": "Random AS2 wall set with directional multi-part pillars.",
         "color": WALL_PROFILE_AS2_SET2,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET3_RANDOM: {
         "short_label": "AS2 Wall Set 3",
         "description": "Random AS2 wall set with rare direction variants.",
         "color": WALL_PROFILE_AS2_SET3,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET4_RANDOM: {
         "short_label": "AS2 Wall Set 4",
         "description": "Random AS2 wall set with rare direction variants.",
         "color": WALL_PROFILE_AS2_SET4,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET5_RANDOM: {
         "short_label": "AS2 Wall Set 5",
         "description": "Random AS2 wall set with spatially distributed rare variants.",
         "color": WALL_PROFILE_AS2_SET5,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET6_RANDOM: {
         "short_label": "AS2 Wall Set 6",
         "description": "Random AS2 wall set with corner pillar directions.",
         "color": WALL_PROFILE_AS2_SET6,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET7_RANDOM: {
         "short_label": "AS2 Wall Set 7",
         "description": "Random AS2 wall set with spatially distributed rare variants.",
         "color": WALL_PROFILE_AS2_SET7,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET8_RANDOM: {
         "short_label": "AS2 Wall Set 8",
         "description": "Random AS2 wall set with per-corner pillar offsets.",
         "color": WALL_PROFILE_AS2_SET8,
-        "preview_key": "",
     },
     WALL_TYPE_AS2_SET9_RANDOM: {
         "short_label": "AS2 Wall Set 9",
         "description": "Random AS2 wall set with fixed corner wall directions.",
         "color": WALL_PROFILE_AS2_SET9,
-        "preview_key": "",
     },
 }
 
@@ -433,7 +419,6 @@ def _require_wall_profile_values(wall_type: int, profile: dict) -> None:
         "short_label",
         "description",
         "color",
-        "preview_key",
         "step_x",
         "step_y",
         "grid_divisor",
@@ -471,7 +456,6 @@ def _get_wall_profile_ui_metadata(wall_type: int) -> dict:
         "short_label": tr(TextKey.WALL_TYPE_FALLBACK_SHORT_LABEL, wall_type=wall_type),
         "description": tr(TextKey.WALL_TYPE_FALLBACK_DESCRIPTION),
         "color": WALL_PROFILE_FALLBACK,
-        "preview_key": "",
     }
     return metadata
 

@@ -14,16 +14,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.config import APP_RESOURCE_DIR
 from app.editor.drawable_parts import AS2_SET1_WALL_TYPES, get_wall_set_drawable_parts
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.ui.previews.wall_assets import get_wall_component_preview_path
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.eraser import EraserPropertiesWidget
 
-IMAGE_ROOT = APP_RESOURCE_DIR / "images" / "preview" / "AS1"
 INSPECTOR_MAX_WIDTH = 320
 COMPONENT_PREVIEW_WIDTH = 260
 COMPONENT_PREVIEW_HEIGHT = 190
@@ -323,40 +322,7 @@ class InspectorPanel(QWidget):
         """
         Update component preview image and nvid labels based on wall type and part ID.
         """
-        rel_img_path = ""
-        if wall_type == 0:
-            if part_id == "wall_body":
-                rel_img_path = "standard/standard_wall.webp"
-            elif part_id == "active_door":
-                rel_img_path = "standard/standard_wall_door_active.webp"
-            elif part_id == "dead_door_closed":
-                rel_img_path = "standard/standard_wall_door_dead_closed.webp"
-            elif part_id == "dead_door_jammed":
-                rel_img_path = "standard/standard_wall_door_dead_jammed.webp"
-            elif part_id == "dead_door_open":
-                rel_img_path = "standard/standard_wall_door_dead_open.webp"
-        elif wall_type == 1:
-            if part_id == "wall_body":
-                rel_img_path = "lab/lab_wall.webp"
-            elif part_id == "lab_laser_closed":
-                rel_img_path = "lab/lab_wall_door_laser_on.webp"
-            elif part_id == "lab_laser_open":
-                rel_img_path = "lab/lab_wall_door_laser_off.webp"
-            elif part_id == "lab_decoration_door":
-                rel_img_path = "lab/lab_wall_door_decoration.webp"
-        elif wall_type == 2:
-            if part_id == "wall_body":
-                rel_img_path = "standard_dark/standard_wall_dark.webp"
-            elif part_id == "active_door":
-                rel_img_path = "standard_dark/standard_wall_dark_door_active.webp"
-            elif part_id == "dead_door_closed":
-                rel_img_path = "standard_dark/standard_wall_dark_door_dead_closed.webp"
-            elif part_id == "dead_door_jammed":
-                rel_img_path = "standard_dark/standard_wall_dark_door_dead_jammed.webp"
-            elif part_id == "dead_door_open":
-                rel_img_path = "standard_dark/standard_wall_dark_door_dead_open.webp"
-
-        image_path = IMAGE_ROOT / rel_img_path if rel_img_path else None
+        image_path = get_wall_component_preview_path(wall_type, part_id)
 
         if image_path and image_path.exists():
             pixmap = QPixmap(str(image_path))

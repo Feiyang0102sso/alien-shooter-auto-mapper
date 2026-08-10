@@ -36,6 +36,7 @@ An AS1-only project option that forces supported active doors open or closed; AS
 - AS2 pillars, **Door Flank Parts**, and topology-locked wall parts are **Fixed-Direction Parts**.
 - Every **AS2 Wall Set Asset** has an explicit **Sprite Army Value**, including assets whose value is zero.
 - An **AS2 Wall Set Asset** keeps the same **Sprite Army Value** everywhere its VID is used.
+- An **AS2 Wall Set Preview** is shared by all **AS2 Series** Project Versions.
 - **Sprite Army Value** is independent of **Map Format**; AS1 support may use the same VID binding in a separate implementation step.
 
 ## Wall Set
@@ -45,6 +46,10 @@ A group of wall sprites that share the same physical grid step and visual style.
 ## AS2 Wall Set Asset
 
 Any sprite asset belonging to an AS2 wall set's walls, door assembly, Door Flank Parts, or matching floor.
+
+## AS2 Wall Set Preview
+
+An editor image that visually represents an AS2 Wall Set Asset or a complete AS2 Wall Set across AS2 Series Project Versions.
 
 ## Sprite Army Value
 

@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.config import APP_RESOURCE_DIR
 from app.editor.drawable_parts import AS2_SET1_WALL_TYPES, PART_WALL_BODY, get_wall_set_drawable_parts
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile, get_wall_profiles
 from app.i18n.locale import tr
@@ -41,15 +40,8 @@ from app.ui.colors import (
     DOOR_STD_DEAD_OPEN_DOT,
     DOOR_STD_DEAD_OPEN_LINE,
 )
+from app.ui.previews.wall_assets import get_wall_set_preview_path
 
-
-IMAGE_ROOT = APP_RESOURCE_DIR / "images" / "preview" / "AS1"
-
-PREVIEW_IMAGES = {
-    "base": IMAGE_ROOT / "standard" / "standard_wall.webp",
-    "lab": IMAGE_ROOT / "lab" / "lab_wall.webp",
-    "standard_dark": IMAGE_ROOT / "standard_dark" / "standard_wall_dark.webp",
-}
 
 WALL_SET_ORDER = {
     0: 0,
@@ -186,8 +178,7 @@ class ThemeShelfPanel(QWidget):
             if not self._profile_belongs_to_current_version(wall_type):
                 continue
 
-            preview_key = profile["preview_key"]
-            image_path = PREVIEW_IMAGES.get(preview_key)
+            image_path = get_wall_set_preview_path(wall_type)
             self._add_card(
                 profile["wall_type"],
                 profile["short_label"],

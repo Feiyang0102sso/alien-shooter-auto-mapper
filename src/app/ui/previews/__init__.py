@@ -1,0 +1,1 @@
+"""UI preview asset registries."""

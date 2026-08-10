@@ -28,6 +28,7 @@ app = [
     "resources/images/preview/AS1/lab/*.webp",
     "resources/images/preview/AS1/standard/*.webp",
     "resources/images/preview/AS1/standard_dark/*.webp",
+    "resources/images/preview/AS2/wall_set*/*.webp",
 ]
 
 [tool.setuptools.dynamic]
