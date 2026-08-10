@@ -24,6 +24,7 @@ class TextKey:
     TOOLTIP_CEILING = "tooltip.ceiling"
     TOOLTIP_IS_DOOR_OPEN = "tooltip.is_door_open"
     TOOLTIP_RANDOM_DIRECTION = "tooltip.random_direction"
+    TOOLTIP_LANGUAGE = "tooltip.language"
 
     DOCK_WALL_SETS = "dock.wall_sets"
     DOCK_INSPECTOR = "dock.inspector"
@@ -71,6 +72,13 @@ class TextKey:
     WALL_LAB_DESCRIPTION = "wall.lab.description"
     WALL_TYPE_FALLBACK_SHORT_LABEL = "wall.fallback.short_label"
     WALL_TYPE_FALLBACK_DESCRIPTION = "wall.fallback.description"
+    WALL_AS2_SET_LABEL = "wall.as2_set.label"
+    WALL_AS2_SET1_VARIANT_LABEL = "wall.as2_set1.variant_label"
+    WALL_AS2_SET1_RANDOM_LABEL = "wall.as2_set1.random_label"
+    WALL_AS2_SET1_VARIANT_DESCRIPTION = "wall.as2_set1.variant_description"
+    WALL_AS2_SET1_RANDOM_DESCRIPTION = "wall.as2_set1.random_description"
+    WALL_AS2_SET1_DESCRIPTION = "wall.as2_set1.description"
+    WALL_AS2_SET_DESCRIPTION = "wall.as2_set.description"
 
     DRAWABLE_WALL_BODY = "drawable.wall_body"
     DRAWABLE_ACTIVE_DOOR = "drawable.active_door"
@@ -93,6 +101,7 @@ class TextKey:
     DIALOG_DLL_ERROR = "dialog.dll_error"
     DIALOG_CEILING = "dialog.ceiling"
     DIALOG_DOOR_OPTION = "dialog.door_option"
+    DIALOG_RESTART_REQUIRED = "dialog.restart_required"
     DIALOG_EXPORT_JSON = "dialog.export_json"
     DIALOG_IMPORT_JSON = "dialog.import_json"
     DIALOG_GENERATE_MAP = "dialog.generate_map"
@@ -139,3 +148,9 @@ class TextKey:
     STATUS_GENERATED_MAP = "status.generated_map"
     STATUS_COMMAND_PLACEHOLDER = "status.command_placeholder"
     STATUS_ERASER_SIZE = "status.eraser_size"
+    STATUS_LANGUAGE_SAVED = "status.language_saved"
+
+    MESSAGE_LANGUAGE_CHANGED = "message.language_changed"
+
+    LANGUAGE_NAME_ENGLISH = "language_name.english"
+    LANGUAGE_NAME_CHINESE = "language_name.chinese"

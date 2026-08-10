@@ -156,8 +156,8 @@ class ThemeShelfPanel(QWidget):
 
             display_profile = dict(profile)
             if wall_type == 3:
-                display_profile["short_label"] = "AS2 Wall Set 1"
-                display_profile["description"] = "AS2 wall set 1. Choose its variant in the right property panel."
+                display_profile["short_label"] = tr(TextKey.WALL_AS2_SET_LABEL, set_number=1)
+                display_profile["description"] = tr(TextKey.WALL_AS2_SET1_DESCRIPTION)
 
             display_profiles.append(display_profile)
 

@@ -159,7 +159,7 @@ class MainWindow(QMainWindow):
         self.language_button.setObjectName("languageToggleButton")
         self.language_button.setText(LANGUAGE_BUTTON_TEXT)
         self.language_button.setFixedSize(112, 52)
-        self.language_button.setToolTip("Select language")
+        self.language_button.setToolTip(tr(TextKey.TOOLTIP_LANGUAGE))
         self.language_button.setMenu(self._create_language_menu())
         toolbar.addWidget(self.language_button)
 
@@ -173,6 +173,11 @@ class MainWindow(QMainWindow):
         self.left_shelf_tabs.setObjectName("leftShelfTabs")
         self.left_shelf_tabs.addTab(self.theme_shelf, tr(TextKey.PANEL_WALL_SETS))
         self.left_shelf_tabs.addTab(self.decoration_shelf, tr(TextKey.PANEL_DECORATIONS))
+
+        # Decoration tools are kept for a future redesign, but are not ready for users.
+        self.left_shelf_tabs.setTabVisible(1, False)
+        self.left_shelf_tabs.tabBar().setVisible(False)
+
         left_dock.setWidget(self.left_shelf_tabs)
         left_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
         left_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
@@ -389,12 +394,12 @@ class MainWindow(QMainWindow):
         save_locale_preference(locale_name)
 
         language_name = self._get_locale_display_name(locale_name)
-        message = f"Language saved: {language_name}. Restart to apply it fully."
+        message = tr(TextKey.STATUS_LANGUAGE_SAVED, language_name=language_name)
         self.statusBar().showMessage(message)
         QMessageBox.information(
             self,
-            "Restart Required",
-            f"Language has been changed to {language_name}. Restart Auto Mapper to apply it fully.",
+            tr(TextKey.DIALOG_RESTART_REQUIRED),
+            tr(TextKey.MESSAGE_LANGUAGE_CHANGED, language_name=language_name),
         )
 
     def _get_locale_display_name(self, locale_name: str) -> str:
@@ -402,9 +407,9 @@ class MainWindow(QMainWindow):
         Return a readable language name for restart prompts.
         """
         if locale_name == LOCALE_ZH_CN:
-            return "Chinese"
+            return tr(TextKey.LANGUAGE_NAME_CHINESE)
 
-        return "English"
+        return tr(TextKey.LANGUAGE_NAME_ENGLISH)
 
     def _on_drawable_part_changed(self, part_id: str) -> None:
         """
