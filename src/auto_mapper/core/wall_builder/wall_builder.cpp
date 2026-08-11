@@ -733,9 +733,20 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
     // Temporary visual experiment: attach one Long curtain to every exterior wall part.
     constexpr bool use_only_long_ceiling_curtains = true;
     if (use_only_long_ceiling_curtains) {
+        constexpr float dir_a_lower_corner_supplement = 0.50f;
+        constexpr float dir_b_lower_corner_supplement = 1.00f;
+
+        struct CornerSupplement {
+            EdgeKey edge;
+            float grid_x;
+            float grid_y;
+        };
+
         std::set<EdgeKey> redundant_dir_b_edges_at_deep_corners;
+        std::vector<CornerSupplement> lower_corner_supplements;
         for (const Point& vertex : vertices) {
             int outside_count = 0;
+            bool interior_cell_is_above_vertex = false;
             Point surrounding_cells[4] = {
                 {vertex.first - 1, vertex.second - 1},
                 {vertex.first, vertex.second - 1},
@@ -746,22 +757,71 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             for (const Point& cell : surrounding_cells) {
                 if (outside_cells.count(cell) > 0) {
                     outside_count += 1;
+                    continue;
+                }
+
+                if (cell.second == vertex.second - 1) {
+                    interior_cell_is_above_vertex = true;
                 }
             }
 
-            if (outside_count != 1) {
+            if (outside_count == 1) {
+                // The DirB edge ending at a deep recess corner is already covered
+                // by the neighboring DirA Long curtain.
+                EdgeKey redundant_edge = {
+                    vertex.first,
+                    vertex.second,
+                    WallPartKind::DirB
+                };
+                if (exterior_edges.count(redundant_edge) > 0) {
+                    redundant_dir_b_edges_at_deep_corners.insert(redundant_edge);
+                }
+            }
+
+            // Only the two lower exterior corners need extra coverage. Recess
+            // entrances have their interior cell below the vertex, while deep
+            // recess corners have only one outside cell.
+            if (outside_count != 3 || !interior_cell_is_above_vertex) {
                 continue;
             }
 
-            // The DirB edge ending at a deep recess corner is already covered
-            // by the neighboring DirA Long curtain.
-            EdgeKey redundant_edge = {
-                vertex.first,
-                vertex.second,
-                WallPartKind::DirB
+            EdgeKey corner_edges[4] = {
+                {vertex.first, vertex.second, WallPartKind::DirA},
+                {vertex.first, vertex.second + 1, WallPartKind::DirA},
+                {vertex.first, vertex.second, WallPartKind::DirB},
+                {vertex.first + 1, vertex.second, WallPartKind::DirB}
             };
-            if (exterior_edges.count(redundant_edge) > 0) {
-                redundant_dir_b_edges_at_deep_corners.insert(redundant_edge);
+
+            for (const EdgeKey& corner_edge : corner_edges) {
+                auto edge_it = exterior_edges.find(corner_edge);
+                if (edge_it == exterior_edges.end()) {
+                    continue;
+                }
+
+                const ExteriorEdge& edge = edge_it->second;
+                CornerSupplement supplement = {corner_edge, 0.0f, 0.0f};
+
+                if (edge.kind == WallPartKind::DirA) {
+                    bool vertex_is_upper_endpoint =
+                        vertex.first == edge.gx && vertex.second == edge.gy - 1;
+                    if (vertex_is_upper_endpoint) {
+                        supplement.grid_y -= dir_a_lower_corner_supplement;
+                    } else {
+                        supplement.grid_y += dir_a_lower_corner_supplement;
+                    }
+                }
+
+                if (edge.kind == WallPartKind::DirB) {
+                    bool vertex_is_left_endpoint =
+                        vertex.first == edge.gx - 1 && vertex.second == edge.gy;
+                    if (vertex_is_left_endpoint) {
+                        supplement.grid_x -= dir_b_lower_corner_supplement;
+                    } else {
+                        supplement.grid_x += dir_b_lower_corner_supplement;
+                    }
+                }
+
+                lower_corner_supplements.push_back(supplement);
             }
         }
 
@@ -771,14 +831,30 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             }
 
             const ExteriorEdge& edge = entry.second;
-            ceiling_sprites.push_back(place_single_ceiling_curtain(
+            io::Sprite curtain_sprite = place_single_ceiling_curtain(
                 edge.gx,
                 edge.gy,
                 edge.wall_type,
                 edge.kind,
                 false,
                 edge.outside_side
-            ));
+            );
+
+            ceiling_sprites.push_back(curtain_sprite);
+
+            for (const CornerSupplement& supplement : lower_corner_supplements) {
+                if (supplement.edge != entry.first) {
+                    continue;
+                }
+
+                const WallProfile& wall_profile = get_wall_profile(edge.wall_type);
+                io::Sprite supplemental_sprite = curtain_sprite;
+                supplemental_sprite.posX +=
+                    (supplement.grid_x - supplement.grid_y) * wall_profile.step_x;
+                supplemental_sprite.posY +=
+                    (supplement.grid_x + supplement.grid_y) * wall_profile.step_y;
+                ceiling_sprites.push_back(supplemental_sprite);
+            }
         }
         return ceiling_sprites;
     }

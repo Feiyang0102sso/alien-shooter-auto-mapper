@@ -124,7 +124,12 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET1 = {
         .offset_y = -80.0f,
         .positive_side_outward_adjustment = 0.50f
     },
-    .dir_b_long = {32, 155.0f, -85.0f},
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .positive_side_outward_adjustment = -0.25f
+    },
     .dir_a_wide = {
         .direction = 158,
         .offset_x = -90.0f,
