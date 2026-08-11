@@ -22,6 +22,13 @@ enum class WallPartKind {
     Pillar
 };
 
+// The exterior cell lies on the negative or positive logical-grid side of a wall.
+// DirA uses the grid X axis; DirB uses the grid Y axis.
+enum class WallOutsideSide {
+    NegativeGridSide,
+    PositiveGridSide
+};
+
 enum class WallPillarMode {
     Complete,
     DirectionalSlices
@@ -118,6 +125,25 @@ struct CeilingProfile {
     float step_y;
     float pos_z;
     int grid_divisor = 1;
+};
+
+struct CeilingCurtainPartProfile {
+    uint32_t direction;
+    float offset_x;
+    float offset_y;
+    // Extra outward distance in logical wall-grid widths for asymmetric sprites.
+    float negative_side_outward_adjustment = 0.0f;
+    float positive_side_outward_adjustment = 0.0f;
+};
+
+struct CeilingCurtainProfile {
+    int vid;
+    float pos_z;
+    int maximum_wide_opposing_wall_distance;
+    CeilingCurtainPartProfile dir_a_long;
+    CeilingCurtainPartProfile dir_b_long;
+    CeilingCurtainPartProfile dir_a_wide;
+    CeilingCurtainPartProfile dir_b_wide;
 };
 
 inline constexpr WallPartAsset make_wall_part_asset(

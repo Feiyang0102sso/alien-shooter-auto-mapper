@@ -112,6 +112,28 @@ inline constexpr WallProfile WALL_AS2_SET1_RANDOM = {
     .randomize_wall_parts_independently = true
 };
 
+// Initial AS2 Set 1 Ceiling Curtain calibration.
+// Offsets are relative to the emitted wall sprite anchor and remain adjustable.
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET1 = {
+    .vid = 1127,
+    .pos_z = 116.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .positive_side_outward_adjustment = 0.50f
+    },
+    .dir_b_long = {32, 155.0f, -85.0f},
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {97, 105.0f, 150.0f}
+};
+
 inline constexpr WallProfile WALL_AS2_SET2_RANDOM = {
     .dir_a_vid = 1701,
     .dir_b_vid = 1700,

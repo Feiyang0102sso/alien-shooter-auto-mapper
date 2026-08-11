@@ -145,6 +145,22 @@ const CeilingProfile& WallBuilder::get_ceiling_profile(int ceiling_type) {
     return profiles.at(CEILING_TYPE_STANDARD);
 }
 
+const CeilingCurtainProfile* WallBuilder::get_ceiling_curtain_profile(int wall_type) {
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_0) {
+        return &CEILING_CURTAIN_AS2_SET1;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_1) {
+        return &CEILING_CURTAIN_AS2_SET1;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET1_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET1;
+    }
+
+    return nullptr;
+}
+
 MapPoint WallBuilder::get_wall_shift(float map_size_x, const WallProfile& profile) {
     float divisor = static_cast<float>(profile.grid_divisor);
     float grid_step_x = profile.step_x / divisor;
@@ -519,15 +535,449 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
     return floor_sprites;
 }
 
-std::vector<io::Sprite> WallBuilder::place_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const {
+std::vector<io::Sprite> WallBuilder::place_ceilings(
+    const std::vector<Segment>& segments,
+    const PhysicalGridContext& grid_ctx
+) const {
+    std::vector<io::Sprite> ceiling_sprites = place_as2_ceiling_curtains(segments);
+    std::vector<io::Sprite> legacy_sprites = place_legacy_ceilings(segments, grid_ctx);
+    ceiling_sprites.insert(ceiling_sprites.end(), legacy_sprites.begin(), legacy_sprites.end());
+    return ceiling_sprites;
+}
+
+std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
+    const std::vector<Segment>& segments
+) const {
+    using Point = std::pair<int, int>;
+    using EdgeKey = std::tuple<int, int, WallPartKind>;
+
+    struct ExteriorEdge {
+        int gx;
+        int gy;
+        int wall_type;
+        WallPartKind kind;
+        int opposing_wall_distance;
+        WallOutsideSide outside_side;
+    };
+
     std::vector<io::Sprite> ceiling_sprites;
+    std::map<Point, int> edges_a;
+    std::map<Point, int> edges_b;
+    std::set<Point> vertices;
+
+    for (const Segment& segment : segments) {
+        if (!is_as2_wall_set_type(segment.wall_type)) {
+            continue;
+        }
+
+        int x1 = segment.start.x;
+        int y1 = segment.start.y;
+        int x2 = segment.end.x;
+        int y2 = segment.end.y;
+
+        if (x1 == x2) {
+            int min_y = std::min(y1, y2);
+            int max_y = std::max(y1, y2);
+            for (int y = min_y + 1; y <= max_y; ++y) {
+                edges_a.emplace(Point{x1, y}, segment.wall_type);
+                vertices.insert({x1, y - 1});
+                vertices.insert({x1, y});
+            }
+        }
+
+        if (y1 == y2) {
+            int min_x = std::min(x1, x2);
+            int max_x = std::max(x1, x2);
+            for (int x = min_x + 1; x <= max_x; ++x) {
+                edges_b.emplace(Point{x, y1}, segment.wall_type);
+                vertices.insert({x - 1, y1});
+                vertices.insert({x, y1});
+            }
+        }
+    }
+
+    if (vertices.empty()) {
+        return ceiling_sprites;
+    }
+
+    int min_vertex_x = vertices.begin()->first;
+    int max_vertex_x = vertices.begin()->first;
+    int min_vertex_y = vertices.begin()->second;
+    int max_vertex_y = vertices.begin()->second;
+
+    for (const Point& vertex : vertices) {
+        min_vertex_x = std::min(min_vertex_x, vertex.first);
+        max_vertex_x = std::max(max_vertex_x, vertex.first);
+        min_vertex_y = std::min(min_vertex_y, vertex.second);
+        max_vertex_y = std::max(max_vertex_y, vertex.second);
+    }
+
+    int cell_margin = CEILING_CURTAIN_AS2_SET1.maximum_wide_opposing_wall_distance + 2;
+    int min_cell_x = min_vertex_x - cell_margin;
+    int max_cell_x = max_vertex_x + cell_margin;
+    int min_cell_y = min_vertex_y - cell_margin;
+    int max_cell_y = max_vertex_y + cell_margin;
+
+    auto movement_crosses_wall = [&](int cell_x, int cell_y, int next_x, int next_y) {
+        if (next_x == cell_x + 1) {
+            return edges_a.count({cell_x + 1, cell_y + 1}) > 0;
+        }
+
+        if (next_x == cell_x - 1) {
+            return edges_a.count({cell_x, cell_y + 1}) > 0;
+        }
+
+        if (next_y == cell_y + 1) {
+            return edges_b.count({cell_x + 1, cell_y + 1}) > 0;
+        }
+
+        return edges_b.count({cell_x + 1, cell_y}) > 0;
+    };
+
+    std::set<Point> outside_cells;
+    std::vector<Point> pending_cells;
+    pending_cells.push_back({min_cell_x, min_cell_y});
+    outside_cells.insert({min_cell_x, min_cell_y});
+
+    std::size_t pending_index = 0;
+    while (pending_index < pending_cells.size()) {
+        Point cell = pending_cells[pending_index];
+        pending_index += 1;
+
+        int neighbors[4][2] = {
+            {cell.first + 1, cell.second},
+            {cell.first - 1, cell.second},
+            {cell.first, cell.second + 1},
+            {cell.first, cell.second - 1}
+        };
+
+        for (const auto& neighbor : neighbors) {
+            int next_x = neighbor[0];
+            int next_y = neighbor[1];
+
+            if (next_x < min_cell_x || next_x > max_cell_x) {
+                continue;
+            }
+
+            if (next_y < min_cell_y || next_y > max_cell_y) {
+                continue;
+            }
+
+            if (outside_cells.count({next_x, next_y}) > 0) {
+                continue;
+            }
+
+            if (movement_crosses_wall(cell.first, cell.second, next_x, next_y)) {
+                continue;
+            }
+
+            outside_cells.insert({next_x, next_y});
+            pending_cells.push_back({next_x, next_y});
+        }
+    }
+
+    std::map<EdgeKey, ExteriorEdge> exterior_edges;
+
+    for (const auto& entry : edges_a) {
+        int gx = entry.first.first;
+        int gy = entry.first.second;
+        int wall_type = entry.second;
+        const CeilingCurtainProfile* profile = get_ceiling_curtain_profile(wall_type);
+        if (profile == nullptr) {
+            continue;
+        }
+
+        bool left_is_outside = outside_cells.count({gx - 1, gy - 1}) > 0;
+        bool right_is_outside = outside_cells.count({gx, gy - 1}) > 0;
+        if (left_is_outside == right_is_outside) {
+            continue;
+        }
+
+        EdgeKey key = {gx, gy, WallPartKind::DirA};
+        WallOutsideSide outside_side = WallOutsideSide::PositiveGridSide;
+        if (left_is_outside) {
+            outside_side = WallOutsideSide::NegativeGridSide;
+        }
+        exterior_edges.emplace(
+            key,
+            ExteriorEdge{gx, gy, wall_type, WallPartKind::DirA, 0, outside_side}
+        );
+    }
+
+    for (const auto& entry : edges_b) {
+        int gx = entry.first.first;
+        int gy = entry.first.second;
+        int wall_type = entry.second;
+        const CeilingCurtainProfile* profile = get_ceiling_curtain_profile(wall_type);
+        if (profile == nullptr) {
+            continue;
+        }
+
+        bool upper_is_outside = outside_cells.count({gx - 1, gy - 1}) > 0;
+        bool lower_is_outside = outside_cells.count({gx - 1, gy}) > 0;
+        if (upper_is_outside == lower_is_outside) {
+            continue;
+        }
+
+        EdgeKey key = {gx, gy, WallPartKind::DirB};
+        WallOutsideSide outside_side = WallOutsideSide::PositiveGridSide;
+        if (upper_is_outside) {
+            outside_side = WallOutsideSide::NegativeGridSide;
+        }
+        exterior_edges.emplace(
+            key,
+            ExteriorEdge{gx, gy, wall_type, WallPartKind::DirB, 0, outside_side}
+        );
+    }
+
+    for (auto& entry : exterior_edges) {
+        ExteriorEdge& edge = entry.second;
+        const CeilingCurtainProfile* profile = get_ceiling_curtain_profile(edge.wall_type);
+        if (profile == nullptr) {
+            continue;
+        }
+
+        int search_step_x = 0;
+        int search_step_y = 0;
+        if (edge.kind == WallPartKind::DirA) {
+            search_step_x = 1;
+        } else {
+            search_step_y = 1;
+        }
+
+        if (edge.outside_side == WallOutsideSide::NegativeGridSide) {
+            search_step_x = -search_step_x;
+            search_step_y = -search_step_y;
+        }
+
+        for (
+            int distance = 1;
+            distance <= profile->maximum_wide_opposing_wall_distance;
+            ++distance
+        ) {
+            EdgeKey opposing_key = {
+                edge.gx + search_step_x * distance,
+                edge.gy + search_step_y * distance,
+                edge.kind
+            };
+            auto opposing_it = exterior_edges.find(opposing_key);
+            if (opposing_it == exterior_edges.end()) {
+                continue;
+            }
+
+            const ExteriorEdge& opposing_edge = opposing_it->second;
+            if (opposing_edge.outside_side == edge.outside_side) {
+                continue;
+            }
+
+            edge.opposing_wall_distance = distance;
+            break;
+        }
+    }
+
+    std::set<EdgeKey> wide_edges;
+    std::set<EdgeKey> long_edges_replaced_by_wide;
+    std::set<EdgeKey> dir_a_long_edges_covered_by_corner;
+    std::set<EdgeKey> processed_narrow_edges;
+
+    for (const Point& vertex : vertices) {
+        int outside_count = 0;
+        Point surrounding_cells[4] = {
+            {vertex.first - 1, vertex.second - 1},
+            {vertex.first, vertex.second - 1},
+            {vertex.first - 1, vertex.second},
+            {vertex.first, vertex.second}
+        };
+
+        for (const Point& cell : surrounding_cells) {
+            if (outside_cells.count(cell) > 0) {
+                outside_count += 1;
+            }
+        }
+
+        EdgeKey candidates[4] = {
+            {vertex.first, vertex.second, WallPartKind::DirA},
+            {vertex.first, vertex.second + 1, WallPartKind::DirA},
+            {vertex.first, vertex.second, WallPartKind::DirB},
+            {vertex.first + 1, vertex.second, WallPartKind::DirB}
+        };
+
+        if (outside_count == 1) {
+            bool has_dir_b_edge_at_corner = false;
+            for (const EdgeKey& candidate : candidates) {
+                auto edge_it = exterior_edges.find(candidate);
+                if (edge_it == exterior_edges.end()) {
+                    continue;
+                }
+
+                if (edge_it->second.kind == WallPartKind::DirB) {
+                    has_dir_b_edge_at_corner = true;
+                    break;
+                }
+            }
+
+            if (has_dir_b_edge_at_corner) {
+                for (const EdgeKey& candidate : candidates) {
+                    auto edge_it = exterior_edges.find(candidate);
+                    if (edge_it == exterior_edges.end()) {
+                        continue;
+                    }
+
+                    const ExteriorEdge& edge = edge_it->second;
+                    if (edge.kind != WallPartKind::DirA) {
+                        continue;
+                    }
+
+                    // The adjacent DirB Long already covers the deep recess corner.
+                    // Keeping this terminal DirA Long lets its visual tail cross the turn.
+                    if (edge.opposing_wall_distance == 0) {
+                        dir_a_long_edges_covered_by_corner.insert(candidate);
+                    }
+                }
+            }
+        }
+
+        if (outside_count != 3) {
+            continue;
+        }
+
+        for (const EdgeKey& candidate : candidates) {
+            auto edge_it = exterior_edges.find(candidate);
+            if (edge_it == exterior_edges.end()) {
+                continue;
+            }
+
+            const ExteriorEdge& edge = edge_it->second;
+            const CeilingCurtainProfile* profile = get_ceiling_curtain_profile(edge.wall_type);
+            if (profile == nullptr) {
+                continue;
+            }
+
+            if (edge.opposing_wall_distance == 0) {
+                continue;
+            }
+
+            if (processed_narrow_edges.count(candidate) > 0) {
+                continue;
+            }
+
+            EdgeKey covered_edge = candidate;
+            int covered_edge_step_x = 0;
+            int covered_edge_step_y = 0;
+            if (edge.kind == WallPartKind::DirA) {
+                bool vertex_is_upper_endpoint = vertex.first == edge.gx && vertex.second == edge.gy - 1;
+                if (vertex_is_upper_endpoint) {
+                    covered_edge_step_y = 1;
+                } else {
+                    covered_edge_step_y = -1;
+                }
+            } else {
+                bool vertex_is_left_endpoint = vertex.first == edge.gx - 1 && vertex.second == edge.gy;
+                if (vertex_is_left_endpoint) {
+                    covered_edge_step_x = 1;
+                } else {
+                    covered_edge_step_x = -1;
+                }
+            }
+
+            // Every wall part in the facing narrow run is covered by Wide.
+            // One Wide replaces up to three consecutive Long parts.
+            std::vector<EdgeKey> narrow_run;
+            while (true) {
+                auto covered_it = exterior_edges.find(covered_edge);
+                if (covered_it == exterior_edges.end()) {
+                    break;
+                }
+
+                const ExteriorEdge& covered_exterior_edge = covered_it->second;
+                if (covered_exterior_edge.opposing_wall_distance == 0) {
+                    break;
+                }
+
+                if (covered_exterior_edge.outside_side != edge.outside_side) {
+                    break;
+                }
+
+                processed_narrow_edges.insert(covered_edge);
+                long_edges_replaced_by_wide.insert(covered_edge);
+                narrow_run.push_back(covered_edge);
+                covered_edge = {
+                    std::get<0>(covered_edge) + covered_edge_step_x,
+                    std::get<1>(covered_edge) + covered_edge_step_y,
+                    edge.kind
+                };
+            }
+
+            int run_size = static_cast<int>(narrow_run.size());
+            for (int group_start = 0; group_start < run_size; group_start += 3) {
+                int anchor_index = group_start;
+                int remaining_count = run_size - group_start;
+                if (remaining_count < 3) {
+                    anchor_index = std::max(0, run_size - 3);
+                }
+                wide_edges.insert(narrow_run[anchor_index]);
+            }
+        }
+    }
+
+    for (const EdgeKey& key : wide_edges) {
+        const ExteriorEdge& edge = exterior_edges.at(key);
+        ceiling_sprites.push_back(place_single_ceiling_curtain(
+            edge.gx,
+            edge.gy,
+            edge.wall_type,
+            edge.kind,
+            true,
+            edge.outside_side
+        ));
+    }
+
+    for (const auto& entry : exterior_edges) {
+        if (long_edges_replaced_by_wide.count(entry.first) > 0) {
+            continue;
+        }
+
+        if (dir_a_long_edges_covered_by_corner.count(entry.first) > 0) {
+            continue;
+        }
+
+        const ExteriorEdge& edge = entry.second;
+        ceiling_sprites.push_back(place_single_ceiling_curtain(
+            edge.gx,
+            edge.gy,
+            edge.wall_type,
+            edge.kind,
+            false,
+            edge.outside_side
+        ));
+    }
+
+    return ceiling_sprites;
+}
+
+std::vector<io::Sprite> WallBuilder::place_legacy_ceilings(
+    const std::vector<Segment>& segments,
+    const PhysicalGridContext& grid_ctx
+) const {
+    std::vector<Segment> legacy_segments;
+    for (const Segment& segment : segments) {
+        if (!is_as2_wall_set_type(segment.wall_type)) {
+            legacy_segments.push_back(segment);
+        }
+    }
+
+    std::vector<io::Sprite> ceiling_sprites;
+    if (legacy_segments.empty()) {
+        return ceiling_sprites;
+    }
+
     int cell_size = 5;
 
     const CeilingProfile& c_prof = get_ceiling_profile(CEILING_TYPE_STANDARD);
     MapPoint c_shift = get_floor_ceiling_shift(map_size_x_, c_prof.step_x, c_prof.step_y, c_prof.grid_divisor);
 
     int min_gx = 1e9, max_gx = -1e9, min_gy = 1e9, max_gy = -1e9;
-    for (const auto& seg : segments) {
+    for (const auto& seg : legacy_segments) {
         MapPoint p1 = get_phys(seg.start.x, seg.start.y, seg.wall_type);
         MapPoint p2 = get_phys(seg.end.x, seg.end.y, seg.wall_type);
         
@@ -935,6 +1385,108 @@ io::Sprite WallBuilder::place_single_floor_celling(int gx, int gy, int vid, floa
     MapPoint shift = get_floor_ceiling_shift(map_size_x_, step_x, step_y, grid_divisor);
     MapPoint pt = to_iso(GridPoint{gx, gy}, step_x, step_y, shift);
     return io::Sprite(vid, pt.x, pt.y, pos_z, 0);
+}
+
+io::Sprite WallBuilder::place_single_ceiling_curtain(
+    int gx,
+    int gy,
+    int wall_type,
+    WallPartKind kind,
+    bool use_wide,
+    WallOutsideSide outside_side
+) const {
+    const CeilingCurtainProfile* curtain_profile = get_ceiling_curtain_profile(wall_type);
+    if (curtain_profile == nullptr) {
+        Logger::warning("Missing Ceiling Curtain profile for wall_type={}", wall_type);
+        return {};
+    }
+
+    const WallProfile& wall_profile = get_wall_profile(wall_type);
+    const CeilingCurtainPartProfile* part_profile = nullptr;
+    float wall_offset_x = 0.0f;
+    float wall_offset_y = 0.0f;
+
+    if (kind == WallPartKind::DirA) {
+        wall_offset_x = wall_profile.offset_a_x;
+        wall_offset_y = wall_profile.offset_a_y;
+        if (use_wide) {
+            part_profile = &curtain_profile->dir_a_wide;
+        } else {
+            part_profile = &curtain_profile->dir_a_long;
+        }
+    }
+
+    if (kind == WallPartKind::DirB) {
+        wall_offset_x = wall_profile.offset_b_x;
+        wall_offset_y = wall_profile.offset_b_y;
+        if (use_wide) {
+            part_profile = &curtain_profile->dir_b_wide;
+        } else {
+            part_profile = &curtain_profile->dir_b_long;
+        }
+    }
+
+    if (part_profile == nullptr) {
+        Logger::warning("Ceiling Curtain cannot attach to pillar wall part");
+        return {};
+    }
+
+    // Profile offsets come from one calibrated sample side. Convert the offset
+    // back to logical-grid axes so the outward component can follow the actual
+    // exterior side while the along-wall component stays unchanged.
+    float offset_grid_x = (
+        part_profile->offset_x / wall_profile.step_x
+        + part_profile->offset_y / wall_profile.step_y
+    ) / 2.0f;
+    float offset_grid_y = (
+        part_profile->offset_y / wall_profile.step_y
+        - part_profile->offset_x / wall_profile.step_x
+    ) / 2.0f;
+
+    if (kind == WallPartKind::DirA) {
+        bool offset_points_positive = offset_grid_x > 0.0f;
+        bool outside_is_positive = outside_side == WallOutsideSide::PositiveGridSide;
+        if (offset_points_positive != outside_is_positive) {
+            offset_grid_x = -offset_grid_x;
+        }
+
+        if (outside_is_positive) {
+            offset_grid_x += part_profile->positive_side_outward_adjustment;
+        } else {
+            offset_grid_x -= part_profile->negative_side_outward_adjustment;
+        }
+    }
+
+    if (kind == WallPartKind::DirB) {
+        bool offset_points_positive = offset_grid_y > 0.0f;
+        bool outside_is_positive = outside_side == WallOutsideSide::PositiveGridSide;
+        if (offset_points_positive != outside_is_positive) {
+            offset_grid_y = -offset_grid_y;
+        }
+
+        if (outside_is_positive) {
+            offset_grid_y += part_profile->positive_side_outward_adjustment;
+        } else {
+            offset_grid_y -= part_profile->negative_side_outward_adjustment;
+        }
+    }
+
+    float oriented_offset_x = (offset_grid_x - offset_grid_y) * wall_profile.step_x;
+    float oriented_offset_y = (offset_grid_x + offset_grid_y) * wall_profile.step_y;
+
+    MapPoint logical_anchor = get_phys(gx, gy, wall_type);
+    float pos_x = logical_anchor.x + wall_offset_x + oriented_offset_x;
+    float pos_y = logical_anchor.y + wall_offset_y + oriented_offset_y;
+
+    io::Sprite curtain_sprite(
+        curtain_profile->vid,
+        pos_x,
+        pos_y,
+        curtain_profile->pos_z,
+        part_profile->direction
+    );
+    curtain_sprite.army = 0;
+    return curtain_sprite;
 }
 
 int WallBuilder::select_wall_variant_index(const WallProfile& profile) const {

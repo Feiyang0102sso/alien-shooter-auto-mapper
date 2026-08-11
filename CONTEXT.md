@@ -248,6 +248,61 @@ A pillar generation mode where one logical pillar point can produce multiple pil
 
 Multi-part pillars are shared behavior for wall sets whose pillar visuals are assembled from direction-specific pieces. They are not specific to one wall set.
 
+## Ceiling Curtains
+
+### Exterior Wall Part
+
+A wall part that separates room interior from map exterior.
+
+### Concave Wall Recess (凹角)
+
+An inward recess in the room's exterior wall boundary formed by two opposing side walls and one connecting wall.
+
+### Ceiling Curtain
+
+An AS2 Series black rectangular cover outside Exterior Wall Parts that conceals the map exterior.
+
+_Avoid:_ Ceiling, because the legacy AS1 ceiling tile has different geometry and placement semantics.
+
+### Long Ceiling Curtain (长)
+
+The default long rectangle used for ordinary Exterior Wall Parts, with one Long Ceiling Curtain for each wall part.
+
+In project dialogue, call this curtain **长**.
+
+### Wide Ceiling Curtain (宽)
+
+A wide rectangle used at a Concave Wall Recess entrance when a facing parallel wall is within three wall-part widths.
+
+The width of one Wide Ceiling Curtain is approximately three wall-part widths.
+
+In project dialogue, call this curtain **宽**.
+
+### Ceiling Curtain Direction Values
+
+All AS2 Wall Sets share these Ceiling Curtain direction values:
+
+- Direction A (`/`) **长**: `96`
+- Direction B (`\`) **长**: `32`
+- Direction A (`/`) **宽**: `158`
+- Direction B (`\`) **宽**: `97`
+
+Ceiling Curtain relationships:
+
+- Each ordinary **Exterior Wall Part** receives one **长**.
+- Each side of a **Concave Wall Recess** is evaluated independently.
+- A recess entrance uses **宽** when a facing parallel wall of the same direction is one to three wall-part widths away.
+- A facing parallel wall exactly three wall-part widths away still uses **宽**.
+- A recess entrance uses **长** when the facing parallel wall is more than three wall-part widths away or no facing parallel wall exists.
+- The two opposing sides of a narrow **Concave Wall Recess** each receive their own **宽**.
+- The connecting wall of a **Concave Wall Recess** continues to use **长** when no facing parallel wall of its direction exists within three wall-part widths.
+- One **宽** is approximately as wide as three **Exterior Wall Parts**.
+- At a concave turn, the adjacent `\` **长** covers the corner. A terminal `/` **长** that is not replaced by **宽** is omitted so its visual tail cannot cross beyond the turn.
+- Facing narrow wall parts are divided into consecutive groups of up to three, starting at the Concave Wall Recess entrance.
+- Each group receives one **宽**, and none of its covered wall parts receive **长**.
+- When the final group has fewer than three wall parts, its **宽** shifts back toward the entrance so it does not extend past the recess end.
+- Wall parts after the facing narrow relationship ends continue to receive their normal **长**.
+
 ## Wall Step Inference
 
 Infer wall steps from normalized adjacent same-VID deltas:

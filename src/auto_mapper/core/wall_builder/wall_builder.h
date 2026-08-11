@@ -74,6 +74,14 @@ public:
     // Place a single tile/wall sprite at logical grid coordinates
     io::Sprite place_single_floor_celling(int gx, int gy, int vid, float step_x, float step_y, float pos_z, int grid_divisor) const;
     io::Sprite place_single_wall(int gx, int gy, int wall_type, WallPartKind kind) const;
+    io::Sprite place_single_ceiling_curtain(
+        int gx,
+        int gy,
+        int wall_type,
+        WallPartKind kind,
+        bool use_wide,
+        WallOutsideSide outside_side
+    ) const;
 
     // Look up a WallPartAsset from a variant by kind (public for door_builder.cpp access)
     static const WallPartAsset& select_wall_part_asset(const WallVariant& variant, WallPartKind kind);
@@ -126,6 +134,8 @@ private:
     PhysicalGridContext build_physical_grid(const std::vector<Segment>& segments) const;
     std::vector<io::Sprite> place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
     std::vector<io::Sprite> place_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
+    std::vector<io::Sprite> place_as2_ceiling_curtains(const std::vector<Segment>& segments) const;
+    std::vector<io::Sprite> place_legacy_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
 
     // Select rare wall positions after door excavation. The method owns all
     // density, straight-run, fairness, and physical-distance placement rules.
@@ -135,6 +145,7 @@ private:
     // Look up profiles
     static const FloorProfile& get_floor_profile(int floor_type);
     static const CeilingProfile& get_ceiling_profile(int ceiling_type);
+    static const CeilingCurtainProfile* get_ceiling_curtain_profile(int wall_type);
     const WallVariant& select_wall_variant(const WallProfile& profile) const;
     int select_wall_variant_index(const WallProfile& profile) const;
     static bool has_rare_wall_variant(const WallProfile& profile);

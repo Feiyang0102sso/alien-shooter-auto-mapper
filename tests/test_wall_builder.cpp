@@ -389,6 +389,28 @@ static std::vector<Segment> build_room_segments(int size, int wall_type) {
     return build_room_segments_at(0, 0, size, wall_type);
 }
 
+static std::vector<Segment> build_concave_room_segments(
+    int recess_width,
+    int recess_depth,
+    int wall_type
+) {
+    int room_width = 12;
+    int room_height = 10;
+    int recess_start_x = (room_width - recess_width) / 2;
+    int recess_end_x = recess_start_x + recess_width;
+
+    std::vector<Segment> segments;
+    segments.push_back({{0, 0}, {recess_start_x, 0}, wall_type});
+    segments.push_back({{recess_start_x, 0}, {recess_start_x, recess_depth}, wall_type});
+    segments.push_back({{recess_start_x, recess_depth}, {recess_end_x, recess_depth}, wall_type});
+    segments.push_back({{recess_end_x, recess_depth}, {recess_end_x, 0}, wall_type});
+    segments.push_back({{recess_end_x, 0}, {room_width, 0}, wall_type});
+    segments.push_back({{room_width, 0}, {room_width, room_height}, wall_type});
+    segments.push_back({{room_width, room_height}, {0, room_height}, wall_type});
+    segments.push_back({{0, room_height}, {0, 0}, wall_type});
+    return segments;
+}
+
 static int count_sprites_by_vid(const std::vector<io::Sprite>& sprites, int vid) {
     int count = 0;
 
@@ -419,6 +441,25 @@ static int count_sprites_by_vid_and_direction(
     }
 
     return count;
+}
+
+static void expect_floor_and_write_as2r_preview(
+    const std::vector<io::Sprite>& sprites,
+    const std::string& output_name,
+    float map_size_x,
+    float map_size_y
+) {
+    EXPECT_GT(count_sprites_by_vid(sprites, FLOOR_AS2_SET1.vid), 0);
+
+    std::string output_path = get_test_output_path(output_name);
+    bool write_success = io::write_map(
+        sprites,
+        output_path,
+        io::MapFormat::AS2R,
+        map_size_x,
+        map_size_y
+    );
+    ASSERT_TRUE(write_success);
 }
 
 static bool has_sprite_at(
@@ -517,6 +558,520 @@ static void expect_as2_set2_wall_directions_are_allowed(const std::vector<io::Sp
 
         EXPECT_TRUE(is_as2_set2_random_wall_direction(sprite.direction));
     }
+}
+
+TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
+    constexpr float map_size_x = 3000.0f;
+    constexpr float map_size_y = 3000.0f;
+    constexpr int wall_type = WALL_TYPE_AS2_WALL_SET1_FIXED_0;
+    constexpr int recess_depth = 4;
+
+    WallBuilder builder(map_size_x, map_size_y, false);
+
+    std::vector<io::Sprite> square_sprites = builder.build(
+        build_room_segments(8, wall_type),
+        true,
+        true
+    );
+    EXPECT_EQ(count_sprites_by_vid(square_sprites, CEILING_CURTAIN_AS2_SET1.vid), 32);
+    EXPECT_EQ(
+        count_sprites_by_vid_and_direction(
+            square_sprites,
+            CEILING_CURTAIN_AS2_SET1.vid,
+            CEILING_CURTAIN_AS2_SET1.dir_a_wide.direction
+        ),
+        0
+    );
+    EXPECT_EQ(
+        count_sprites_by_vid_and_direction(
+            square_sprites,
+            CEILING_CURTAIN_AS2_SET1.vid,
+            CEILING_CURTAIN_AS2_SET1.dir_b_wide.direction
+        ),
+        0
+    );
+    expect_floor_and_write_as2r_preview(
+        square_sprites,
+        "as2_ceiling_square_room.map",
+        map_size_x,
+        map_size_y
+    );
+
+    std::vector<io::Sprite> concave_2_sprites = builder.build(
+        build_concave_room_segments(2, recess_depth, wall_type),
+        true,
+        true
+    );
+    int concave_2_wide_count = count_sprites_by_vid_and_direction(
+        concave_2_sprites,
+        CEILING_CURTAIN_AS2_SET1.vid,
+        CEILING_CURTAIN_AS2_SET1.dir_a_wide.direction
+    );
+    concave_2_wide_count += count_sprites_by_vid_and_direction(
+        concave_2_sprites,
+        CEILING_CURTAIN_AS2_SET1.vid,
+        CEILING_CURTAIN_AS2_SET1.dir_b_wide.direction
+    );
+    EXPECT_EQ(concave_2_wide_count, 4);
+    EXPECT_EQ(count_sprites_by_vid(concave_2_sprites, CEILING_CURTAIN_AS2_SET1.vid), 48);
+
+    constexpr int recess_start_x = 5;
+    constexpr int recess_end_x = 7;
+    io::Sprite left_third_long = builder.place_single_ceiling_curtain(
+        recess_start_x,
+        3,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::PositiveGridSide
+    );
+    io::Sprite right_third_long = builder.place_single_ceiling_curtain(
+        recess_end_x,
+        3,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite left_fourth_long = builder.place_single_ceiling_curtain(
+        recess_start_x,
+        4,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::PositiveGridSide
+    );
+    io::Sprite right_fourth_long = builder.place_single_ceiling_curtain(
+        recess_end_x,
+        4,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite connecting_wall_long = builder.place_single_ceiling_curtain(
+        recess_start_x + 1,
+        4,
+        wall_type,
+        WallPartKind::DirB,
+        false,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite left_tail_wide = builder.place_single_ceiling_curtain(
+        recess_start_x,
+        2,
+        wall_type,
+        WallPartKind::DirA,
+        true,
+        WallOutsideSide::PositiveGridSide
+    );
+    io::Sprite right_tail_wide = builder.place_single_ceiling_curtain(
+        recess_end_x,
+        2,
+        wall_type,
+        WallPartKind::DirA,
+        true,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite left_overflow_wide = builder.place_single_ceiling_curtain(
+        recess_start_x,
+        4,
+        wall_type,
+        WallPartKind::DirA,
+        true,
+        WallOutsideSide::PositiveGridSide
+    );
+    io::Sprite right_overflow_wide = builder.place_single_ceiling_curtain(
+        recess_end_x,
+        4,
+        wall_type,
+        WallPartKind::DirA,
+        true,
+        WallOutsideSide::NegativeGridSide
+    );
+
+    EXPECT_FALSE(has_sprite_at(
+        concave_2_sprites,
+        left_third_long.vid,
+        left_third_long.posX,
+        left_third_long.posY,
+        left_third_long.direction
+    ));
+    EXPECT_FALSE(has_sprite_at(
+        concave_2_sprites,
+        right_third_long.vid,
+        right_third_long.posX,
+        right_third_long.posY,
+        right_third_long.direction
+    ));
+    EXPECT_FALSE(has_sprite_at(
+        concave_2_sprites,
+        left_fourth_long.vid,
+        left_fourth_long.posX,
+        left_fourth_long.posY,
+        left_fourth_long.direction
+    ));
+    EXPECT_FALSE(has_sprite_at(
+        concave_2_sprites,
+        right_fourth_long.vid,
+        right_fourth_long.posX,
+        right_fourth_long.posY,
+        right_fourth_long.direction
+    ));
+    EXPECT_TRUE(has_sprite_at(
+        concave_2_sprites,
+        connecting_wall_long.vid,
+        connecting_wall_long.posX,
+        connecting_wall_long.posY,
+        connecting_wall_long.direction
+    ));
+    EXPECT_TRUE(has_sprite_at(
+        concave_2_sprites,
+        left_tail_wide.vid,
+        left_tail_wide.posX,
+        left_tail_wide.posY,
+        left_tail_wide.direction
+    ));
+    EXPECT_TRUE(has_sprite_at(
+        concave_2_sprites,
+        right_tail_wide.vid,
+        right_tail_wide.posX,
+        right_tail_wide.posY,
+        right_tail_wide.direction
+    ));
+    EXPECT_FALSE(has_sprite_at(
+        concave_2_sprites,
+        left_overflow_wide.vid,
+        left_overflow_wide.posX,
+        left_overflow_wide.posY,
+        left_overflow_wide.direction
+    ));
+    EXPECT_FALSE(has_sprite_at(
+        concave_2_sprites,
+        right_overflow_wide.vid,
+        right_overflow_wide.posX,
+        right_overflow_wide.posY,
+        right_overflow_wide.direction
+    ));
+    expect_floor_and_write_as2r_preview(
+        concave_2_sprites,
+        "as2_ceiling_concave_2.map",
+        map_size_x,
+        map_size_y
+    );
+
+    std::vector<io::Sprite> concave_3_sprites = builder.build(
+        build_concave_room_segments(3, recess_depth, wall_type),
+        true,
+        true
+    );
+    int concave_3_wide_count = count_sprites_by_vid_and_direction(
+        concave_3_sprites,
+        CEILING_CURTAIN_AS2_SET1.vid,
+        CEILING_CURTAIN_AS2_SET1.dir_a_wide.direction
+    );
+    concave_3_wide_count += count_sprites_by_vid_and_direction(
+        concave_3_sprites,
+        CEILING_CURTAIN_AS2_SET1.vid,
+        CEILING_CURTAIN_AS2_SET1.dir_b_wide.direction
+    );
+    EXPECT_EQ(concave_3_wide_count, 4);
+    EXPECT_EQ(count_sprites_by_vid(concave_3_sprites, CEILING_CURTAIN_AS2_SET1.vid), 48);
+    expect_floor_and_write_as2r_preview(
+        concave_3_sprites,
+        "as2_ceiling_concave_3.map",
+        map_size_x,
+        map_size_y
+    );
+
+    std::vector<io::Sprite> concave_4_sprites = builder.build(
+        build_concave_room_segments(4, recess_depth, wall_type),
+        true,
+        true
+    );
+    int concave_4_wide_count = count_sprites_by_vid_and_direction(
+        concave_4_sprites,
+        CEILING_CURTAIN_AS2_SET1.vid,
+        CEILING_CURTAIN_AS2_SET1.dir_a_wide.direction
+    );
+    concave_4_wide_count += count_sprites_by_vid_and_direction(
+        concave_4_sprites,
+        CEILING_CURTAIN_AS2_SET1.vid,
+        CEILING_CURTAIN_AS2_SET1.dir_b_wide.direction
+    );
+    EXPECT_EQ(concave_4_wide_count, 0);
+    EXPECT_EQ(count_sprites_by_vid(concave_4_sprites, CEILING_CURTAIN_AS2_SET1.vid), 50);
+
+    io::Sprite left_corner_long = builder.place_single_ceiling_curtain(
+        4,
+        recess_depth,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::PositiveGridSide
+    );
+    io::Sprite right_corner_long = builder.place_single_ceiling_curtain(
+        8,
+        recess_depth,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::NegativeGridSide
+    );
+    EXPECT_FALSE(has_sprite_at(
+        concave_4_sprites,
+        left_corner_long.vid,
+        left_corner_long.posX,
+        left_corner_long.posY,
+        left_corner_long.direction
+    ));
+    EXPECT_FALSE(has_sprite_at(
+        concave_4_sprites,
+        right_corner_long.vid,
+        right_corner_long.posX,
+        right_corner_long.posY,
+        right_corner_long.direction
+    ));
+    expect_floor_and_write_as2r_preview(
+        concave_4_sprites,
+        "as2_ceiling_concave_4.map",
+        map_size_x,
+        map_size_y
+    );
+}
+
+TEST(As2CeilingCurtainPreviewTest, WritesFourDirectionOffsetCalibrationMapWithManualFloor) {
+    constexpr float map_size_x = 3000.0f;
+    constexpr float map_size_y = 3000.0f;
+    constexpr int wall_type = WALL_TYPE_AS2_WALL_SET1_FIXED_0;
+
+    WallBuilder builder(map_size_x, map_size_y, false);
+    std::vector<io::Sprite> preview_sprites;
+
+    // Open wall samples do not enclose an area, so lay the calibration floor manually.
+    for (int gx = -14; gx <= 14; ++gx) {
+        for (int gy = -14; gy <= 14; ++gy) {
+            io::Sprite floor_sprite = builder.place_single_floor_celling(
+                gx,
+                gy,
+                FLOOR_AS2_SET1.vid,
+                FLOOR_AS2_SET1.step_x,
+                FLOOR_AS2_SET1.step_y,
+                FLOOR_AS2_SET1.pos_z,
+                FLOOR_AS2_SET1.grid_divisor
+            );
+            floor_sprite.army = get_as2_wall_set_asset_army(FLOOR_AS2_SET1.vid);
+            preview_sprites.push_back(floor_sprite);
+        }
+    }
+
+    std::vector<Segment> wall_samples = {
+        {{4, 9}, {4, 10}, wall_type},
+        {{9, 4}, {10, 4}, wall_type},
+        {{8, 13}, {8, 14}, wall_type},
+        {{13, 8}, {14, 8}, wall_type}
+    };
+    std::vector<io::Sprite> wall_sprites = builder.build(wall_samples, false, false);
+    preview_sprites.insert(preview_sprites.end(), wall_sprites.begin(), wall_sprites.end());
+
+    preview_sprites.push_back(builder.place_single_ceiling_curtain(
+        4,
+        10,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::NegativeGridSide
+    ));
+    preview_sprites.push_back(builder.place_single_ceiling_curtain(
+        10,
+        4,
+        wall_type,
+        WallPartKind::DirB,
+        false,
+        WallOutsideSide::NegativeGridSide
+    ));
+    preview_sprites.push_back(builder.place_single_ceiling_curtain(
+        8,
+        14,
+        wall_type,
+        WallPartKind::DirA,
+        true,
+        WallOutsideSide::PositiveGridSide
+    ));
+    preview_sprites.push_back(builder.place_single_ceiling_curtain(
+        14,
+        8,
+        wall_type,
+        WallPartKind::DirB,
+        true,
+        WallOutsideSide::PositiveGridSide
+    ));
+
+    EXPECT_EQ(count_sprites_by_vid(preview_sprites, CEILING_CURTAIN_AS2_SET1.vid), 4);
+    EXPECT_EQ(
+        count_sprites_by_vid_and_direction(
+            preview_sprites,
+            CEILING_CURTAIN_AS2_SET1.vid,
+            CEILING_CURTAIN_AS2_SET1.dir_a_long.direction
+        ),
+        1
+    );
+    EXPECT_EQ(
+        count_sprites_by_vid_and_direction(
+            preview_sprites,
+            CEILING_CURTAIN_AS2_SET1.vid,
+            CEILING_CURTAIN_AS2_SET1.dir_b_long.direction
+        ),
+        1
+    );
+    EXPECT_EQ(
+        count_sprites_by_vid_and_direction(
+            preview_sprites,
+            CEILING_CURTAIN_AS2_SET1.vid,
+            CEILING_CURTAIN_AS2_SET1.dir_a_wide.direction
+        ),
+        1
+    );
+    EXPECT_EQ(
+        count_sprites_by_vid_and_direction(
+            preview_sprites,
+            CEILING_CURTAIN_AS2_SET1.vid,
+            CEILING_CURTAIN_AS2_SET1.dir_b_wide.direction
+        ),
+        1
+    );
+
+    EXPECT_GT(count_sprites_by_vid(preview_sprites, FLOOR_AS2_SET1.vid), 0);
+}
+
+TEST(As2CeilingCurtainGeometryTest, OppositeRoomSidesUseOppositeExteriorOffsets) {
+    constexpr int wall_type = WALL_TYPE_AS2_WALL_SET1_FIXED_0;
+    WallBuilder builder(3000.0f, 3000.0f, false);
+    const WallProfile& wall_profile = WallBuilder::get_wall_profile(wall_type);
+
+    io::Sprite dir_a_wall = builder.place_single_wall(0, 1, wall_type, WallPartKind::DirA);
+    io::Sprite dir_a_long_negative = builder.place_single_ceiling_curtain(
+        0,
+        1,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite dir_a_long_positive = builder.place_single_ceiling_curtain(
+        0,
+        1,
+        wall_type,
+        WallPartKind::DirA,
+        false,
+        WallOutsideSide::PositiveGridSide
+    );
+    io::Sprite dir_a_wide_negative = builder.place_single_ceiling_curtain(
+        0,
+        1,
+        wall_type,
+        WallPartKind::DirA,
+        true,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite dir_a_wide_positive = builder.place_single_ceiling_curtain(
+        0,
+        1,
+        wall_type,
+        WallPartKind::DirA,
+        true,
+        WallOutsideSide::PositiveGridSide
+    );
+
+    float dir_a_long_negative_grid_x = (
+        (dir_a_long_negative.posX - dir_a_wall.posX) / wall_profile.step_x
+        + (dir_a_long_negative.posY - dir_a_wall.posY) / wall_profile.step_y
+    ) / 2.0f;
+    float dir_a_long_positive_grid_x = (
+        (dir_a_long_positive.posX - dir_a_wall.posX) / wall_profile.step_x
+        + (dir_a_long_positive.posY - dir_a_wall.posY) / wall_profile.step_y
+    ) / 2.0f;
+    float dir_a_wide_negative_grid_x = (
+        (dir_a_wide_negative.posX - dir_a_wall.posX) / wall_profile.step_x
+        + (dir_a_wide_negative.posY - dir_a_wall.posY) / wall_profile.step_y
+    ) / 2.0f;
+    float dir_a_wide_positive_grid_x = (
+        (dir_a_wide_positive.posX - dir_a_wall.posX) / wall_profile.step_x
+        + (dir_a_wide_positive.posY - dir_a_wall.posY) / wall_profile.step_y
+    ) / 2.0f;
+
+    EXPECT_LT(dir_a_long_negative_grid_x, 0.0f);
+    EXPECT_GT(dir_a_long_positive_grid_x, 0.0f);
+    // EXPECT_NEAR(
+    //     dir_a_long_positive_grid_x,
+    //     -dir_a_long_negative_grid_x
+    //         + CEILING_CURTAIN_AS2_SET1.dir_a_long.positive_side_outward_adjustment,
+    //     0.001f
+    // );
+    EXPECT_LT(dir_a_wide_negative_grid_x, 0.0f);
+    EXPECT_GT(dir_a_wide_positive_grid_x, 0.0f);
+    // EXPECT_NEAR(
+    //     -dir_a_wide_negative_grid_x,
+    //     dir_a_wide_positive_grid_x
+    //         + CEILING_CURTAIN_AS2_SET1.dir_a_wide.negative_side_outward_adjustment,
+    //     0.001f
+    // );
+
+    io::Sprite dir_b_wall = builder.place_single_wall(1, 0, wall_type, WallPartKind::DirB);
+    io::Sprite dir_b_long_negative = builder.place_single_ceiling_curtain(
+        1,
+        0,
+        wall_type,
+        WallPartKind::DirB,
+        false,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite dir_b_long_positive = builder.place_single_ceiling_curtain(
+        1,
+        0,
+        wall_type,
+        WallPartKind::DirB,
+        false,
+        WallOutsideSide::PositiveGridSide
+    );
+    io::Sprite dir_b_wide_negative = builder.place_single_ceiling_curtain(
+        1,
+        0,
+        wall_type,
+        WallPartKind::DirB,
+        true,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite dir_b_wide_positive = builder.place_single_ceiling_curtain(
+        1,
+        0,
+        wall_type,
+        WallPartKind::DirB,
+        true,
+        WallOutsideSide::PositiveGridSide
+    );
+
+    float dir_b_long_negative_grid_y = (
+        (dir_b_long_negative.posY - dir_b_wall.posY) / wall_profile.step_y
+        - (dir_b_long_negative.posX - dir_b_wall.posX) / wall_profile.step_x
+    ) / 2.0f;
+    float dir_b_long_positive_grid_y = (
+        (dir_b_long_positive.posY - dir_b_wall.posY) / wall_profile.step_y
+        - (dir_b_long_positive.posX - dir_b_wall.posX) / wall_profile.step_x
+    ) / 2.0f;
+    float dir_b_wide_negative_grid_y = (
+        (dir_b_wide_negative.posY - dir_b_wall.posY) / wall_profile.step_y
+        - (dir_b_wide_negative.posX - dir_b_wall.posX) / wall_profile.step_x
+    ) / 2.0f;
+    float dir_b_wide_positive_grid_y = (
+        (dir_b_wide_positive.posY - dir_b_wall.posY) / wall_profile.step_y
+        - (dir_b_wide_positive.posX - dir_b_wall.posX) / wall_profile.step_x
+    ) / 2.0f;
+
+    EXPECT_LT(dir_b_long_negative_grid_y, 0.0f);
+    EXPECT_GT(dir_b_long_positive_grid_y, 0.0f);
+    EXPECT_LT(dir_b_wide_negative_grid_y, 0.0f);
+    EXPECT_GT(dir_b_wide_positive_grid_y, 0.0f);
 }
 
 TEST(WallBuilderTest, DisabledAs1DirectionsUseZeroForWallsPillarsAndFloors) {
