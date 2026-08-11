@@ -730,6 +730,59 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         );
     }
 
+    // Temporary visual experiment: attach one Long curtain to every exterior wall part.
+    constexpr bool use_only_long_ceiling_curtains = true;
+    if (use_only_long_ceiling_curtains) {
+        std::set<EdgeKey> redundant_dir_b_edges_at_deep_corners;
+        for (const Point& vertex : vertices) {
+            int outside_count = 0;
+            Point surrounding_cells[4] = {
+                {vertex.first - 1, vertex.second - 1},
+                {vertex.first, vertex.second - 1},
+                {vertex.first - 1, vertex.second},
+                {vertex.first, vertex.second}
+            };
+
+            for (const Point& cell : surrounding_cells) {
+                if (outside_cells.count(cell) > 0) {
+                    outside_count += 1;
+                }
+            }
+
+            if (outside_count != 1) {
+                continue;
+            }
+
+            // The DirB edge ending at a deep recess corner is already covered
+            // by the neighboring DirA Long curtain.
+            EdgeKey redundant_edge = {
+                vertex.first,
+                vertex.second,
+                WallPartKind::DirB
+            };
+            if (exterior_edges.count(redundant_edge) > 0) {
+                redundant_dir_b_edges_at_deep_corners.insert(redundant_edge);
+            }
+        }
+
+        for (const auto& entry : exterior_edges) {
+            if (redundant_dir_b_edges_at_deep_corners.count(entry.first) > 0) {
+                continue;
+            }
+
+            const ExteriorEdge& edge = entry.second;
+            ceiling_sprites.push_back(place_single_ceiling_curtain(
+                edge.gx,
+                edge.gy,
+                edge.wall_type,
+                edge.kind,
+                false,
+                edge.outside_side
+            ));
+        }
+        return ceiling_sprites;
+    }
+
     for (auto& entry : exterior_edges) {
         ExteriorEdge& edge = entry.second;
         const CeilingCurtainProfile* profile = get_ceiling_curtain_profile(edge.wall_type);
