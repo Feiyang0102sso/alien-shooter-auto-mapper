@@ -29,6 +29,7 @@ from app.project.data import (
     DEFAULT_MAP_SIZE_X,
     DEFAULT_MAP_SIZE_Y,
     ProjectData,
+    supports_ceiling_generation,
     supports_global_door_state,
 )
 from app.project.io import load_project_json, save_project_json
@@ -71,7 +72,9 @@ class MainWindow(QMainWindow):
         self._build_toolbar()
         self._build_docks()
         self._connect_signals()
-        self._sync_global_door_option(self.theme_shelf.get_project_version(), False)
+        project_version = self.theme_shelf.get_project_version()
+        self._sync_ceiling_option(project_version, False)
+        self._sync_global_door_option(project_version, False)
 
         self.statusBar().showMessage(tr(TextKey.STATUS_READY))
         logger.debug("Main window initialized")
@@ -116,11 +119,11 @@ class MainWindow(QMainWindow):
         self.floor_check.setToolTip(tr(TextKey.TOOLTIP_FLOOR))
 
         self.ceiling_check = QCheckBox(tr(TextKey.CHECK_CEILING))
-        self.ceiling_check.setObjectName("disabledCeilingCheck")
+        self.ceiling_check.setObjectName("ceilingCheck")
         self.ceiling_check.setChecked(False)
         self.ceiling_check.setProperty("unavailable", True)
         self.ceiling_check.setToolTip(tr(TextKey.TOOLTIP_CEILING))
-        self.ceiling_check.clicked.connect(self._show_ceiling_warning)
+        self.ceiling_check.clicked.connect(self._on_ceiling_changed)
 
         self.is_door_open_check = QCheckBox(tr(TextKey.CHECK_IS_DOOR_OPEN))
         self.is_door_open_check.setObjectName("isDoorOpenCheck")
@@ -354,13 +357,17 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
         logger.info(f"Map size applied: {map_size_x:.1f} x {map_size_y:.1f}")
 
-    def _show_ceiling_warning(self) -> None:
-        """
-        Explain why ceiling generation is disabled.
-        """
+    def _on_ceiling_changed(self, checked: bool) -> None:
+        """Allow ceiling generation for AS2 projects and reject it for AS1."""
+        project_version = self.theme_shelf.get_project_version()
+        if supports_ceiling_generation(project_version):
+            logger.info(f"Ceiling generation changed: {checked}")
+            return
+
         self.ceiling_check.setChecked(False)
         QMessageBox.warning(self, tr(TextKey.DIALOG_CEILING), tr(TextKey.ERROR_CEILING_DISABLED))
         self.statusBar().showMessage(tr(TextKey.STATUS_CEILING_DISABLED))
+        logger.info(f"Ceiling generation unavailable: {project_version}")
 
     def _create_language_menu(self) -> QMenu:
         """
@@ -431,6 +438,7 @@ class MainWindow(QMainWindow):
         """Reset editor content while preserving the selected project version."""
         self.viewport.clear_segments()
         project_version = self.theme_shelf.get_project_version()
+        self._sync_ceiling_option(project_version, False)
         self._sync_global_door_option(project_version, False)
         self.inspector.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
         self.viewport.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
@@ -567,7 +575,7 @@ class MainWindow(QMainWindow):
                 output_path,
                 project_data,
                 generate_floor=self.floor_check.isChecked(),
-                generate_ceiling=False,
+                generate_ceiling=self.ceiling_check.isChecked(),
                 random_direction=self.random_direction_check.isChecked(),
             )
         except FileNotFoundError as error:
@@ -627,10 +635,22 @@ class MainWindow(QMainWindow):
         self.viewport.set_segments(project_data.segments)
         self.viewport.set_doors(project_data.doors)
         self.viewport.set_decorations(project_data.decorations)
+        self._sync_ceiling_option(project_data.version, False)
         self._sync_global_door_option(project_data.version, project_data.is_door_open)
         self.inspector.set_map_size(project_data.map_size_x, project_data.map_size_y)
         self.viewport.set_map_size(project_data.map_size_x, project_data.map_size_y)
         self.inspector.clear_decoration_selection()
+
+    def _sync_ceiling_option(self, project_version: str, generate_ceiling: bool) -> None:
+        """Apply project-version support rules to the ceiling checkbox."""
+        option_supported = supports_ceiling_generation(project_version)
+        effective_generate_ceiling = False
+        if option_supported:
+            effective_generate_ceiling = generate_ceiling
+
+        self.ceiling_check.setChecked(effective_generate_ceiling)
+        self.ceiling_check.setEnabled(True)
+        self._set_checkbox_unavailable(self.ceiling_check, not option_supported)
 
     def _sync_global_door_option(self, project_version: str, is_door_open: bool) -> None:
         """Apply version support rules to the global door option and viewport."""

@@ -88,6 +88,17 @@ def is_as2_series_project_version(version: str) -> bool:
     return version in AS2_SERIES_PROJECT_VERSIONS
 
 
+def supports_ceiling_generation(version: str) -> bool:
+    """Return whether the selected project format supports ceiling generation."""
+    if version == PROJECT_VERSION_AS1:
+        return False
+
+    if is_as2_series_project_version(version):
+        return True
+
+    raise ValueError(f"Unsupported project version: {version}")
+
+
 def supports_global_door_state(version: str) -> bool:
     """Return whether the project format supports the global door override."""
     if version == PROJECT_VERSION_AS1:

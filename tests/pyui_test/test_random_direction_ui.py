@@ -12,11 +12,13 @@ from app.ui.main_window import MainWindow
 class RandomDirectionHarness:
     """Minimal Qt harness for the map generation action."""
 
-    def __init__(self, random_direction: bool) -> None:
+    def __init__(self, random_direction: bool, generate_ceiling: bool = True) -> None:
         self.auto_mapper_client = Mock()
         self.auto_mapper_client.generate_map.return_value = True
         self.floor_check = QCheckBox()
         self.floor_check.setChecked(True)
+        self.ceiling_check = QCheckBox()
+        self.ceiling_check.setChecked(generate_ceiling)
         self.random_direction_check = QCheckBox()
         self.random_direction_check.setChecked(random_direction)
         self.status_bar = Mock()
@@ -55,8 +57,39 @@ class RandomDirectionUiTest(unittest.TestCase):
                     call_arguments.kwargs["random_direction"],
                     random_direction,
                 )
+                self.assertTrue(call_arguments.kwargs["generate_ceiling"])
 
                 harness.floor_check.close()
+                harness.ceiling_check.close()
+                harness.random_direction_check.close()
+
+        application.processEvents()
+
+    def test_generate_map_passes_ceiling_checkbox_value(self) -> None:
+        """Both ceiling states should be forwarded without reinterpretation."""
+        application = QApplication.instance()
+        if application is None:
+            application = QApplication([])
+
+        for generate_ceiling in (False, True):
+            with self.subTest(generate_ceiling=generate_ceiling):
+                harness = RandomDirectionHarness(True, generate_ceiling)
+
+                with patch(
+                    "app.ui.main_window.QFileDialog.getSaveFileName",
+                    return_value=("ceiling_test.map", ""),
+                ):
+                    with patch.object(QMessageBox, "information"):
+                        MainWindow._generate_map(harness)
+
+                call_arguments = harness.auto_mapper_client.generate_map.call_args
+                self.assertEqual(
+                    call_arguments.kwargs["generate_ceiling"],
+                    generate_ceiling,
+                )
+
+                harness.floor_check.close()
+                harness.ceiling_check.close()
                 harness.random_direction_check.close()
 
         application.processEvents()

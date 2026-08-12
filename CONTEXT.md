@@ -258,6 +258,24 @@ A wall part that separates room interior from map exterior.
 
 An inward recess in the room's exterior wall boundary formed by two opposing side walls and one connecting wall.
 
+### Deep Recess Corner（凹槽深角）
+
+A concave boundary vertex whose four neighboring grid cells contain exactly one exterior cell.
+
+Deep Recess Corners are classified by the exterior cell's position relative to the vertex:
+
+```text
+Upper-left     Upper-right    Lower-left     Lower-right
+■ □            □ ■            □ □            □ □
+□ □            □ □            ■ □            □ ■
+```
+
+Screen-facing descriptions such as “upward corner” or “downward corner” are avoided because they do not uniquely identify Grid topology.
+
+### Deep Corner Replacement Curtain（深角替代帘）
+
+A Long Ceiling Curtain that replaces a removed overhanging corner curtain using the same asset and direction, with only its along-wall position changed.
+
 ### Ceiling Curtain
 
 An AS2 Series black rectangular cover outside Exterior Wall Parts that conceals the map exterior.
@@ -290,6 +308,8 @@ All AS2 Wall Sets share these Ceiling Curtain direction values:
 Ceiling Curtain relationships:
 
 - Each ordinary **Exterior Wall Part** receives one **长**.
+- A **Deep Recess Corner** has exactly one of four quadrant variants: Upper-left, Upper-right, Lower-left, or Lower-right.
+- A **Deep Corner Replacement Curtain** preserves the removed curtain's asset, direction, and outward alignment while changing only its along-wall position.
 - Each side of a **Concave Wall Recess** is evaluated independently.
 - A recess entrance uses **宽** when a facing parallel wall of the same direction is one to three wall-part widths away.
 - A facing parallel wall exactly three wall-part widths away still uses **宽**.

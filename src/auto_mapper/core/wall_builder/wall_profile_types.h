@@ -136,6 +136,18 @@ struct CeilingCurtainPartProfile {
     float positive_side_outward_adjustment = 0.0f;
 };
 
+enum class DeepCornerCurtainAction {
+    KeepOriginal,
+    DeleteOnly,
+    DeleteAndReplace
+};
+
+struct DeepCornerDirAProfile {
+    DeepCornerCurtainAction action = DeepCornerCurtainAction::KeepOriginal;
+    // Distance from the corner toward the wall run, measured in grid widths.
+    float replacement_distance = 0.0f;
+};
+
 struct CeilingCurtainProfile {
     int vid;
     float pos_z;
@@ -147,6 +159,11 @@ struct CeilingCurtainProfile {
     // Keep or remove the DirB Long sprite touching each deep recess corner.
     bool keep_dir_b_long_at_left_deep_corner;
     bool keep_dir_b_long_at_right_deep_corner;
+    // DirA Long handling for the four possible outside-cell quadrants.
+    DeepCornerDirAProfile upper_left_deep_corner_dir_a;
+    DeepCornerDirAProfile upper_right_deep_corner_dir_a;
+    DeepCornerDirAProfile lower_left_deep_corner_dir_a;
+    DeepCornerDirAProfile lower_right_deep_corner_dir_a;
     // Number of Long sprites added along each lower exterior corner edge.
     // Zero disables the supplement; values above one continue at equal spacing.
     int left_lower_corner_dir_a_supplement_count;

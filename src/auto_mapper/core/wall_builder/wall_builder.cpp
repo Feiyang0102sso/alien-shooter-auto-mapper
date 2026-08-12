@@ -760,11 +760,18 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         };
 
         std::set<CeilingEdgeKey> redundant_dir_b_edges_at_deep_corners;
+        std::set<CeilingEdgeKey> removed_dir_a_edges_at_deep_corners;
+        std::vector<CornerSupplement> deep_corner_dir_a_replacements;
         std::vector<CornerSupplement> lower_corner_supplements;
         for (const CeilingPoint& vertex : vertices) {
             int outside_count = 0;
             bool interior_cell_is_above_vertex = false;
             bool lower_corner_is_left = false;
+            CeilingPoint only_outside_cell = {0, 0};
+            // Neighbor cells are classified relative to the corner vertex:
+            // upper-left, upper-right, lower-left, lower-right.
+            // A deep recess corner has exactly one outside cell, so its quadrant
+            // must be preserved instead of describing it only as an up/down turn.
             CeilingPoint surrounding_cells[4] = {
                 {vertex.first - 1, vertex.second - 1},
                 {vertex.first, vertex.second - 1},
@@ -775,6 +782,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             for (const CeilingPoint& cell : surrounding_cells) {
                 if (outside_cells.count(cell) > 0) {
                     outside_count += 1;
+                    only_outside_cell = cell;
                     continue;
                 }
 
@@ -817,6 +825,76 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                         !profile->keep_dir_b_long_at_left_deep_corner) {
                         redundant_dir_b_edges_at_deep_corners.insert(left_deep_corner_edge);
                     }
+                }
+
+                CeilingEdgeKey dir_a_candidates[2] = {
+                    {vertex.first, vertex.second, WallPartKind::DirA},
+                    {vertex.first, vertex.second + 1, WallPartKind::DirA}
+                };
+                for (const CeilingEdgeKey& candidate : dir_a_candidates) {
+                    auto edge_it = exterior_edges.find(candidate);
+                    if (edge_it == exterior_edges.end()) {
+                        continue;
+                    }
+
+                    const ExteriorCeilingEdge& edge = edge_it->second;
+                    const CeilingCurtainProfile* profile =
+                        get_ceiling_curtain_profile(edge.wall_type);
+                    if (profile == nullptr) {
+                        continue;
+                    }
+
+                    const DeepCornerDirAProfile* corner_profile = nullptr;
+                    if (only_outside_cell == CeilingPoint{vertex.first - 1, vertex.second - 1}) {
+                        corner_profile = &profile->upper_left_deep_corner_dir_a;
+                    }
+                    if (only_outside_cell == CeilingPoint{vertex.first, vertex.second - 1}) {
+                        corner_profile = &profile->upper_right_deep_corner_dir_a;
+                    }
+                    if (only_outside_cell == CeilingPoint{vertex.first - 1, vertex.second}) {
+                        corner_profile = &profile->lower_left_deep_corner_dir_a;
+                    }
+                    if (only_outside_cell == CeilingPoint{vertex.first, vertex.second}) {
+                        corner_profile = &profile->lower_right_deep_corner_dir_a;
+                    }
+
+                    if (corner_profile == nullptr ||
+                        corner_profile->action == DeepCornerCurtainAction::KeepOriginal) {
+                        continue;
+                    }
+
+                    removed_dir_a_edges_at_deep_corners.insert(candidate);
+                    if (corner_profile->action != DeepCornerCurtainAction::DeleteAndReplace) {
+                        continue;
+                    }
+
+                    CornerSupplement replacement = {candidate, 0.0f, 0.0f};
+                    bool vertex_is_upper_endpoint =
+                        vertex.first == edge.gx && vertex.second == edge.gy - 1;
+                    CeilingEdgeKey inward_neighbor = candidate;
+                    if (vertex_is_upper_endpoint) {
+                        std::get<1>(inward_neighbor) += 1;
+                        replacement.grid_y += corner_profile->replacement_distance;
+                    } else {
+                        std::get<1>(inward_neighbor) -= 1;
+                        replacement.grid_y -= corner_profile->replacement_distance;
+                    }
+
+                    // Replace the corner edge and its inward neighbor with one
+                    // curtain between them. Keeping the neighbor would leave
+                    // two overlapping 1127 sprites; deleting only the corner
+                    // edge would expose a visible hole.
+                    auto inward_neighbor_it = exterior_edges.find(inward_neighbor);
+                    if (inward_neighbor_it != exterior_edges.end()) {
+                        const ExteriorCeilingEdge& inward_edge = inward_neighbor_it->second;
+                        bool same_run = inward_edge.wall_type == edge.wall_type;
+                        same_run = same_run && inward_edge.kind == WallPartKind::DirA;
+                        same_run = same_run && inward_edge.outside_side == edge.outside_side;
+                        if (same_run) {
+                            removed_dir_a_edges_at_deep_corners.insert(inward_neighbor);
+                        }
+                    }
+                    deep_corner_dir_a_replacements.push_back(replacement);
                 }
             }
 
@@ -914,7 +992,23 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                 edge.outside_side
             );
 
-            ceiling_sprites.push_back(curtain_sprite);
+            if (removed_dir_a_edges_at_deep_corners.count(entry.first) == 0) {
+                ceiling_sprites.push_back(curtain_sprite);
+            }
+
+            for (const CornerSupplement& replacement : deep_corner_dir_a_replacements) {
+                if (replacement.edge != entry.first) {
+                    continue;
+                }
+
+                const WallProfile& wall_profile = get_wall_profile(edge.wall_type);
+                io::Sprite replacement_sprite = curtain_sprite;
+                replacement_sprite.posX +=
+                    (replacement.grid_x - replacement.grid_y) * wall_profile.step_x;
+                replacement_sprite.posY +=
+                    (replacement.grid_x + replacement.grid_y) * wall_profile.step_y;
+                ceiling_sprites.push_back(replacement_sprite);
+            }
 
             for (const CornerSupplement& supplement : lower_corner_supplements) {
                 if (supplement.edge != entry.first) {

@@ -5,7 +5,11 @@ from unittest.mock import Mock, patch
 
 from PySide6.QtWidgets import QApplication, QCheckBox, QMessageBox
 
-from app.project.data import PROJECT_VERSION_AS1, PROJECT_VERSION_AS2R
+from app.project.data import (
+    PROJECT_VERSION_AS1,
+    PROJECT_VERSION_AS2R,
+    supports_ceiling_generation,
+)
 from app.ui.main_window import MainWindow
 from app.ui.panels.theme_shelf import ThemeShelfPanel
 
@@ -23,6 +27,27 @@ class DoorOptionHarness:
 
     def _on_clicked(self, checked: bool) -> None:
         MainWindow._on_is_door_open_changed(self, checked)
+
+    def _set_checkbox_unavailable(self, checkbox: QCheckBox, unavailable: bool) -> None:
+        MainWindow._set_checkbox_unavailable(self, checkbox, unavailable)
+
+    def statusBar(self):
+        """Return a status bar mock matching QMainWindow's public seam."""
+        return self.status_bar
+
+
+class CeilingOptionHarness:
+    """Minimal Qt harness for the MainWindow ceiling-option methods."""
+
+    def __init__(self, project_version: str) -> None:
+        self.ceiling_check = QCheckBox()
+        self.theme_shelf = Mock()
+        self.theme_shelf.get_project_version.return_value = project_version
+        self.status_bar = Mock()
+        self.ceiling_check.clicked.connect(self._on_clicked)
+
+    def _on_clicked(self, checked: bool) -> None:
+        MainWindow._on_ceiling_changed(self, checked)
 
     def _set_checkbox_unavailable(self, checkbox: QCheckBox, unavailable: bool) -> None:
         MainWindow._set_checkbox_unavailable(self, checkbox, unavailable)
@@ -115,6 +140,55 @@ class ProjectVersionUiTest(unittest.TestCase):
         harness.viewport.set_is_door_open.assert_called_with(False)
 
         harness.is_door_open_check.close()
+        application.processEvents()
+
+    def test_only_as2_series_supports_ceiling_generation(self) -> None:
+        """AS2R should support ceilings while AS1 remains unavailable."""
+        self.assertFalse(supports_ceiling_generation(PROJECT_VERSION_AS1))
+        self.assertTrue(supports_ceiling_generation(PROJECT_VERSION_AS2R))
+
+    def test_as2r_ceiling_option_is_available(self) -> None:
+        """AS2R should preserve the requested ceiling state and accept clicks."""
+        application = QApplication.instance()
+        if application is None:
+            application = QApplication([])
+
+        harness = CeilingOptionHarness(PROJECT_VERSION_AS2R)
+        MainWindow._sync_ceiling_option(harness, PROJECT_VERSION_AS2R, True)
+
+        self.assertTrue(harness.ceiling_check.isEnabled())
+        self.assertFalse(harness.ceiling_check.property("unavailable"))
+        self.assertTrue(harness.ceiling_check.isChecked())
+
+        with patch.object(QMessageBox, "warning") as warning:
+            harness.ceiling_check.click()
+
+        warning.assert_not_called()
+        self.assertFalse(harness.ceiling_check.isChecked())
+
+        harness.ceiling_check.close()
+        application.processEvents()
+
+    def test_as1_ceiling_option_looks_unavailable_and_rejects_clicks(self) -> None:
+        """AS1 should keep the ceiling control visible but prevent enabling it."""
+        application = QApplication.instance()
+        if application is None:
+            application = QApplication([])
+
+        harness = CeilingOptionHarness(PROJECT_VERSION_AS1)
+        MainWindow._sync_ceiling_option(harness, PROJECT_VERSION_AS1, True)
+
+        self.assertTrue(harness.ceiling_check.isEnabled())
+        self.assertTrue(harness.ceiling_check.property("unavailable"))
+        self.assertFalse(harness.ceiling_check.isChecked())
+
+        with patch.object(QMessageBox, "warning") as warning:
+            harness.ceiling_check.click()
+
+        warning.assert_called_once()
+        self.assertFalse(harness.ceiling_check.isChecked())
+
+        harness.ceiling_check.close()
         application.processEvents()
 
 
