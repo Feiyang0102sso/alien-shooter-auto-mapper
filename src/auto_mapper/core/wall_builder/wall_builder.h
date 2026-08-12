@@ -10,7 +10,9 @@
 #include "auto_mapper/core/wall_builder/wall_profiles_as1.h"
 #include "auto_mapper/core/wall_builder/wall_profiles_as2.h"
 #include "auto_mapper/io/map_writer.h"
+#include <map>
 #include <set>
+#include <tuple>
 #include <vector>
 
 namespace auto_mapper::core {
@@ -87,6 +89,18 @@ public:
     static const WallPartAsset& select_wall_part_asset(const WallVariant& variant, WallPartKind kind);
 
 private:
+    using CeilingPoint = std::pair<int, int>;
+    using CeilingEdgeKey = std::tuple<int, int, WallPartKind>;
+
+    struct ExteriorCeilingEdge {
+        int gx;
+        int gy;
+        int wall_type;
+        WallPartKind kind;
+        int opposing_wall_distance;
+        WallOutsideSide outside_side;
+    };
+
     struct RawSprite {
         int gx;
         int gy;
@@ -135,6 +149,15 @@ private:
     std::vector<io::Sprite> place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
     std::vector<io::Sprite> place_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
     std::vector<io::Sprite> place_as2_ceiling_curtains(const std::vector<Segment>& segments) const;
+    // Legacy Wide Ceiling Curtain strategy. It detects narrow recesses, groups
+    // their exterior wall parts, and replaces Long curtains with Wide curtains.
+    // The current AS2 path intentionally uses Long curtains only, so this
+    // method is retained for possible future experiments and is not called.
+    std::vector<io::Sprite> place_as2_ceiling_curtains_with_wide(
+        std::map<CeilingEdgeKey, ExteriorCeilingEdge> exterior_edges,
+        const std::set<CeilingPoint>& vertices,
+        const std::set<CeilingPoint>& outside_cells
+    ) const;
     std::vector<io::Sprite> place_legacy_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
 
     // Select rare wall positions after door excavation. The method owns all

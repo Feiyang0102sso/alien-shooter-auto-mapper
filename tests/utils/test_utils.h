@@ -51,13 +51,12 @@ inline std::string get_project_root() {
     return fs::path(resolved).parent_path().parent_path().parent_path().string();
 }
 
-// Build a test output path under tests/out and create the directory if needed.
-inline std::string get_test_output_path(const std::string& filename) {
+// Build a test output path under tests/out and create its parent directory if needed.
+inline std::string get_test_output_path(const std::string& relative_path) {
     namespace fs = std::filesystem;
     fs::path output_dir = fs::path(get_project_root()) / "tests" / "out";
-    fs::create_directories(output_dir);
-
-    fs::path output_path = output_dir / filename;
+    fs::path output_path = output_dir / relative_path;
+    fs::create_directories(output_path.parent_path());
     std::cout << "[TestOutput] " << output_path.string() << std::endl;
     return output_path.string();
 }

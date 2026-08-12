@@ -31,7 +31,7 @@ TEST(WallBuilderTest, WallOnlyGolden) {
     std::vector<io::Sprite> sprites = builder.build(scene.segments, false, false);
     
     // write spirit into temp map
-    const std::string temp_output_path = get_test_output_path("current_wall_builder.map");
+    const std::string temp_output_path = get_test_output_path("wall/current_wall_builder.map");
     
     // add cleaner
     TempFileCleaner cleaner(temp_output_path);
@@ -451,7 +451,7 @@ static void expect_floor_and_write_as2r_preview(
 ) {
     EXPECT_GT(count_sprites_by_vid(sprites, FLOOR_AS2_SET1.vid), 0);
 
-    std::string output_path = get_test_output_path(output_name);
+    std::string output_path = get_test_output_path("celling/" + output_name);
     bool write_success = io::write_map(
         sprites,
         output_path,
@@ -568,6 +568,9 @@ TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
 
     WallBuilder builder(map_size_x, map_size_y, false);
 
+    EXPECT_FLOAT_EQ(CEILING_CURTAIN_AS2_SET1.dir_a_lower_corner_supplement, 0.50f);
+    EXPECT_FLOAT_EQ(CEILING_CURTAIN_AS2_SET1.dir_b_lower_corner_supplement, 1.00f);
+
     std::vector<io::Sprite> square_sprites = builder.build(
         build_room_segments(8, wall_type),
         true,
@@ -601,8 +604,10 @@ TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
         WallOutsideSide::PositiveGridSide
     );
     io::Sprite supplemental_corner_dir_a = raw_corner_dir_a;
-    supplemental_corner_dir_a.posX -= wall_profile.step_x * 0.50f;
-    supplemental_corner_dir_a.posY += wall_profile.step_y * 0.50f;
+    supplemental_corner_dir_a.posX -=
+        wall_profile.step_x * CEILING_CURTAIN_AS2_SET1.dir_a_lower_corner_supplement;
+    supplemental_corner_dir_a.posY +=
+        wall_profile.step_y * CEILING_CURTAIN_AS2_SET1.dir_a_lower_corner_supplement;
 
     io::Sprite raw_corner_dir_b = builder.place_single_ceiling_curtain(
         8,
@@ -613,8 +618,10 @@ TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
         WallOutsideSide::PositiveGridSide
     );
     io::Sprite supplemental_corner_dir_b = raw_corner_dir_b;
-    supplemental_corner_dir_b.posX += wall_profile.step_x * 1.00f;
-    supplemental_corner_dir_b.posY += wall_profile.step_y * 1.00f;
+    supplemental_corner_dir_b.posX +=
+        wall_profile.step_x * CEILING_CURTAIN_AS2_SET1.dir_b_lower_corner_supplement;
+    supplemental_corner_dir_b.posY +=
+        wall_profile.step_y * CEILING_CURTAIN_AS2_SET1.dir_b_lower_corner_supplement;
 
     EXPECT_TRUE(has_sprite_at(
         square_sprites,
@@ -647,7 +654,7 @@ TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
 
     expect_floor_and_write_as2r_preview(
         square_sprites,
-        "as2_ceiling_square_room.map",
+        "as2_set1_ceiling_square_room.map",
         map_size_x,
         map_size_y
     );
@@ -825,7 +832,7 @@ TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
     ));
     expect_floor_and_write_as2r_preview(
         concave_2_sprites,
-        "as2_ceiling_concave_2.map",
+        "as2_set1_ceiling_concave_2.map",
         map_size_x,
         map_size_y
     );
@@ -849,7 +856,7 @@ TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
     EXPECT_EQ(count_sprites_by_vid(concave_3_sprites, CEILING_CURTAIN_AS2_SET1.vid), 55);
     expect_floor_and_write_as2r_preview(
         concave_3_sprites,
-        "as2_ceiling_concave_3.map",
+        "as2_set1_ceiling_concave_3.map",
         map_size_x,
         map_size_y
     );
@@ -904,7 +911,7 @@ TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
     ));
     expect_floor_and_write_as2r_preview(
         concave_4_sprites,
-        "as2_ceiling_concave_4.map",
+        "as2_set1_ceiling_concave_4.map",
         map_size_x,
         map_size_y
     );
@@ -997,7 +1004,7 @@ TEST(As2CeilingCurtainPreviewTest, WritesLongCurtainCalibrationMap) {
         ));
     }
 
-    std::string output_path = get_test_output_path("as2_ceiling_long_calibration.map");
+    std::string output_path = get_test_output_path("celling/as2_set1_ceiling_long_calibration.map");
     io::write_map(
         preview_sprites,
         output_path,
@@ -1354,7 +1361,7 @@ TEST(WallBuilderTest, As2WallSet2WritesManualPreviewMap) {
     segments.insert(segments.end(), cross_segments.begin(), cross_segments.end());
 
     std::vector<io::Sprite> sprites = builder.build(segments, false, false);
-    std::string preview_map_path = get_test_output_path("as2_wall_set2_directional_pillars.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set2_directional_pillars.map");
     bool write_success = io::write_map(
         sprites,
         preview_map_path,
@@ -1425,7 +1432,7 @@ TEST(WallBuilderTest, As2WallSet3BuildsLargeRoomWithBoundedRareVariants) {
         }
     }
 
-    std::string preview_map_path = get_test_output_path("as2_wall_set3_rare_variants.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set3_rare_variants.map");
     bool write_success = io::write_map(
         sprites,
         preview_map_path,
@@ -1494,7 +1501,7 @@ TEST(WallBuilderTest, As2WallSet4BuildsLargeRoomWithBoundedRareVariants) {
         }
     }
 
-    std::string preview_map_path = get_test_output_path("as2_wall_set4_rare_variants.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set4_rare_variants.map");
     bool write_success = io::write_map(
         sprites,
         preview_map_path,
@@ -1752,7 +1759,7 @@ TEST(WallBuilderTest, As2WallSet5BuildsRoomWithRareDensityAndCornerPillars) {
         }
     }
 
-    std::string preview_map_path = get_test_output_path("as2_wall_set5_fixed_rare_variants.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set5_fixed_rare_variants.map");
     bool write_success = io::write_map(
         preview_sprites,
         preview_map_path,
@@ -1799,7 +1806,7 @@ TEST(WallBuilderTest, As2WallSet6BuildsRoomWithRandomDirectionsAndSingleCornerPi
         }
     }
 
-    std::string preview_map_path = get_test_output_path("as2_wall_set6_random_variants.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set6_random_variants.map");
     bool write_success = io::write_map(
         preview_sprites,
         preview_map_path,
@@ -1867,7 +1874,7 @@ TEST(WallBuilderTest, As2WallSet7BuildsRoomWithRareDensityAndFixedPillars) {
         }
     }
 
-    std::string preview_map_path = get_test_output_path("as2_wall_set7_fixed_rare_variants.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set7_fixed_rare_variants.map");
     bool write_success = io::write_map(
         sprites,
         preview_map_path,
@@ -1920,7 +1927,7 @@ TEST(WallBuilderTest, As2WallSet8BuildsRoomWithRandomDirectionsAndPerCornerPilla
         }
     }
 
-    std::string preview_map_path = get_test_output_path("as2_wall_set8_random_variants.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set8_random_variants.map");
     bool write_success = io::write_map(
         sprites,
         preview_map_path,
@@ -1975,7 +1982,7 @@ TEST(WallBuilderTest, As2WallSet9BuildsRoomWithCornerWallDirectionsAndNoPillars)
         }
     }
 
-    std::string preview_map_path = get_test_output_path("as2_wall_set9_corner_wall_variants.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set9_corner_wall_variants.map");
     bool write_success = io::write_map(
         sprites,
         preview_map_path,
@@ -2094,7 +2101,7 @@ TEST(WallBuilderTest, As2WallSet1BuildsFixedRoomsAndRandomLargeRoom) {
     preview_segments.insert(preview_segments.end(), random_preview_segments.begin(), random_preview_segments.end());
 
     std::vector<io::Sprite> preview_sprites = builder.build(preview_segments, false, false);
-    std::string preview_map_path = get_test_output_path("as2_wall_set1_variants.map");
+    std::string preview_map_path = get_test_output_path("wall/as2_wall_set1_variants.map");
     bool write_success = io::write_map(
         preview_sprites,
         preview_map_path,
@@ -2253,7 +2260,7 @@ TEST(FloorBuilderTest, FloorGoldenMap) {
     WallBuilder builder(scene.map_size_x, scene.map_size_y);
     std::vector<io::Sprite> sprites = builder.build(scene.segments, true, false);
 
-    const std::string temp_output_path = get_test_output_path("current_floor_builder.map");
+    const std::string temp_output_path = get_test_output_path("floor/current_floor_builder.map");
     TempFileCleaner cleaner(temp_output_path);
 
     bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);
@@ -2272,7 +2279,7 @@ TEST(FloorBuilderTest, FloorGoldenMap) {
 // runs WallBuilder with gen_floor=true, then verifies:
 //   1. Expected wall VIDs exist (dir_a / dir_b / pillar)
 //   2. Expected floor VID exists and floor_count >= 9 (at least 3x3 tiles)
-//   3. Writes a .map preview file to test_output/ for visual inspection
+//   3. Writes a .map preview file to tests/out/floor/ for visual inspection
 // Room size (grid) = 3, AS2 grid_divisor=2, so physical room spans
 // approx 270x192 which easily fits 9+ floor tiles of step 80x56.
 // ===========================================================================
@@ -2303,7 +2310,7 @@ TEST(As2FloorTest, Set1Random3x3RoomUsesVid1783Floor) {
     }
     EXPECT_GT(floor_directions.size(), 1u);
 
-    std::string out_path = get_test_output_path("as2_floor_set1_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set1_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
@@ -2339,7 +2346,7 @@ TEST(As2FloorTest, Set2Random3x3RoomUsesVid1724Floor) {
         EXPECT_TRUE(direction_is_allowed);
     }
 
-    std::string out_path = get_test_output_path("as2_floor_set2_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set2_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
@@ -2361,7 +2368,7 @@ TEST(As2FloorTest, Set3Random3x3RoomUsesVid1121Floor) {
     EXPECT_GE(wall_pillar, 4);
     EXPECT_GE(floor_count, 9) << "Set3 3x3 room should produce at least 9 floor tiles (VID 1121)";
 
-    std::string out_path = get_test_output_path("as2_floor_set3_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set3_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
@@ -2383,7 +2390,7 @@ TEST(As2FloorTest, Set4Random3x3RoomUsesVid1121Floor) {
     EXPECT_GE(wall_pillar, 4);
     EXPECT_GE(floor_count, 9) << "Set4 3x3 room should produce at least 9 floor tiles (VID 1121)";
 
-    std::string out_path = get_test_output_path("as2_floor_set4_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set4_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
@@ -2405,7 +2412,7 @@ TEST(As2FloorTest, Set5Random3x3RoomUsesVid2503Floor) {
     EXPECT_GE(wall_pillar, 4);
     EXPECT_GE(floor_count, 9) << "Set5 3x3 room should produce at least 9 floor tiles (VID 2503)";
 
-    std::string out_path = get_test_output_path("as2_floor_set5_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set5_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
@@ -2428,7 +2435,7 @@ TEST(As2FloorTest, Set6Random3x3RoomUsesVid2503Floor) {
     EXPECT_GE(wall_pillar, 1);
     EXPECT_GE(floor_count, 9) << "Set6 3x3 room should produce at least 9 floor tiles (VID 2503)";
 
-    std::string out_path = get_test_output_path("as2_floor_set6_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set6_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
@@ -2450,7 +2457,7 @@ TEST(As2FloorTest, Set7Random3x3RoomUsesVid2643Floor) {
     EXPECT_GE(wall_pillar, 4);
     EXPECT_GE(floor_count, 9) << "Set7 3x3 room should produce at least 9 floor tiles (VID 2643)";
 
-    std::string out_path = get_test_output_path("as2_floor_set7_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set7_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
@@ -2472,7 +2479,7 @@ TEST(As2FloorTest, Set8Random3x3RoomUsesVid2643Floor) {
     EXPECT_GE(wall_pillar, 4);
     EXPECT_GE(floor_count, 9) << "Set8 3x3 room should produce at least 9 floor tiles (VID 2643)";
 
-    std::string out_path = get_test_output_path("as2_floor_set8_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set8_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 
@@ -2493,7 +2500,7 @@ TEST(As2FloorTest, Set9Random3x3RoomUsesVid1724Floor) {
     EXPECT_GE(wall_dir_b, 6);
     EXPECT_GE(floor_count, 9) << "Set9 3x3 room should produce at least 9 floor tiles (VID 1724)";
 
-    std::string out_path = get_test_output_path("as2_floor_set9_3x3.map");
+    std::string out_path = get_test_output_path("floor/as2_floor_set9_3x3.map");
     io::write_map(sprites, out_path, io::MapFormat::AS2R, 2000.0f, 2000.0f);
 }
 

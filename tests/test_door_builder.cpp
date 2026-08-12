@@ -51,7 +51,7 @@ TEST(DoorBuilderTest, DoorSceneGolden) {
     std::vector<io::Sprite> door_sprites = door_builder.build(scene.doors);
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
-    const std::string temp_output_path = get_test_output_path("current_door_builder.map");
+    const std::string temp_output_path = get_test_output_path("door/current_door_builder.map");
     TempFileCleaner cleaner(temp_output_path);
 
     bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);
@@ -501,7 +501,7 @@ TEST(DoorBuilderTest, AS2WallSet1DoorVariantsWriteCompactLShapeMap) {
     std::vector<io::Sprite> door_sprites = door_builder.build(scene.doors);
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
-    std::string output_path = get_test_output_path("as2_wall_set1_door_variants.map");
+    std::string output_path = get_test_output_path("door/as2_wall_set1_door_variants.map");
     bool write_success = io::write_map(
         sprites,
         output_path,
@@ -668,7 +668,7 @@ TEST(DoorBuilderTest, AS2WallSet2LargeDoorVariantsWriteCompactLShapeMap) {
     std::vector<io::Sprite> door_sprites = door_builder.build(doors);
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
-    std::string output_path = get_test_output_path("as2_wall_set2_door_variants.map");
+    std::string output_path = get_test_output_path("door/as2_wall_set2_door_variants.map");
     bool write_success = io::write_map(
         sprites,
         output_path,
@@ -840,7 +840,7 @@ static void write_as2_wall_set3_or_set4_large_door_map(int wall_type, const std:
     std::vector<io::Sprite> door_sprites = door_builder.build(doors);
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
-    std::string output_path = get_test_output_path(output_name);
+    std::string output_path = get_test_output_path("door/" + output_name);
     bool write_success = io::write_map(
         sprites,
         output_path,
@@ -1028,7 +1028,7 @@ TEST(DoorBuilderTest, AS2WallSet5LargeDoorVariantsWriteCompactLShapeMap) {
     std::vector<io::Sprite> door_sprites = door_builder.build(doors);
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
-    std::string output_path = get_test_output_path("as2_wall_set5_door_variants.map");
+    std::string output_path = get_test_output_path("door/as2_wall_set5_door_variants.map");
     bool write_success = io::write_map(
         sprites,
         output_path,
@@ -1374,7 +1374,7 @@ static void write_as2_manual_single_frame_large_door_map(int wall_type, const st
     std::vector<io::Sprite> door_sprites = door_builder.build(doors);
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
-    std::string output_path = get_test_output_path(output_name);
+    std::string output_path = get_test_output_path("door/" + output_name);
     bool write_success = io::write_map(
         sprites,
         output_path,

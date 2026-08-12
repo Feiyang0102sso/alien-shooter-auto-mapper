@@ -140,6 +140,10 @@ struct CeilingCurtainProfile {
     int vid;
     float pos_z;
     int maximum_wide_opposing_wall_distance;
+    // Extra along-wall coverage placed at the two lower exterior corners.
+    // Values use logical wall-grid widths and may differ by wall set.
+    float dir_a_lower_corner_supplement;
+    float dir_b_lower_corner_supplement;
     CeilingCurtainPartProfile dir_a_long;
     CeilingCurtainPartProfile dir_b_long;
     CeilingCurtainPartProfile dir_a_wide;

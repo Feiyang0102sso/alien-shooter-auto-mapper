@@ -548,22 +548,10 @@ std::vector<io::Sprite> WallBuilder::place_ceilings(
 std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
     const std::vector<Segment>& segments
 ) const {
-    using Point = std::pair<int, int>;
-    using EdgeKey = std::tuple<int, int, WallPartKind>;
-
-    struct ExteriorEdge {
-        int gx;
-        int gy;
-        int wall_type;
-        WallPartKind kind;
-        int opposing_wall_distance;
-        WallOutsideSide outside_side;
-    };
-
     std::vector<io::Sprite> ceiling_sprites;
-    std::map<Point, int> edges_a;
-    std::map<Point, int> edges_b;
-    std::set<Point> vertices;
+    std::map<CeilingPoint, int> edges_a;
+    std::map<CeilingPoint, int> edges_b;
+    std::set<CeilingPoint> vertices;
 
     for (const Segment& segment : segments) {
         if (!is_as2_wall_set_type(segment.wall_type)) {
@@ -579,7 +567,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             int min_y = std::min(y1, y2);
             int max_y = std::max(y1, y2);
             for (int y = min_y + 1; y <= max_y; ++y) {
-                edges_a.emplace(Point{x1, y}, segment.wall_type);
+                edges_a.emplace(CeilingPoint{x1, y}, segment.wall_type);
                 vertices.insert({x1, y - 1});
                 vertices.insert({x1, y});
             }
@@ -589,7 +577,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             int min_x = std::min(x1, x2);
             int max_x = std::max(x1, x2);
             for (int x = min_x + 1; x <= max_x; ++x) {
-                edges_b.emplace(Point{x, y1}, segment.wall_type);
+                edges_b.emplace(CeilingPoint{x, y1}, segment.wall_type);
                 vertices.insert({x - 1, y1});
                 vertices.insert({x, y1});
             }
@@ -605,7 +593,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
     int min_vertex_y = vertices.begin()->second;
     int max_vertex_y = vertices.begin()->second;
 
-    for (const Point& vertex : vertices) {
+    for (const CeilingPoint& vertex : vertices) {
         min_vertex_x = std::min(min_vertex_x, vertex.first);
         max_vertex_x = std::max(max_vertex_x, vertex.first);
         min_vertex_y = std::min(min_vertex_y, vertex.second);
@@ -634,14 +622,14 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         return edges_b.count({cell_x + 1, cell_y}) > 0;
     };
 
-    std::set<Point> outside_cells;
-    std::vector<Point> pending_cells;
+    std::set<CeilingPoint> outside_cells;
+    std::vector<CeilingPoint> pending_cells;
     pending_cells.push_back({min_cell_x, min_cell_y});
     outside_cells.insert({min_cell_x, min_cell_y});
 
     std::size_t pending_index = 0;
     while (pending_index < pending_cells.size()) {
-        Point cell = pending_cells[pending_index];
+        CeilingPoint cell = pending_cells[pending_index];
         pending_index += 1;
 
         int neighbors[4][2] = {
@@ -676,7 +664,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         }
     }
 
-    std::map<EdgeKey, ExteriorEdge> exterior_edges;
+    std::map<CeilingEdgeKey, ExteriorCeilingEdge> exterior_edges;
 
     for (const auto& entry : edges_a) {
         int gx = entry.first.first;
@@ -693,14 +681,14 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             continue;
         }
 
-        EdgeKey key = {gx, gy, WallPartKind::DirA};
+        CeilingEdgeKey key = {gx, gy, WallPartKind::DirA};
         WallOutsideSide outside_side = WallOutsideSide::PositiveGridSide;
         if (left_is_outside) {
             outside_side = WallOutsideSide::NegativeGridSide;
         }
         exterior_edges.emplace(
             key,
-            ExteriorEdge{gx, gy, wall_type, WallPartKind::DirA, 0, outside_side}
+            ExteriorCeilingEdge{gx, gy, wall_type, WallPartKind::DirA, 0, outside_side}
         );
     }
 
@@ -719,42 +707,39 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             continue;
         }
 
-        EdgeKey key = {gx, gy, WallPartKind::DirB};
+        CeilingEdgeKey key = {gx, gy, WallPartKind::DirB};
         WallOutsideSide outside_side = WallOutsideSide::PositiveGridSide;
         if (upper_is_outside) {
             outside_side = WallOutsideSide::NegativeGridSide;
         }
         exterior_edges.emplace(
             key,
-            ExteriorEdge{gx, gy, wall_type, WallPartKind::DirB, 0, outside_side}
+            ExteriorCeilingEdge{gx, gy, wall_type, WallPartKind::DirB, 0, outside_side}
         );
     }
 
     // Temporary visual experiment: attach one Long curtain to every exterior wall part.
     constexpr bool use_only_long_ceiling_curtains = true;
     if (use_only_long_ceiling_curtains) {
-        constexpr float dir_a_lower_corner_supplement = 0.50f;
-        constexpr float dir_b_lower_corner_supplement = 1.00f;
-
         struct CornerSupplement {
-            EdgeKey edge;
+            CeilingEdgeKey edge;
             float grid_x;
             float grid_y;
         };
 
-        std::set<EdgeKey> redundant_dir_b_edges_at_deep_corners;
+        std::set<CeilingEdgeKey> redundant_dir_b_edges_at_deep_corners;
         std::vector<CornerSupplement> lower_corner_supplements;
-        for (const Point& vertex : vertices) {
+        for (const CeilingPoint& vertex : vertices) {
             int outside_count = 0;
             bool interior_cell_is_above_vertex = false;
-            Point surrounding_cells[4] = {
+            CeilingPoint surrounding_cells[4] = {
                 {vertex.first - 1, vertex.second - 1},
                 {vertex.first, vertex.second - 1},
                 {vertex.first - 1, vertex.second},
                 {vertex.first, vertex.second}
             };
 
-            for (const Point& cell : surrounding_cells) {
+            for (const CeilingPoint& cell : surrounding_cells) {
                 if (outside_cells.count(cell) > 0) {
                     outside_count += 1;
                     continue;
@@ -768,7 +753,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             if (outside_count == 1) {
                 // The DirB edge ending at a deep recess corner is already covered
                 // by the neighboring DirA Long curtain.
-                EdgeKey redundant_edge = {
+                CeilingEdgeKey redundant_edge = {
                     vertex.first,
                     vertex.second,
                     WallPartKind::DirB
@@ -785,29 +770,35 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                 continue;
             }
 
-            EdgeKey corner_edges[4] = {
+            CeilingEdgeKey corner_edges[4] = {
                 {vertex.first, vertex.second, WallPartKind::DirA},
                 {vertex.first, vertex.second + 1, WallPartKind::DirA},
                 {vertex.first, vertex.second, WallPartKind::DirB},
                 {vertex.first + 1, vertex.second, WallPartKind::DirB}
             };
 
-            for (const EdgeKey& corner_edge : corner_edges) {
+            for (const CeilingEdgeKey& corner_edge : corner_edges) {
                 auto edge_it = exterior_edges.find(corner_edge);
                 if (edge_it == exterior_edges.end()) {
                     continue;
                 }
 
-                const ExteriorEdge& edge = edge_it->second;
+                const ExteriorCeilingEdge& edge = edge_it->second;
+                const CeilingCurtainProfile* profile =
+                    get_ceiling_curtain_profile(edge.wall_type);
+                if (profile == nullptr) {
+                    continue;
+                }
+
                 CornerSupplement supplement = {corner_edge, 0.0f, 0.0f};
 
                 if (edge.kind == WallPartKind::DirA) {
                     bool vertex_is_upper_endpoint =
                         vertex.first == edge.gx && vertex.second == edge.gy - 1;
                     if (vertex_is_upper_endpoint) {
-                        supplement.grid_y -= dir_a_lower_corner_supplement;
+                        supplement.grid_y -= profile->dir_a_lower_corner_supplement;
                     } else {
-                        supplement.grid_y += dir_a_lower_corner_supplement;
+                        supplement.grid_y += profile->dir_a_lower_corner_supplement;
                     }
                 }
 
@@ -815,9 +806,9 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                     bool vertex_is_left_endpoint =
                         vertex.first == edge.gx - 1 && vertex.second == edge.gy;
                     if (vertex_is_left_endpoint) {
-                        supplement.grid_x -= dir_b_lower_corner_supplement;
+                        supplement.grid_x -= profile->dir_b_lower_corner_supplement;
                     } else {
-                        supplement.grid_x += dir_b_lower_corner_supplement;
+                        supplement.grid_x += profile->dir_b_lower_corner_supplement;
                     }
                 }
 
@@ -830,7 +821,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                 continue;
             }
 
-            const ExteriorEdge& edge = entry.second;
+            const ExteriorCeilingEdge& edge = entry.second;
             io::Sprite curtain_sprite = place_single_ceiling_curtain(
                 edge.gx,
                 edge.gy,
@@ -859,8 +850,25 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         return ceiling_sprites;
     }
 
+    // Temporarily disabled: the current AS2 strategy intentionally uses only
+    // Long Ceiling Curtains. Keep the old Wide strategy behind one method so
+    // it can be reviewed or restored without mixing it into the active path.
+    return place_as2_ceiling_curtains_with_wide(
+        exterior_edges,
+        vertices,
+        outside_cells
+    );
+}
+
+std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains_with_wide(
+    std::map<CeilingEdgeKey, ExteriorCeilingEdge> exterior_edges,
+    const std::set<CeilingPoint>& vertices,
+    const std::set<CeilingPoint>& outside_cells
+) const {
+    std::vector<io::Sprite> ceiling_sprites;
+
     for (auto& entry : exterior_edges) {
-        ExteriorEdge& edge = entry.second;
+        ExteriorCeilingEdge& edge = entry.second;
         const CeilingCurtainProfile* profile = get_ceiling_curtain_profile(edge.wall_type);
         if (profile == nullptr) {
             continue;
@@ -884,7 +892,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             distance <= profile->maximum_wide_opposing_wall_distance;
             ++distance
         ) {
-            EdgeKey opposing_key = {
+            CeilingEdgeKey opposing_key = {
                 edge.gx + search_step_x * distance,
                 edge.gy + search_step_y * distance,
                 edge.kind
@@ -894,7 +902,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                 continue;
             }
 
-            const ExteriorEdge& opposing_edge = opposing_it->second;
+            const ExteriorCeilingEdge& opposing_edge = opposing_it->second;
             if (opposing_edge.outside_side == edge.outside_side) {
                 continue;
             }
@@ -904,27 +912,27 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         }
     }
 
-    std::set<EdgeKey> wide_edges;
-    std::set<EdgeKey> long_edges_replaced_by_wide;
-    std::set<EdgeKey> dir_a_long_edges_covered_by_corner;
-    std::set<EdgeKey> processed_narrow_edges;
+    std::set<CeilingEdgeKey> wide_edges;
+    std::set<CeilingEdgeKey> long_edges_replaced_by_wide;
+    std::set<CeilingEdgeKey> dir_a_long_edges_covered_by_corner;
+    std::set<CeilingEdgeKey> processed_narrow_edges;
 
-    for (const Point& vertex : vertices) {
+    for (const CeilingPoint& vertex : vertices) {
         int outside_count = 0;
-        Point surrounding_cells[4] = {
+        CeilingPoint surrounding_cells[4] = {
             {vertex.first - 1, vertex.second - 1},
             {vertex.first, vertex.second - 1},
             {vertex.first - 1, vertex.second},
             {vertex.first, vertex.second}
         };
 
-        for (const Point& cell : surrounding_cells) {
+        for (const CeilingPoint& cell : surrounding_cells) {
             if (outside_cells.count(cell) > 0) {
                 outside_count += 1;
             }
         }
 
-        EdgeKey candidates[4] = {
+        CeilingEdgeKey candidates[4] = {
             {vertex.first, vertex.second, WallPartKind::DirA},
             {vertex.first, vertex.second + 1, WallPartKind::DirA},
             {vertex.first, vertex.second, WallPartKind::DirB},
@@ -933,7 +941,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
 
         if (outside_count == 1) {
             bool has_dir_b_edge_at_corner = false;
-            for (const EdgeKey& candidate : candidates) {
+            for (const CeilingEdgeKey& candidate : candidates) {
                 auto edge_it = exterior_edges.find(candidate);
                 if (edge_it == exterior_edges.end()) {
                     continue;
@@ -946,13 +954,13 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             }
 
             if (has_dir_b_edge_at_corner) {
-                for (const EdgeKey& candidate : candidates) {
+                for (const CeilingEdgeKey& candidate : candidates) {
                     auto edge_it = exterior_edges.find(candidate);
                     if (edge_it == exterior_edges.end()) {
                         continue;
                     }
 
-                    const ExteriorEdge& edge = edge_it->second;
+                    const ExteriorCeilingEdge& edge = edge_it->second;
                     if (edge.kind != WallPartKind::DirA) {
                         continue;
                     }
@@ -970,13 +978,13 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             continue;
         }
 
-        for (const EdgeKey& candidate : candidates) {
+        for (const CeilingEdgeKey& candidate : candidates) {
             auto edge_it = exterior_edges.find(candidate);
             if (edge_it == exterior_edges.end()) {
                 continue;
             }
 
-            const ExteriorEdge& edge = edge_it->second;
+            const ExteriorCeilingEdge& edge = edge_it->second;
             const CeilingCurtainProfile* profile = get_ceiling_curtain_profile(edge.wall_type);
             if (profile == nullptr) {
                 continue;
@@ -990,7 +998,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                 continue;
             }
 
-            EdgeKey covered_edge = candidate;
+            CeilingEdgeKey covered_edge = candidate;
             int covered_edge_step_x = 0;
             int covered_edge_step_y = 0;
             if (edge.kind == WallPartKind::DirA) {
@@ -1011,14 +1019,14 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
 
             // Every wall part in the facing narrow run is covered by Wide.
             // One Wide replaces up to three consecutive Long parts.
-            std::vector<EdgeKey> narrow_run;
+            std::vector<CeilingEdgeKey> narrow_run;
             while (true) {
                 auto covered_it = exterior_edges.find(covered_edge);
                 if (covered_it == exterior_edges.end()) {
                     break;
                 }
 
-                const ExteriorEdge& covered_exterior_edge = covered_it->second;
+                const ExteriorCeilingEdge& covered_exterior_edge = covered_it->second;
                 if (covered_exterior_edge.opposing_wall_distance == 0) {
                     break;
                 }
@@ -1049,8 +1057,8 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         }
     }
 
-    for (const EdgeKey& key : wide_edges) {
-        const ExteriorEdge& edge = exterior_edges.at(key);
+    for (const CeilingEdgeKey& key : wide_edges) {
+        const ExteriorCeilingEdge& edge = exterior_edges.at(key);
         ceiling_sprites.push_back(place_single_ceiling_curtain(
             edge.gx,
             edge.gy,
@@ -1070,7 +1078,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             continue;
         }
 
-        const ExteriorEdge& edge = entry.second;
+        const ExteriorCeilingEdge& edge = entry.second;
         ceiling_sprites.push_back(place_single_ceiling_curtain(
             edge.gx,
             edge.gy,

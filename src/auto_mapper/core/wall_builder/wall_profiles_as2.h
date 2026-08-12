@@ -118,6 +118,8 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET1 = {
     .vid = 1127,
     .pos_z = 116.0f,
     .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
     .dir_a_long = {
         .direction = 96,
         .offset_x = -95.0f,
@@ -136,7 +138,10 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET1 = {
         .offset_y = 145.0f,
         .negative_side_outward_adjustment = 0.25f
     },
-    .dir_b_wide = {97, 105.0f, 150.0f}
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
 };
 
 inline constexpr WallProfile WALL_AS2_SET2_RANDOM = {
