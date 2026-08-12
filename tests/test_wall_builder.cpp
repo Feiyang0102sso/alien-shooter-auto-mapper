@@ -917,6 +917,67 @@ TEST(As2CeilingCurtainPreviewTest, WritesSquareAndConcaveRoomMapsWithFloors) {
     );
 }
 
+TEST(As2CeilingCurtainPreviewTest, WritesSet2ToSet9RoomMapsForVisualInspection) {
+    constexpr float map_size_x = 3000.0f;
+    constexpr float map_size_y = 3000.0f;
+    constexpr int recess_depth = 4;
+    constexpr int wall_types[] = {
+        WALL_TYPE_AS2_WALL_SET2_RANDOM,
+        WALL_TYPE_AS2_WALL_SET3_RANDOM,
+        WALL_TYPE_AS2_WALL_SET4_RANDOM,
+        WALL_TYPE_AS2_WALL_SET5_RANDOM,
+        WALL_TYPE_AS2_WALL_SET6_RANDOM,
+        WALL_TYPE_AS2_WALL_SET7_RANDOM,
+        WALL_TYPE_AS2_WALL_SET8_RANDOM,
+        WALL_TYPE_AS2_WALL_SET9_RANDOM
+    };
+
+    WallBuilder builder(map_size_x, map_size_y, false);
+
+    // This test intentionally has no assertions. The generated maps are for
+    // manually calibrating each wall set's copied Ceiling Curtain profile.
+    for (int set_index = 0; set_index < 8; ++set_index) {
+        int set_number = set_index + 2;
+        int wall_type = wall_types[set_index];
+        std::string output_prefix = "as2_set" + std::to_string(set_number) + "_ceiling_";
+
+        std::vector<io::Sprite> square_sprites = builder.build(
+            build_room_segments(8, wall_type),
+            true,
+            true
+        );
+        std::string square_output_path = get_test_output_path(
+            "celling/" + output_prefix + "square_room.map"
+        );
+        io::write_map(
+            square_sprites,
+            square_output_path,
+            io::MapFormat::AS2R,
+            map_size_x,
+            map_size_y
+        );
+
+        for (int recess_width = 2; recess_width <= 4; ++recess_width) {
+            std::vector<io::Sprite> concave_sprites = builder.build(
+                build_concave_room_segments(recess_width, recess_depth, wall_type),
+                true,
+                true
+            );
+            std::string concave_output_path = get_test_output_path(
+                "celling/" + output_prefix + "concave_" +
+                std::to_string(recess_width) + ".map"
+            );
+            io::write_map(
+                concave_sprites,
+                concave_output_path,
+                io::MapFormat::AS2R,
+                map_size_x,
+                map_size_y
+            );
+        }
+    }
+}
+
 TEST(As2CeilingCurtainPreviewTest, WritesLongCurtainCalibrationMap) {
     constexpr float map_size_x = 3000.0f;
     constexpr float map_size_y = 3000.0f;

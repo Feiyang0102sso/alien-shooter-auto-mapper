@@ -144,6 +144,15 @@ struct CeilingCurtainProfile {
     // Values use logical wall-grid widths and may differ by wall set.
     float dir_a_lower_corner_supplement;
     float dir_b_lower_corner_supplement;
+    // Keep or remove the DirB Long sprite touching each deep recess corner.
+    bool keep_dir_b_long_at_left_deep_corner;
+    bool keep_dir_b_long_at_right_deep_corner;
+    // Number of Long sprites added along each lower exterior corner edge.
+    // Zero disables the supplement; values above one continue at equal spacing.
+    int left_lower_corner_dir_a_supplement_count;
+    int left_lower_corner_dir_b_supplement_count;
+    int right_lower_corner_dir_a_supplement_count;
+    int right_lower_corner_dir_b_supplement_count;
     CeilingCurtainPartProfile dir_a_long;
     CeilingCurtainPartProfile dir_b_long;
     CeilingCurtainPartProfile dir_a_wide;

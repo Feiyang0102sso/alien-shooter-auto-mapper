@@ -158,6 +158,38 @@ const CeilingCurtainProfile* WallBuilder::get_ceiling_curtain_profile(int wall_t
         return &CEILING_CURTAIN_AS2_SET1;
     }
 
+    if (wall_type == WALL_TYPE_AS2_WALL_SET2_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET2;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET3_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET3;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET4_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET4;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET5_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET5;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET6_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET6;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET7_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET7;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET8_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET8;
+    }
+
+    if (wall_type == WALL_TYPE_AS2_WALL_SET9_RANDOM) {
+        return &CEILING_CURTAIN_AS2_SET9;
+    }
+
     return nullptr;
 }
 
@@ -732,6 +764,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         for (const CeilingPoint& vertex : vertices) {
             int outside_count = 0;
             bool interior_cell_is_above_vertex = false;
+            bool lower_corner_is_left = false;
             CeilingPoint surrounding_cells[4] = {
                 {vertex.first - 1, vertex.second - 1},
                 {vertex.first, vertex.second - 1},
@@ -747,19 +780,43 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
 
                 if (cell.second == vertex.second - 1) {
                     interior_cell_is_above_vertex = true;
+                    // At a lower exterior corner, the upper interior cell tells
+                    // whether the missing corner lies on its screen-left side.
+                    lower_corner_is_left = cell.first == vertex.first;
                 }
             }
 
             if (outside_count == 1) {
-                // The DirB edge ending at a deep recess corner is already covered
-                // by the neighboring DirA Long curtain.
-                CeilingEdgeKey redundant_edge = {
+                // Each deep recess corner may keep or remove its touching DirB
+                // Long independently because wall-set sprites cover corners differently.
+                CeilingEdgeKey right_deep_corner_edge = {
                     vertex.first,
                     vertex.second,
                     WallPartKind::DirB
                 };
-                if (exterior_edges.count(redundant_edge) > 0) {
-                    redundant_dir_b_edges_at_deep_corners.insert(redundant_edge);
+                auto right_edge_it = exterior_edges.find(right_deep_corner_edge);
+                if (right_edge_it != exterior_edges.end()) {
+                    const CeilingCurtainProfile* profile =
+                        get_ceiling_curtain_profile(right_edge_it->second.wall_type);
+                    if (profile != nullptr &&
+                        !profile->keep_dir_b_long_at_right_deep_corner) {
+                        redundant_dir_b_edges_at_deep_corners.insert(right_deep_corner_edge);
+                    }
+                }
+
+                CeilingEdgeKey left_deep_corner_edge = {
+                    vertex.first + 1,
+                    vertex.second,
+                    WallPartKind::DirB
+                };
+                auto left_edge_it = exterior_edges.find(left_deep_corner_edge);
+                if (left_edge_it != exterior_edges.end()) {
+                    const CeilingCurtainProfile* profile =
+                        get_ceiling_curtain_profile(left_edge_it->second.wall_type);
+                    if (profile != nullptr &&
+                        !profile->keep_dir_b_long_at_left_deep_corner) {
+                        redundant_dir_b_edges_at_deep_corners.insert(left_deep_corner_edge);
+                    }
                 }
             }
 
@@ -790,29 +847,55 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                     continue;
                 }
 
-                CornerSupplement supplement = {corner_edge, 0.0f, 0.0f};
-
-                if (edge.kind == WallPartKind::DirA) {
-                    bool vertex_is_upper_endpoint =
-                        vertex.first == edge.gx && vertex.second == edge.gy - 1;
-                    if (vertex_is_upper_endpoint) {
-                        supplement.grid_y -= profile->dir_a_lower_corner_supplement;
-                    } else {
-                        supplement.grid_y += profile->dir_a_lower_corner_supplement;
-                    }
+                int supplement_count = 0;
+                if (lower_corner_is_left && edge.kind == WallPartKind::DirA) {
+                    supplement_count = profile->left_lower_corner_dir_a_supplement_count;
                 }
 
-                if (edge.kind == WallPartKind::DirB) {
-                    bool vertex_is_left_endpoint =
-                        vertex.first == edge.gx - 1 && vertex.second == edge.gy;
-                    if (vertex_is_left_endpoint) {
-                        supplement.grid_x -= profile->dir_b_lower_corner_supplement;
-                    } else {
-                        supplement.grid_x += profile->dir_b_lower_corner_supplement;
-                    }
+                if (lower_corner_is_left && edge.kind == WallPartKind::DirB) {
+                    supplement_count = profile->left_lower_corner_dir_b_supplement_count;
                 }
 
-                lower_corner_supplements.push_back(supplement);
+                if (!lower_corner_is_left && edge.kind == WallPartKind::DirA) {
+                    supplement_count = profile->right_lower_corner_dir_a_supplement_count;
+                }
+
+                if (!lower_corner_is_left && edge.kind == WallPartKind::DirB) {
+                    supplement_count = profile->right_lower_corner_dir_b_supplement_count;
+                }
+
+                for (int supplement_number = 1;
+                     supplement_number <= supplement_count;
+                     ++supplement_number) {
+                    CornerSupplement supplement = {corner_edge, 0.0f, 0.0f};
+                    float supplement_scale = static_cast<float>(supplement_number);
+
+                    if (edge.kind == WallPartKind::DirA) {
+                        bool vertex_is_upper_endpoint =
+                            vertex.first == edge.gx && vertex.second == edge.gy - 1;
+                        float supplement_distance =
+                            profile->dir_a_lower_corner_supplement * supplement_scale;
+                        if (vertex_is_upper_endpoint) {
+                            supplement.grid_y -= supplement_distance;
+                        } else {
+                            supplement.grid_y += supplement_distance;
+                        }
+                    }
+
+                    if (edge.kind == WallPartKind::DirB) {
+                        bool vertex_is_left_endpoint =
+                            vertex.first == edge.gx - 1 && vertex.second == edge.gy;
+                        float supplement_distance =
+                            profile->dir_b_lower_corner_supplement * supplement_scale;
+                        if (vertex_is_left_endpoint) {
+                            supplement.grid_x -= supplement_distance;
+                        } else {
+                            supplement.grid_x += supplement_distance;
+                        }
+                    }
+
+                    lower_corner_supplements.push_back(supplement);
+                }
             }
         }
 

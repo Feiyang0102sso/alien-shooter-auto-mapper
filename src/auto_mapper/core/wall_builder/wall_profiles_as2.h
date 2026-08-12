@@ -120,6 +120,12 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET1 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = true,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 1,
+    .right_lower_corner_dir_b_supplement_count = 1,
     .dir_a_long = {
         .direction = 96,
         .offset_x = -95.0f,
@@ -130,6 +136,300 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET1 = {
         .direction = 32,
         .offset_x = 155.0f,
         .offset_y = -85.0f,
+        .positive_side_outward_adjustment = -0.25f
+    },
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
+};
+
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET2 = {
+    .vid = 1127,
+    .pos_z = 116.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = true,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 1,
+    .right_lower_corner_dir_b_supplement_count = 1,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .positive_side_outward_adjustment = 0.50f
+    },
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .positive_side_outward_adjustment = -0.25f
+    },
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
+};
+
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET3 = {
+    .vid = 1127,
+    .pos_z = 116.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = false,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 2,
+    .right_lower_corner_dir_b_supplement_count = 1,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .negative_side_outward_adjustment = -0.10,
+        .positive_side_outward_adjustment = 0.65f
+    },
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .negative_side_outward_adjustment = -0.15f,
+        .positive_side_outward_adjustment = -0.05f
+    },
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
+};
+
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET4 = {
+    .vid = 1127,
+    .pos_z = 116.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = false,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 1,
+    .right_lower_corner_dir_b_supplement_count = 1,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .negative_side_outward_adjustment = -0.10,
+        .positive_side_outward_adjustment = 0.65f
+    },
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .negative_side_outward_adjustment = -0.15f,
+        .positive_side_outward_adjustment = -0.05f
+    },
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
+};
+
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET5 = {
+    .vid = 1127,
+    .pos_z = 183.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = false,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 2,
+    .right_lower_corner_dir_b_supplement_count = 2,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .positive_side_outward_adjustment = 0.70f
+    },
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .positive_side_outward_adjustment = -0.15f
+    },
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
+};
+
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET6 = {
+    .vid = 1127,
+    .pos_z = 159.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = false,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 2,
+    .right_lower_corner_dir_b_supplement_count = 2,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .positive_side_outward_adjustment = 0.50f
+    },
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .positive_side_outward_adjustment = -0.25f
+    },
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
+};
+
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET7 = {
+    .vid = 1127,
+    .pos_z = 163.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = false,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 2,
+    .right_lower_corner_dir_b_supplement_count = 2,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .positive_side_outward_adjustment = 0.60f
+    },
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .positive_side_outward_adjustment = -0.15f
+    },
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
+};
+
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET8 = {
+    .vid = 1127,
+    .pos_z = 163.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = false,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 2,
+    .right_lower_corner_dir_b_supplement_count = 2,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .positive_side_outward_adjustment = 0.60f
+    },
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .positive_side_outward_adjustment = -0.15f
+    },
+    .dir_a_wide = {
+        .direction = 158,
+        .offset_x = -90.0f,
+        .offset_y = 145.0f,
+        .negative_side_outward_adjustment = 0.25f
+    },
+    .dir_b_wide = {
+        .direction = 97,
+        .offset_x = 105.0f,
+        .offset_y = 150.0f}
+};
+
+inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET9 = {
+    .vid = 1127,
+    .pos_z = 101.0f,
+    .maximum_wide_opposing_wall_distance = 3,
+    .dir_a_lower_corner_supplement = 0.50f,
+    .dir_b_lower_corner_supplement = 1.00f,
+    .keep_dir_b_long_at_left_deep_corner = false,
+    .keep_dir_b_long_at_right_deep_corner = false,
+    .left_lower_corner_dir_a_supplement_count = 1,
+    .left_lower_corner_dir_b_supplement_count = 1,
+    .right_lower_corner_dir_a_supplement_count = 1,
+    .right_lower_corner_dir_b_supplement_count = 1,
+    .dir_a_long = {
+        .direction = 96,
+        .offset_x = -95.0f,
+        .offset_y = -80.0f,
+        .negative_side_outward_adjustment = 0.15f,
+        .positive_side_outward_adjustment = 0.50f
+    },
+    .dir_b_long = {
+        .direction = 32,
+        .offset_x = 155.0f,
+        .offset_y = -85.0f,
+        .negative_side_outward_adjustment = 0.15f,
         .positive_side_outward_adjustment = -0.25f
     },
     .dir_a_wide = {
