@@ -160,6 +160,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET1 = {
             .side_long_away_from_corner_adjustment = 0.15f
         }
     },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = false,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = false,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.25f
+        },
+        .lower_left = {
+            .keep_dir_a_long = false,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = false,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 1,
@@ -234,6 +260,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET2 = {
             .side_long_away_from_corner_adjustment = 0.00f
         }
     },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 1,
@@ -306,6 +358,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET3 = {
         .lower_corner = {
             .keep_connector_long = true,
             .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
         }
     },
     .left_lower_corner_dir_a_supplement_count = 1,
@@ -384,6 +462,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET4 = {
             .side_long_away_from_corner_adjustment = 0.00f
         }
     },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 1,
@@ -460,6 +564,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET5 = {
             .side_long_away_from_corner_adjustment = 0.00f
         }
     },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 2,
@@ -532,6 +662,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET6 = {
         .lower_corner = {
             .keep_connector_long = true,
             .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
         }
     },
     .left_lower_corner_dir_a_supplement_count = 1,
@@ -608,6 +764,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET7 = {
             .side_long_away_from_corner_adjustment = 0.00f
         }
     },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 2,
@@ -682,6 +864,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET8 = {
             .side_long_away_from_corner_adjustment = 0.00f
         }
     },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 2,
@@ -754,6 +962,32 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET9 = {
         .lower_corner = {
             .keep_connector_long = true,
             .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .standalone_deep_corners = {
+        .upper_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .upper_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_left = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_right = {
+            .keep_dir_a_long = true,
+            .dir_a_long_away_from_corner_adjustment = 0.00f,
+            .keep_dir_b_long = true,
+            .dir_b_long_away_from_corner_adjustment = 0.00f
         }
     },
     .left_lower_corner_dir_a_supplement_count = 1,

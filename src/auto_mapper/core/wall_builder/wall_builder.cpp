@@ -765,7 +765,8 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         };
 
         std::map<CeilingPoint, CeilingPoint> deep_corner_outside_cells;
-        std::set<CeilingEdgeKey> removed_recess_connector_edges;
+        std::set<CeilingPoint> paired_recess_corners;
+        std::set<CeilingEdgeKey> removed_ceiling_edges;
         std::map<CeilingEdgeKey, RecessSideAdjustment> recess_side_adjustments;
         std::vector<CornerSupplement> lower_corner_supplements;
         for (const CeilingPoint& vertex : vertices) {
@@ -902,28 +903,34 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             return true;
         };
 
-        auto add_side_adjustment = [&](const CeilingPoint& corner,
-                                       WallPartKind connector_kind,
-                                       float distance) {
-            CeilingEdgeKey side_candidates[2];
-            if (connector_kind == WallPartKind::DirA) {
-                side_candidates[0] = {corner.first, corner.second, WallPartKind::DirB};
-                side_candidates[1] = {corner.first + 1, corner.second, WallPartKind::DirB};
+        auto configure_long_at_corner = [&](const CeilingPoint& corner,
+                                            WallPartKind long_kind,
+                                            bool keep_long,
+                                            float distance) {
+            CeilingEdgeKey candidates[2];
+            if (long_kind == WallPartKind::DirA) {
+                candidates[0] = {corner.first, corner.second, WallPartKind::DirA};
+                candidates[1] = {corner.first, corner.second + 1, WallPartKind::DirA};
             } else {
-                side_candidates[0] = {corner.first, corner.second, WallPartKind::DirA};
-                side_candidates[1] = {corner.first, corner.second + 1, WallPartKind::DirA};
+                candidates[0] = {corner.first, corner.second, WallPartKind::DirB};
+                candidates[1] = {corner.first + 1, corner.second, WallPartKind::DirB};
             }
 
-            for (const CeilingEdgeKey& side_edge : side_candidates) {
-                if (exterior_edges.count(side_edge) == 0) {
+            for (const CeilingEdgeKey& candidate : candidates) {
+                if (exterior_edges.count(candidate) == 0) {
                     continue;
                 }
 
+                if (!keep_long) {
+                    removed_ceiling_edges.insert(candidate);
+                    return;
+                }
+
                 RecessSideAdjustment adjustment;
-                if (std::get<2>(side_edge) == WallPartKind::DirA) {
+                if (long_kind == WallPartKind::DirA) {
                     bool corner_is_upper_endpoint =
-                        corner.first == std::get<0>(side_edge) &&
-                        corner.second == std::get<1>(side_edge) - 1;
+                        corner.first == std::get<0>(candidate) &&
+                        corner.second == std::get<1>(candidate) - 1;
                     if (corner_is_upper_endpoint) {
                         adjustment.grid_y = distance;
                     } else {
@@ -931,8 +938,8 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                     }
                 } else {
                     bool corner_is_left_endpoint =
-                        corner.first == std::get<0>(side_edge) - 1 &&
-                        corner.second == std::get<1>(side_edge);
+                        corner.first == std::get<0>(candidate) - 1 &&
+                        corner.second == std::get<1>(candidate);
                     if (corner_is_left_endpoint) {
                         adjustment.grid_x = distance;
                     } else {
@@ -940,9 +947,25 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                     }
                 }
 
-                recess_side_adjustments[side_edge] = adjustment;
+                recess_side_adjustments[candidate] = adjustment;
                 return;
             }
+        };
+
+        auto get_corner_wall_type = [&](const CeilingPoint& corner) {
+            CeilingEdgeKey candidates[4] = {
+                {corner.first, corner.second, WallPartKind::DirA},
+                {corner.first, corner.second + 1, WallPartKind::DirA},
+                {corner.first, corner.second, WallPartKind::DirB},
+                {corner.first + 1, corner.second, WallPartKind::DirB}
+            };
+            for (const CeilingEdgeKey& candidate : candidates) {
+                auto edge_it = exterior_edges.find(candidate);
+                if (edge_it != exterior_edges.end()) {
+                    return edge_it->second.wall_type;
+                }
+            }
+            return -1;
         };
 
         auto has_deep_corner_between = [&](const CeilingPoint& first, const CeilingPoint& second) {
@@ -1014,6 +1037,9 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                         continue;
                     }
 
+                    paired_recess_corners.insert(left_vertex);
+                    paired_recess_corners.insert(right_vertex);
+
                     CeilingEdgeKey left_edge = {
                         left_vertex.first + 1,
                         grid_y,
@@ -1043,19 +1069,21 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                     }
 
                     if (!left_corner_profile->keep_connector_long) {
-                        removed_recess_connector_edges.insert(left_edge);
+                        removed_ceiling_edges.insert(left_edge);
                     }
                     if (!right_corner_profile->keep_connector_long) {
-                        removed_recess_connector_edges.insert(right_edge);
+                        removed_ceiling_edges.insert(right_edge);
                     }
-                    add_side_adjustment(
+                    configure_long_at_corner(
                         left_vertex,
-                        WallPartKind::DirB,
+                        WallPartKind::DirA,
+                        true,
                         left_corner_profile->side_long_away_from_corner_adjustment
                     );
-                    add_side_adjustment(
+                    configure_long_at_corner(
                         right_vertex,
-                        WallPartKind::DirB,
+                        WallPartKind::DirA,
+                        true,
                         right_corner_profile->side_long_away_from_corner_adjustment
                     );
                     continue;
@@ -1100,6 +1128,9 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                     continue;
                 }
 
+                paired_recess_corners.insert(upper_vertex);
+                paired_recess_corners.insert(lower_vertex);
+
                 CeilingEdgeKey upper_edge = {
                     grid_x,
                     upper_vertex.second + 1,
@@ -1129,26 +1160,74 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                 }
 
                 if (!upper_corner_profile->keep_connector_long) {
-                    removed_recess_connector_edges.insert(upper_edge);
+                    removed_ceiling_edges.insert(upper_edge);
                 }
                 if (!lower_corner_profile->keep_connector_long) {
-                    removed_recess_connector_edges.insert(lower_edge);
+                    removed_ceiling_edges.insert(lower_edge);
                 }
-                add_side_adjustment(
+                configure_long_at_corner(
                     upper_vertex,
-                    WallPartKind::DirA,
+                    WallPartKind::DirB,
+                    true,
                     upper_corner_profile->side_long_away_from_corner_adjustment
                 );
-                add_side_adjustment(
+                configure_long_at_corner(
                     lower_vertex,
-                    WallPartKind::DirA,
+                    WallPartKind::DirB,
+                    true,
                     lower_corner_profile->side_long_away_from_corner_adjustment
                 );
             }
         }
 
+        for (const auto& entry : deep_corner_outside_cells) {
+            const CeilingPoint& corner = entry.first;
+            if (paired_recess_corners.count(corner) > 0) {
+                continue;
+            }
+
+            int wall_type = get_corner_wall_type(corner);
+            const CeilingCurtainProfile* profile = get_ceiling_curtain_profile(wall_type);
+            if (profile == nullptr) {
+                continue;
+            }
+
+            const CeilingPoint& outside_cell = entry.second;
+            const StandaloneDeepCornerCurtainProfile* corner_profile = nullptr;
+            // Configuration names describe where the L-shaped recess opens.
+            // The single outside cell lies diagonally opposite that direction.
+            if (outside_cell == CeilingPoint{corner.first - 1, corner.second - 1}) {
+                corner_profile = &profile->standalone_deep_corners.lower_right;
+            }
+            if (outside_cell == CeilingPoint{corner.first, corner.second - 1}) {
+                corner_profile = &profile->standalone_deep_corners.lower_left;
+            }
+            if (outside_cell == CeilingPoint{corner.first - 1, corner.second}) {
+                corner_profile = &profile->standalone_deep_corners.upper_right;
+            }
+            if (outside_cell == CeilingPoint{corner.first, corner.second}) {
+                corner_profile = &profile->standalone_deep_corners.upper_left;
+            }
+            if (corner_profile == nullptr) {
+                continue;
+            }
+
+            configure_long_at_corner(
+                corner,
+                WallPartKind::DirA,
+                corner_profile->keep_dir_a_long,
+                corner_profile->dir_a_long_away_from_corner_adjustment
+            );
+            configure_long_at_corner(
+                corner,
+                WallPartKind::DirB,
+                corner_profile->keep_dir_b_long,
+                corner_profile->dir_b_long_away_from_corner_adjustment
+            );
+        }
+
         for (const auto& entry : exterior_edges) {
-            if (removed_recess_connector_edges.count(entry.first) > 0) {
+            if (removed_ceiling_edges.count(entry.first) > 0) {
                 continue;
             }
 

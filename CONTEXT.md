@@ -307,7 +307,7 @@ An inward recess in the room's exterior wall boundary formed by two opposing sid
 
 A concave boundary vertex whose four neighboring grid cells contain exactly one exterior cell.
 
-Deep Recess Corners are classified by the exterior cell's position relative to the vertex:
+The geometry detector records Deep Recess Corners by the exterior cell's position relative to the vertex:
 
 ```text
 Upper-left     Upper-right    Lower-left     Lower-right
@@ -315,7 +315,21 @@ Upper-left     Upper-right    Lower-left     Lower-right
 □ □            □ □            ■ □            □ ■
 ```
 
-Screen-facing descriptions such as “upward corner” or “downward corner” are avoided because they do not uniquely identify Grid topology.
+This outside-cell quadrant is internal detection data. It is not the public name
+used by the Standalone Deep Corner profile.
+
+### Standalone Deep Corner（独立深角）
+
+A single Deep Recess Corner in an L-shaped room boundary that is not paired with
+another Deep Recess Corner to form a complete Oriented Wall Recess.
+
+Standalone Deep Corner profile names describe the direction in which the visible
+L-shaped recess opens: Upper-left, Upper-right, Lower-left, and Lower-right. The
+detector's single outside cell is diagonally opposite the profile name. Each profile independently
+keeps or removes its Direction A (`96`) Long and Direction B (`32`) Long. A kept
+Long may also be shifted away from the corner along its wall run. Removal is used
+when the sprite itself crosses the room boundary; shifting is reserved for a kept
+sprite whose along-wall position needs calibration.
 
 ### Ceiling Curtain
 
@@ -352,6 +366,7 @@ Ceiling Curtain relationships:
 - A **Deep Recess Corner** has exactly one of four quadrant variants: Upper-left, Upper-right, Lower-left, or Lower-right.
 - Each corner of an **Oriented Wall Recess** independently keeps or removes the Long Ceiling Curtain on its connecting wall.
 - Each recess corner independently shifts its side-wall Long away from the corner without deleting that corner coverage.
+- A **Standalone Deep Corner** uses its quadrant-specific Direction A and Direction B keep/remove switches and along-wall adjustments; it never inherits an Oriented Wall Recess profile.
 - Each side of a **Concave Wall Recess** is evaluated independently.
 - A recess entrance uses **宽** when a facing parallel wall of the same direction is one to three wall-part widths away.
 - A facing parallel wall exactly three wall-part widths away still uses **宽**.

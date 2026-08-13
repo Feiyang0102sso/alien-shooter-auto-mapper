@@ -152,6 +152,21 @@ struct VerticalRecessCurtainProfile {
     RecessCornerCurtainProfile lower_corner;
 };
 
+struct StandaloneDeepCornerCurtainProfile {
+    bool keep_dir_a_long = true;
+    float dir_a_long_away_from_corner_adjustment = 0.0f;
+    bool keep_dir_b_long = true;
+    float dir_b_long_away_from_corner_adjustment = 0.0f;
+};
+
+struct StandaloneDeepCornersCurtainProfile {
+    // Names describe the visible direction in which the L-shaped recess opens.
+    StandaloneDeepCornerCurtainProfile upper_left;
+    StandaloneDeepCornerCurtainProfile upper_right;
+    StandaloneDeepCornerCurtainProfile lower_left;
+    StandaloneDeepCornerCurtainProfile lower_right;
+};
+
 struct CeilingCurtainProfile {
     int vid;
     float pos_z;
@@ -165,6 +180,8 @@ struct CeilingCurtainProfile {
     HorizontalRecessCurtainProfile lower_recess;
     VerticalRecessCurtainProfile left_recess;
     VerticalRecessCurtainProfile right_recess;
+    // Independent L-shaped deep corners that are not paired into a complete recess.
+    StandaloneDeepCornersCurtainProfile standalone_deep_corners;
     // Number of Long sprites added along each lower exterior corner edge.
     // Zero disables the supplement; values above one continue at equal spacing.
     int left_lower_corner_dir_a_supplement_count;

@@ -411,56 +411,73 @@ static std::vector<Segment> build_concave_room_segments(
     return segments;
 }
 
-static std::vector<Segment> build_ceiling_manual_validation_segments(int wall_type) {
-    // Copied from the root auto_mapper_project.json drawn by the user.
-    // Keep every segment unchanged except for the wall type under calibration.
-    std::vector<Segment> segments = {
-        {{-8, 11}, {-8, 12}, wall_type},
-        {{-8, 18}, {-8, 23}, wall_type},
-        {{-8, 23}, {-1, 23}, wall_type},
-        {{6, 23}, {16, 23}, wall_type},
-        {{16, 23}, {16, 19}, wall_type},
-        {{16, 14}, {16, 9}, wall_type},
-        {{16, 9}, {8, 9}, wall_type},
-        {{-2, 9}, {-8, 9}, wall_type},
-        {{-8, 9}, {-8, 12}, wall_type},
-        {{-8, 18}, {-5, 18}, wall_type},
-        {{-5, 18}, {-5, 12}, wall_type},
-        {{-5, 12}, {-8, 12}, wall_type},
-        {{-2, 9}, {-2, 12}, wall_type},
-        {{-2, 12}, {8, 12}, wall_type},
-        {{8, 12}, {8, 9}, wall_type},
-        {{16, 14}, {10, 14}, wall_type},
-        {{10, 14}, {10, 19}, wall_type},
-        {{10, 19}, {16, 19}, wall_type},
-        {{-1, 23}, {-1, 18}, wall_type},
-        {{-1, 18}, {6, 18}, wall_type},
-        {{6, 18}, {6, 22}, wall_type},
-        {{6, 22}, {6, 23}, wall_type},
-        {{-1, 16}, {-1, 14}, wall_type},
-        {{-1, 14}, {5, 14}, wall_type},
-        {{5, 14}, {5, 16}, wall_type},
-        {{5, 16}, {0, 16}, wall_type},
-        {{0, 16}, {-1, 16}, wall_type},
-        {{12, -5}, {17, -5}, wall_type},
-        {{17, -5}, {17, 1}, wall_type},
-        {{17, 1}, {28, 1}, wall_type},
-        {{28, 1}, {28, 5}, wall_type},
-        {{28, 5}, {11, 5}, wall_type},
-        {{11, 5}, {11, -5}, wall_type},
-        {{11, -5}, {14, -5}, wall_type},
-        {{25, 11}, {35, 11}, wall_type},
-        {{35, 11}, {35, 18}, wall_type},
-        {{35, 18}, {32, 18}, wall_type},
-        {{32, 18}, {32, 14}, wall_type},
-        {{32, 14}, {25, 14}, wall_type},
-        {{25, 14}, {25, 11}, wall_type},
-        {{17, 35}, {17, 28}, wall_type},
-        {{17, 28}, {30, 28}, wall_type},
-        {{30, 28}, {30, 35}, wall_type},
-        {{30, 35}, {17, 35}, wall_type}
-    };
-    return segments;
+static TestScene load_ceiling_manual_validation_scene(int wall_type) {
+    TestScene scene;
+    scene.map_size_x = 7000.0f;
+    scene.map_size_y = 6000.0f;
+
+    // Copied from the root project used for manual Ceiling Curtain calibration.
+    // The scene includes all four standalone deep-corner quadrants.
+    std::vector<Segment>& segments = scene.segments;
+    segments.reserve(56);
+    segments.push_back({{-8, 11}, {-8, 12}, wall_type});
+    segments.push_back({{-8, 18}, {-8, 23}, wall_type});
+    segments.push_back({{-8, 23}, {-1, 23}, wall_type});
+    segments.push_back({{6, 23}, {16, 23}, wall_type});
+    segments.push_back({{16, 23}, {16, 19}, wall_type});
+    segments.push_back({{16, 14}, {16, 9}, wall_type});
+    segments.push_back({{16, 9}, {8, 9}, wall_type});
+    segments.push_back({{-2, 9}, {-8, 9}, wall_type});
+    segments.push_back({{-8, 9}, {-8, 12}, wall_type});
+    segments.push_back({{-8, 18}, {-5, 18}, wall_type});
+    segments.push_back({{-5, 18}, {-5, 12}, wall_type});
+    segments.push_back({{-5, 12}, {-8, 12}, wall_type});
+    segments.push_back({{-2, 9}, {-2, 12}, wall_type});
+    segments.push_back({{-2, 12}, {8, 12}, wall_type});
+    segments.push_back({{8, 12}, {8, 9}, wall_type});
+    segments.push_back({{16, 14}, {10, 14}, wall_type});
+    segments.push_back({{10, 14}, {10, 19}, wall_type});
+    segments.push_back({{10, 19}, {16, 19}, wall_type});
+    segments.push_back({{-1, 23}, {-1, 18}, wall_type});
+    segments.push_back({{-1, 18}, {6, 18}, wall_type});
+    segments.push_back({{6, 18}, {6, 22}, wall_type});
+    segments.push_back({{6, 22}, {6, 23}, wall_type});
+    segments.push_back({{-1, 16}, {-1, 14}, wall_type});
+    segments.push_back({{-1, 14}, {5, 14}, wall_type});
+    segments.push_back({{5, 14}, {5, 16}, wall_type});
+    segments.push_back({{5, 16}, {0, 16}, wall_type});
+    segments.push_back({{0, 16}, {-1, 16}, wall_type});
+    segments.push_back({{17, 40}, {27, 40}, wall_type});
+    segments.push_back({{27, 40}, {27, 50}, wall_type});
+    segments.push_back({{27, 50}, {17, 50}, wall_type});
+    segments.push_back({{17, 50}, {17, 40}, wall_type});
+    segments.push_back({{21, 17}, {21, 10}, wall_type});
+    segments.push_back({{21, 10}, {31, 10}, wall_type});
+    segments.push_back({{31, 10}, {31, 14}, wall_type});
+    segments.push_back({{31, 14}, {26, 14}, wall_type});
+    segments.push_back({{26, 14}, {26, 18}, wall_type});
+    segments.push_back({{26, 18}, {21, 18}, wall_type});
+    segments.push_back({{21, 18}, {21, 17}, wall_type});
+    segments.push_back({{37, 13}, {37, 10}, wall_type});
+    segments.push_back({{37, 10}, {45, 10}, wall_type});
+    segments.push_back({{45, 10}, {45, 19}, wall_type});
+    segments.push_back({{45, 19}, {42, 19}, wall_type});
+    segments.push_back({{42, 19}, {42, 13}, wall_type});
+    segments.push_back({{42, 13}, {37, 13}, wall_type});
+    segments.push_back({{24, 23}, {27, 23}, wall_type});
+    segments.push_back({{27, 23}, {27, 28}, wall_type});
+    segments.push_back({{27, 28}, {35, 28}, wall_type});
+    segments.push_back({{35, 28}, {35, 32}, wall_type});
+    segments.push_back({{35, 32}, {24, 32}, wall_type});
+    segments.push_back({{24, 32}, {24, 23}, wall_type});
+    segments.push_back({{45, 23}, {48, 23}, wall_type});
+    segments.push_back({{48, 23}, {48, 31}, wall_type});
+    segments.push_back({{48, 31}, {40, 31}, wall_type});
+    segments.push_back({{40, 31}, {40, 28}, wall_type});
+    segments.push_back({{40, 28}, {45, 28}, wall_type});
+    segments.push_back({{45, 28}, {45, 23}, wall_type});
+
+    return scene;
 }
 
 static int count_sprites_by_vid(const std::vector<io::Sprite>& sprites, int vid) {
@@ -667,8 +684,6 @@ TEST(As2CeilingCurtainPreviewTest, WritesSet1ThreeCellRecessWithRegressionAssert
 }
 
 TEST(As2CeilingCurtainPreviewTest, WritesManualValidationMapsForSet1ToSet8) {
-    constexpr float map_size_x = 6000.0f;
-    constexpr float map_size_y = 6000.0f;
     constexpr int wall_types[] = {
         WALL_TYPE_AS2_WALL_SET1_FIXED_0,
         WALL_TYPE_AS2_WALL_SET2_RANDOM,
@@ -680,15 +695,17 @@ TEST(As2CeilingCurtainPreviewTest, WritesManualValidationMapsForSet1ToSet8) {
         WALL_TYPE_AS2_WALL_SET8_RANDOM
     };
 
-    WallBuilder builder(map_size_x, map_size_y, false);
-
     // These maps intentionally have no visual assertions. They reproduce the
-    // user's composite project for manual Ceiling Curtain calibration.
+    // four-quadrant manual Ceiling Curtain calibration scene above.
     for (int set_index = 0; set_index < 8; ++set_index) {
         int set_number = set_index + 1;
         int wall_type = wall_types[set_index];
+        TestScene scene = load_ceiling_manual_validation_scene(wall_type);
+        ASSERT_FALSE(scene.segments.empty());
+
+        WallBuilder builder(scene.map_size_x, scene.map_size_y, false);
         std::vector<io::Sprite> sprites = builder.build(
-            build_ceiling_manual_validation_segments(wall_type),
+            scene.segments,
             true,
             true
         );
@@ -701,8 +718,8 @@ TEST(As2CeilingCurtainPreviewTest, WritesManualValidationMapsForSet1ToSet8) {
             sprites,
             output_path,
             io::MapFormat::AS2R,
-            map_size_x,
-            map_size_y
+            scene.map_size_x,
+            scene.map_size_y
         );
     }
 }
