@@ -683,7 +683,7 @@ TEST(As2CeilingCurtainPreviewTest, WritesSet1ThreeCellRecessWithRegressionAssert
     ));
 }
 
-TEST(As2CeilingCurtainPreviewTest, WritesManualValidationMapsForSet1ToSet8) {
+TEST(As2CeilingCurtainPreviewTest, WritesManualValidationMapsForSet1ToSet9) {
     constexpr int wall_types[] = {
         WALL_TYPE_AS2_WALL_SET1_FIXED_0,
         WALL_TYPE_AS2_WALL_SET2_RANDOM,
@@ -692,12 +692,13 @@ TEST(As2CeilingCurtainPreviewTest, WritesManualValidationMapsForSet1ToSet8) {
         WALL_TYPE_AS2_WALL_SET5_RANDOM,
         WALL_TYPE_AS2_WALL_SET6_RANDOM,
         WALL_TYPE_AS2_WALL_SET7_RANDOM,
-        WALL_TYPE_AS2_WALL_SET8_RANDOM
+        WALL_TYPE_AS2_WALL_SET8_RANDOM,
+        WALL_TYPE_AS2_WALL_SET9_RANDOM
     };
 
     // These maps intentionally have no visual assertions. They reproduce the
     // four-quadrant manual Ceiling Curtain calibration scene above.
-    for (int set_index = 0; set_index < 8; ++set_index) {
+    for (int set_index = 0; set_index < 9; ++set_index) {
         int set_number = set_index + 1;
         int wall_type = wall_types[set_index];
         TestScene scene = load_ceiling_manual_validation_scene(wall_type);
