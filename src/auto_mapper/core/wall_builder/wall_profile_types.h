@@ -136,16 +136,20 @@ struct CeilingCurtainPartProfile {
     float positive_side_outward_adjustment = 0.0f;
 };
 
-enum class DeepCornerCurtainAction {
-    KeepOriginal,
-    DeleteOnly,
-    DeleteAndReplace
+struct RecessCornerCurtainProfile {
+    bool keep_connector_long = true;
+    // Moves the touching side-wall Long away from the recess corner along its wall.
+    float side_long_away_from_corner_adjustment = 0.0f;
 };
 
-struct DeepCornerDirAProfile {
-    DeepCornerCurtainAction action = DeepCornerCurtainAction::KeepOriginal;
-    // Distance from the corner toward the wall run, measured in grid widths.
-    float replacement_distance = 0.0f;
+struct HorizontalRecessCurtainProfile {
+    RecessCornerCurtainProfile left_corner;
+    RecessCornerCurtainProfile right_corner;
+};
+
+struct VerticalRecessCurtainProfile {
+    RecessCornerCurtainProfile upper_corner;
+    RecessCornerCurtainProfile lower_corner;
 };
 
 struct CeilingCurtainProfile {
@@ -156,14 +160,11 @@ struct CeilingCurtainProfile {
     // Values use logical wall-grid widths and may differ by wall set.
     float dir_a_lower_corner_supplement;
     float dir_b_lower_corner_supplement;
-    // Keep or remove the DirB Long sprite touching each deep recess corner.
-    bool keep_dir_b_long_at_left_deep_corner;
-    bool keep_dir_b_long_at_right_deep_corner;
-    // DirA Long handling for the four possible outside-cell quadrants.
-    DeepCornerDirAProfile upper_left_deep_corner_dir_a;
-    DeepCornerDirAProfile upper_right_deep_corner_dir_a;
-    DeepCornerDirAProfile lower_left_deep_corner_dir_a;
-    DeepCornerDirAProfile lower_right_deep_corner_dir_a;
+    // Each recess corner controls its connector-wall Long and side-wall Long separately.
+    HorizontalRecessCurtainProfile upper_recess;
+    HorizontalRecessCurtainProfile lower_recess;
+    VerticalRecessCurtainProfile left_recess;
+    VerticalRecessCurtainProfile right_recess;
     // Number of Long sprites added along each lower exterior corner edge.
     // Zero disables the supplement; values above one continue at equal spacing.
     int left_lower_corner_dir_a_supplement_count;

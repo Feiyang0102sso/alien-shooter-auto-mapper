@@ -120,12 +120,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET1 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = true,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.25f
+        },
+        .right_corner = {
+            .keep_connector_long = false,
+            .side_long_away_from_corner_adjustment = 0.10f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = false,
+            .side_long_away_from_corner_adjustment = 0.35f
+        },
+        .right_corner = {
+            .keep_connector_long = false,
+            .side_long_away_from_corner_adjustment = 0.35f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = false,
+            .side_long_away_from_corner_adjustment = 0.35f
+        },
+        .lower_corner = {
+            .keep_connector_long = false,
+            .side_long_away_from_corner_adjustment = 0.35f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = false,
+            .side_long_away_from_corner_adjustment = 0.15f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.15f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 1,
@@ -160,12 +194,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET2 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = true,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 1,
@@ -200,12 +268,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET3 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = false,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 2,
@@ -242,12 +344,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET4 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = false,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 1,
@@ -284,12 +420,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET5 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = false,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 2,
@@ -324,12 +494,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET6 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = false,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 2,
@@ -364,12 +568,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET7 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = false,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 2,
@@ -404,12 +642,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET8 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = false,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 2,
@@ -444,12 +716,46 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET9 = {
     .maximum_wide_opposing_wall_distance = 3,
     .dir_a_lower_corner_supplement = 0.50f,
     .dir_b_lower_corner_supplement = 1.00f,
-    .keep_dir_b_long_at_left_deep_corner = false,
-    .keep_dir_b_long_at_right_deep_corner = false,
-    .upper_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .upper_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_left_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
-    .lower_right_deep_corner_dir_a = {DeepCornerCurtainAction::KeepOriginal, 0.00f},
+    .upper_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .lower_recess = {
+        .left_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .right_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .left_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
+    .right_recess = {
+        .upper_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        },
+        .lower_corner = {
+            .keep_connector_long = true,
+            .side_long_away_from_corner_adjustment = 0.00f
+        }
+    },
     .left_lower_corner_dir_a_supplement_count = 1,
     .left_lower_corner_dir_b_supplement_count = 1,
     .right_lower_corner_dir_a_supplement_count = 1,

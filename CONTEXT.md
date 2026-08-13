@@ -254,6 +254,51 @@ Multi-part pillars are shared behavior for wall sets whose pillar visuals are as
 
 A wall part that separates room interior from map exterior.
 
+### Oriented Wall Recess（定向凹槽）
+
+A complete inward recess classified by the direction in which its opening faces on the editor canvas.
+
+_Avoid:_ Deep Recess Corner, because that term names one inner corner rather than the complete recess.
+
+### Upper Wall Recess（上凹槽）
+
+An Oriented Wall Recess whose opening faces upward on the editor canvas.
+
+_Alias:_ Recess 1（凹槽 1）
+
+### Lower Wall Recess（下凹槽）
+
+An Oriented Wall Recess whose opening faces downward on the editor canvas.
+
+_Alias:_ Recess 2（凹槽 2）
+
+### Left Wall Recess（左凹槽）
+
+An Oriented Wall Recess whose opening faces left on the editor canvas.
+
+_Alias:_ Recess 3（凹槽 3）
+
+### Right Wall Recess（右凹槽）
+
+An Oriented Wall Recess whose opening faces right on the editor canvas.
+
+_Alias:_ Recess 4（凹槽 4）
+
+Each **Oriented Wall Recess** contains two **Deep Recess Corners**. The four
+Deep Recess Corner quadrant variants classify individual corners and must not
+be used as names for the four complete Oriented Wall Recesses.
+
+The two inner corners of an **Upper Wall Recess** or **Lower Wall Recess** are
+called its **Left Recess Corner** and **Right Recess Corner**. The two inner
+corners of a **Left Wall Recess** or **Right Wall Recess** are called its
+**Upper Recess Corner** and **Lower Recess Corner**.
+
+Each recess corner touches two different wall runs: the recess's **Connecting
+Wall** and one **Recess Side Wall**. Their Long Ceiling Curtains have different
+responsibilities: the connecting-wall Long may be kept or removed, while the
+side-wall Long must remain available for corner coverage and may be shifted
+away from the corner along its wall run.
+
 ### Concave Wall Recess (凹角)
 
 An inward recess in the room's exterior wall boundary formed by two opposing side walls and one connecting wall.
@@ -271,10 +316,6 @@ Upper-left     Upper-right    Lower-left     Lower-right
 ```
 
 Screen-facing descriptions such as “upward corner” or “downward corner” are avoided because they do not uniquely identify Grid topology.
-
-### Deep Corner Replacement Curtain（深角替代帘）
-
-A Long Ceiling Curtain that replaces a removed overhanging corner curtain using the same asset and direction, with only its along-wall position changed.
 
 ### Ceiling Curtain
 
@@ -309,7 +350,8 @@ Ceiling Curtain relationships:
 
 - Each ordinary **Exterior Wall Part** receives one **长**.
 - A **Deep Recess Corner** has exactly one of four quadrant variants: Upper-left, Upper-right, Lower-left, or Lower-right.
-- A **Deep Corner Replacement Curtain** preserves the removed curtain's asset, direction, and outward alignment while changing only its along-wall position.
+- Each corner of an **Oriented Wall Recess** independently keeps or removes the Long Ceiling Curtain on its connecting wall.
+- Each recess corner independently shifts its side-wall Long away from the corner without deleting that corner coverage.
 - Each side of a **Concave Wall Recess** is evaluated independently.
 - A recess entrance uses **宽** when a facing parallel wall of the same direction is one to three wall-part widths away.
 - A facing parallel wall exactly three wall-part widths away still uses **宽**.

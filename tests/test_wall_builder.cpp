@@ -620,6 +620,39 @@ TEST(As2CeilingCurtainPreviewTest, WritesSet1ThreeCellRecessWithRegressionAssert
     EXPECT_GT(count_sprites_by_vid(sprites, FLOOR_AS2_SET1.vid), 0);
     EXPECT_EQ(wide_curtain_count, 0);
     EXPECT_EQ(count_sprites_by_vid(sprites, CEILING_CURTAIN_AS2_SET1.vid), 55);
+    EXPECT_TRUE(CEILING_CURTAIN_AS2_SET1.upper_recess.left_corner.keep_connector_long);
+    EXPECT_FALSE(CEILING_CURTAIN_AS2_SET1.upper_recess.right_corner.keep_connector_long);
+
+    io::Sprite left_corner_long = builder.place_single_ceiling_curtain(
+        5,
+        recess_depth,
+        wall_type,
+        WallPartKind::DirB,
+        false,
+        WallOutsideSide::NegativeGridSide
+    );
+    io::Sprite right_corner_long = builder.place_single_ceiling_curtain(
+        7,
+        recess_depth,
+        wall_type,
+        WallPartKind::DirB,
+        false,
+        WallOutsideSide::NegativeGridSide
+    );
+    EXPECT_TRUE(has_sprite_at(
+        sprites,
+        left_corner_long.vid,
+        left_corner_long.posX,
+        left_corner_long.posY,
+        left_corner_long.direction
+    ));
+    EXPECT_FALSE(has_sprite_at(
+        sprites,
+        right_corner_long.vid,
+        right_corner_long.posX,
+        right_corner_long.posY,
+        right_corner_long.direction
+    ));
 
     std::string output_path = get_test_output_path(
         "celling/as2_set1_ceiling_concave_3.map"
