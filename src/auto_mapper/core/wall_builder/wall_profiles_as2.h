@@ -395,7 +395,7 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET3 = {
         .offset_x = -95.0f,
         .offset_y = -80.0f,
         .negative_side_outward_adjustment = -0.10,
-        .positive_side_outward_adjustment = 0.65f
+        .positive_side_outward_adjustment = 0.55f
     },
     .dir_b_long = {
         .direction = 32,
@@ -598,13 +598,15 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET5 = {
         .direction = 96,
         .offset_x = -95.0f,
         .offset_y = -80.0f,
-        .positive_side_outward_adjustment = 0.70f
+        .negative_side_outward_adjustment = -0.15,
+        .positive_side_outward_adjustment = 0.60f
     },
     .dir_b_long = {
         .direction = 32,
         .offset_x = 155.0f,
         .offset_y = -85.0f,
-        .positive_side_outward_adjustment = -0.15f
+        .negative_side_outward_adjustment = -0.15,
+        .positive_side_outward_adjustment = -0.20f
     },
     .dir_a_wide = {
         .direction = 158,
@@ -698,13 +700,15 @@ inline constexpr CeilingCurtainProfile CEILING_CURTAIN_AS2_SET6 = {
         .direction = 96,
         .offset_x = -95.0f,
         .offset_y = -80.0f,
+        .negative_side_outward_adjustment = -0.15,
         .positive_side_outward_adjustment = 0.75f
     },
     .dir_b_long = {
         .direction = 32,
         .offset_x = 155.0f,
         .offset_y = -85.0f,
-        .positive_side_outward_adjustment = 0.15f
+        .negative_side_outward_adjustment = -0.15,
+        .positive_side_outward_adjustment = 0.05f
     },
     .dir_a_wide = {
         .direction = 158,
