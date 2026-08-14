@@ -398,7 +398,7 @@ TEST(IncubatorBuilderTest, WritesManualSpacingPreviewMap) {
 
     compact_sprites.insert(compact_sprites.end(), wide_spacing_sprites.begin(), wide_spacing_sprites.end());
 
-    std::string out_map_path = get_test_output_path("incubator_builder_manual_test.map");
+    std::string out_map_path = get_test_output_path("AS1/decorations/incubator_builder_manual_test.map");
     ASSERT_TRUE(io::write_map(compact_sprites, out_map_path, 1200.0f, 1400.0f));
 }
 
@@ -420,11 +420,11 @@ TEST(IncubatorBuilderTest, IncubatorSceneGolden) {
         sprites.insert(sprites.end(), incubator_sprites.begin(), incubator_sprites.end());
     }
 
-    const std::string temp_output_path = get_test_output_path("current_incubator_builder.map");
+    const std::string temp_output_path = get_test_output_path("AS1/decorations/current_incubator_builder.map");
     TempFileCleaner cleaner(temp_output_path);
 
     // manual verify
-    // const std::string temp_output_path = get_test_output_path("current_incubator_builder.map");
+    // const std::string temp_output_path = get_test_output_path("AS1/decorations/current_incubator_builder.map");
     // TempFileCleaner cleaner(temp_output_path);
 
     bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);

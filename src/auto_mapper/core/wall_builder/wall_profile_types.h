@@ -119,12 +119,32 @@ struct FloorProfile {
     DirectionRandomizationRule direction_randomization{};
 };
 
-struct CeilingProfile {
+struct CeilingWallOffset {
+    float x = 0.0f;
+    float y = 0.0f;
+};
+
+// AS1 ceiling tiles are plain square assets. The profile stores only wall
+// alignment, straight-run pitch correction, and simple convex-corner fills.
+struct AS1CeilingProfile {
     int vid;
+    float pos_z;
     float step_x;
     float step_y;
-    float pos_z;
-    int grid_divisor = 1;
+    CeilingWallOffset dir_a_negative_outside_offset{};
+    CeilingWallOffset dir_a_positive_outside_offset{};
+    CeilingWallOffset dir_b_negative_outside_offset{};
+    CeilingWallOffset dir_b_positive_outside_offset{};
+    CeilingWallOffset dir_a_step_adjustment{};
+    CeilingWallOffset dir_b_step_adjustment{};
+    int left_upper_corner_dir_a_supplement_count = 0;
+    int left_upper_corner_dir_b_supplement_count = 0;
+    int left_lower_corner_dir_a_supplement_count = 0;
+    int left_lower_corner_dir_b_supplement_count = 0;
+    int right_upper_corner_dir_a_supplement_count = 0;
+    int right_upper_corner_dir_b_supplement_count = 0;
+    int right_lower_corner_dir_a_supplement_count = 0;
+    int right_lower_corner_dir_b_supplement_count = 0;
 };
 
 struct CeilingCurtainPartProfile {
@@ -134,6 +154,11 @@ struct CeilingCurtainPartProfile {
     // Extra outward distance in logical wall-grid widths for asymmetric sprites.
     float negative_side_outward_adjustment = 0.0f;
     float positive_side_outward_adjustment = 0.0f;
+    // AS1 Lab ceilings were calibrated independently on all four wall sides.
+    // When enabled, these offsets are applied directly from the emitted wall.
+    bool use_side_specific_offsets = false;
+    CeilingWallOffset negative_side_offset{};
+    CeilingWallOffset positive_side_offset{};
 };
 
 struct RecessCornerCurtainProfile {

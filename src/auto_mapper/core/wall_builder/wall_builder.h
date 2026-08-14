@@ -7,6 +7,7 @@
 
 #include "auto_mapper/core/geometry.h"
 #include "auto_mapper/core/wall_builder/wall_profile_types.h"
+#include "auto_mapper/core/wall_builder/ceiling_profiles_as1.h"
 #include "auto_mapper/core/wall_builder/wall_profiles_as1.h"
 #include "auto_mapper/core/wall_builder/wall_profiles_as2.h"
 #include "auto_mapper/io/map_writer.h"
@@ -147,8 +148,8 @@ private:
     std::vector<RawSprite> process_wall_sprites(const std::vector<Segment>& segments, const std::vector<DoorExcavation>& excavations) const;
     PhysicalGridContext build_physical_grid(const std::vector<Segment>& segments) const;
     std::vector<io::Sprite> place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
-    std::vector<io::Sprite> place_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
-    std::vector<io::Sprite> place_as2_ceiling_curtains(const std::vector<Segment>& segments) const;
+    std::vector<io::Sprite> place_ceilings(const std::vector<Segment>& segments) const;
+    std::vector<io::Sprite> place_wall_aligned_ceiling_curtains(const std::vector<Segment>& segments) const;
     // Legacy Wide Ceiling Curtain strategy. It detects narrow recesses, groups
     // their exterior wall parts, and replaces Long curtains with Wide curtains.
     // The current AS2 path intentionally uses Long curtains only, so this
@@ -158,7 +159,6 @@ private:
         const std::set<CeilingPoint>& vertices,
         const std::set<CeilingPoint>& outside_cells
     ) const;
-    std::vector<io::Sprite> place_legacy_ceilings(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
 
     // Select rare wall positions after door excavation. The method owns all
     // density, straight-run, fairness, and physical-distance placement rules.
@@ -167,7 +167,7 @@ private:
 
     // Look up profiles
     static const FloorProfile& get_floor_profile(int floor_type);
-    static const CeilingProfile& get_ceiling_profile(int ceiling_type);
+    static const AS1CeilingProfile* get_as1_ceiling_profile(int wall_type);
     static const CeilingCurtainProfile* get_ceiling_curtain_profile(int wall_type);
     const WallVariant& select_wall_variant(const WallProfile& profile) const;
     int select_wall_variant_index(const WallProfile& profile) const;

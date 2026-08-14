@@ -31,7 +31,7 @@ TEST(WallBuilderTest, WallOnlyGolden) {
     std::vector<io::Sprite> sprites = builder.build(scene.segments, false, false);
     
     // write spirit into temp map
-    const std::string temp_output_path = get_test_output_path("wall/current_wall_builder.map");
+    const std::string temp_output_path = get_test_output_path("AS1/wall/current_wall_builder.map");
     
     // add cleaner
     TempFileCleaner cleaner(temp_output_path);
@@ -411,7 +411,107 @@ static std::vector<Segment> build_concave_room_segments(
     return segments;
 }
 
-static TestScene load_ceiling_manual_validation_scene(int wall_type) {
+TEST(AS1LabCeilingTest, UsesProfileOffsetsForEveryWallSide) {
+    WallBuilder builder(2000.0f, 2000.0f, false);
+
+    struct PlacementCase {
+        WallPartKind kind;
+        WallOutsideSide outside_side;
+        float expected_offset_x;
+        float expected_offset_y;
+    };
+
+    const PlacementCase cases[] = {
+        {WallPartKind::DirA, WallOutsideSide::NegativeGridSide, -72.0f, -6.0f},
+        {WallPartKind::DirA, WallOutsideSide::PositiveGridSide, 38.0f, 46.0f},
+        {WallPartKind::DirB, WallOutsideSide::NegativeGridSide, 23.0f, -22.0f},
+        {WallPartKind::DirB, WallOutsideSide::PositiveGridSide, -37.0f, 42.0f}
+    };
+
+    for (const PlacementCase& placement_case : cases) {
+        io::Sprite wall = builder.place_single_wall(
+            2,
+            3,
+            WALL_TYPE_LAB,
+            placement_case.kind
+        );
+        io::Sprite ceiling = builder.place_single_ceiling_curtain(
+            2,
+            3,
+            WALL_TYPE_LAB,
+            placement_case.kind,
+            false,
+            placement_case.outside_side
+        );
+
+        EXPECT_EQ(ceiling.vid, CEILING_AS1_LAB.vid);
+        EXPECT_FLOAT_EQ(ceiling.posX - wall.posX, placement_case.expected_offset_x);
+        EXPECT_FLOAT_EQ(ceiling.posY - wall.posY, placement_case.expected_offset_y);
+        EXPECT_FLOAT_EQ(ceiling.posZ, CEILING_AS1_LAB.pos_z);
+        EXPECT_EQ(ceiling.direction, 0u);
+    }
+}
+
+TEST(AS1LabCeilingTest, PlacesWallTilesAndFourCornerSupplements) {
+    constexpr int room_size = 3;
+    WallBuilder builder(2000.0f, 2000.0f, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_LAB),
+        false,
+        true
+    );
+
+    int ceiling_count = 0;
+    std::set<std::pair<float, float>> ceiling_positions;
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != CEILING_AS1_LAB.vid) {
+            continue;
+        }
+
+        ceiling_count += 1;
+        ceiling_positions.insert({sprite.posX, sprite.posY});
+    }
+
+    int expected_exterior_wall_count = room_size * 4;
+    int expected_supplement_count =
+        CEILING_AS1_LAB.left_upper_corner_dir_a_supplement_count +
+        CEILING_AS1_LAB.left_upper_corner_dir_b_supplement_count +
+        CEILING_AS1_LAB.left_lower_corner_dir_a_supplement_count +
+        CEILING_AS1_LAB.left_lower_corner_dir_b_supplement_count +
+        CEILING_AS1_LAB.right_upper_corner_dir_a_supplement_count +
+        CEILING_AS1_LAB.right_upper_corner_dir_b_supplement_count +
+        CEILING_AS1_LAB.right_lower_corner_dir_a_supplement_count +
+        CEILING_AS1_LAB.right_lower_corner_dir_b_supplement_count;
+    int expected_ceiling_count =
+        expected_exterior_wall_count + expected_supplement_count;
+    EXPECT_EQ(ceiling_count, expected_ceiling_count);
+    EXPECT_EQ(
+        ceiling_positions.size(),
+        static_cast<std::size_t>(expected_ceiling_count)
+    );
+
+    int connected_pair_count = 0;
+    for (auto first_it = ceiling_positions.begin();
+         first_it != ceiling_positions.end();
+         ++first_it) {
+        auto second_it = first_it;
+        ++second_it;
+        for (; second_it != ceiling_positions.end(); ++second_it) {
+            float distance_x = std::abs(second_it->first - first_it->first);
+            float distance_y = std::abs(second_it->second - first_it->second);
+            bool follows_ceiling_pitch =
+                distance_x == 80.0f && distance_y == 56.0f;
+            if (follows_ceiling_pitch) {
+                connected_pair_count += 1;
+            }
+        }
+    }
+
+    int expected_straight_connections = 4 * (room_size - 1);
+    EXPECT_GE(connected_pair_count, expected_straight_connections);
+}
+
+static TestScene build_project_reference_wall_scene(int wall_type) {
     TestScene scene;
     scene.map_size_x = 7000.0f;
     scene.map_size_y = 6000.0f;
@@ -701,7 +801,7 @@ TEST(As2CeilingCurtainPreviewTest, WritesManualValidationMapsForSet1ToSet9) {
     for (int set_index = 0; set_index < 9; ++set_index) {
         int set_number = set_index + 1;
         int wall_type = wall_types[set_index];
-        TestScene scene = load_ceiling_manual_validation_scene(wall_type);
+        TestScene scene = build_project_reference_wall_scene(wall_type);
         ASSERT_FALSE(scene.segments.empty());
 
         WallBuilder builder(scene.map_size_x, scene.map_size_y, false);
@@ -1825,135 +1925,37 @@ TEST(WallBuilderTest, As2WallSet1BuildsFixedRoomsAndRandomLargeRoom) {
 
 
 /**
- * Tests for AS1 Celling Floor builder
- * normal floor + lab floor + celling
- * make sure it is aligned and can be manually modified
+ * Generates ceiling-only AS1 maps from the manually arranged UI fixtures.
+ * This test intentionally has no assertions because seams are checked in-game.
  */
-TEST(WallBuilderTest, FloorCeilingManualGoldAlignment) {
-    // 3. Generate 3x3 grids for standard floor, lab floor, and ceiling directly
-    float map_size_x = 1500.0f;
-    float map_size_y = 1500.0f;
-    WallBuilder builder(map_size_x, map_size_y);
+TEST(AS1CeilingPreviewTest, WritesManualStandardAndLabMaps) {
+    const std::string json_paths[] = {
+        "tests/golden/manual_ui_test/AS1_celling_standard.json",
+        "tests/golden/manual_ui_test/AS1_celling_lab.json"
+    };
+    const std::string output_paths[] = {
+        "AS1/as1_celling_standard.map",
+        "AS1/as1_celling_lab.map"
+    };
 
-    std::vector<io::Sprite> generated_sprites;
+    for (int scene_index = 0; scene_index < 2; ++scene_index) {
+        TestScene scene = load_test_scene(
+            resolve_test_path(json_paths[scene_index])
+        );
+        WallBuilder builder(scene.map_size_x, scene.map_size_y);
+        std::vector<io::Sprite> sprites = builder.build(
+            scene.segments,
+            false,
+            true
+        );
 
-    // Standard Floor (vid 500) 3x3
-    const auto& f_std = core::FLOOR_STANDARD;
-    for (int gx = -1; gx <= 1; ++gx) {
-        for (int gy = -1; gy <= 1; ++gy) {
-            generated_sprites.push_back(builder.place_single_floor_celling(
-                gx, gy, f_std.vid, f_std.step_x, f_std.step_y, f_std.pos_z, f_std.grid_divisor
-            ));
-        }
+        io::write_map(
+            sprites,
+            get_test_output_path(output_paths[scene_index]),
+            scene.map_size_x,
+            scene.map_size_y
+        );
     }
-    // Lab Floor (vid 503) 3x3 (shifted to gx=[4..6] to separate in editor)
-    const auto& f_lab = core::FLOOR_LAB;
-    for (int gx = 4; gx <= 6; ++gx) {
-        for (int gy = -1; gy <= 1; ++gy) {
-            generated_sprites.push_back(builder.place_single_floor_celling(
-                gx, gy, f_lab.vid, f_lab.step_x, f_lab.step_y, f_lab.pos_z, f_lab.grid_divisor
-            ));
-        }
-    }
-    // Ceiling (vid 504) 3x3 (shifted to gy=[4..6] to separate in editor)
-    const auto& c_prof = core::CEILING_STANDARD;
-    for (int gx = -1; gx <= 1; ++gx) {
-        for (int gy = 4; gy <= 6; ++gy) {
-            generated_sprites.push_back(builder.place_single_floor_celling(
-                gx, gy, c_prof.vid, c_prof.step_x, c_prof.step_y, c_prof.pos_z,
-                c_prof.grid_divisor
-            ));
-        }
-    }
-
-    // 1. Resolve coordinate anchors directly from the generated sprites.
-    // This implements a robust "Self-Referencing Anchor" strategy, ensuring that
-    // grid alignment checks are immune to shift offset changes in the builder.
-    io::Sprite ref_500;
-    ref_500.vid = -1;
-    io::Sprite ref_503;
-    ref_503.vid = -1;
-    io::Sprite ref_504;
-    ref_504.vid = -1;
-
-    for (const auto& spr : generated_sprites) {
-        if (spr.vid == 500 && ref_500.vid == -1) ref_500 = spr;
-        if (spr.vid == 503 && ref_503.vid == -1) ref_503 = spr;
-        if (spr.vid == 504 && ref_504.vid == -1) ref_504 = spr;
-    }
-
-    ASSERT_NE(ref_500.vid, -1) << "Standard floor reference not found!";
-    ASSERT_NE(ref_503.vid, -1) << "Lab floor reference not found!";
-    ASSERT_NE(ref_504.vid, -1) << "Ceiling reference not found!";
-
-    // in case there need to be manually verified
-    std::string out_map_path = get_test_output_path("floor_celling_alignment_test.map");
-    io::write_map(generated_sprites, out_map_path, map_size_x, map_size_y);
-
-    // 4. Assert grid alignment properties
-    std::set<std::pair<int, int>> floor_std_grid;
-    std::set<std::pair<int, int>> floor_lab_grid;
-    std::set<std::pair<int, int>> ceiling_grid;
-
-    int floor_std_count = 0;
-    int floor_lab_count = 0;
-    int ceiling_count = 0;
-
-    for (const auto& spr : generated_sprites) {
-        if (spr.vid == 500) { // FLOOR_STANDARD
-            floor_std_count++;
-            float dx = spr.posX - ref_500.posX;
-            float dy = spr.posY - ref_500.posY;
-            const auto& f_std = core::FLOOR_STANDARD;
-            float gx_diff = ((dx / f_std.step_x) + (dy / f_std.step_y)) / 2.0f;
-            float gy_diff = ((dy / f_std.step_y) - (dx / f_std.step_x)) / 2.0f;
-
-            EXPECT_NEAR(gx_diff, std::round(gx_diff), 1e-3f)
-                << "Standard Floor at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
-            EXPECT_NEAR(gy_diff, std::round(gy_diff), 1e-3f)
-                << "Standard Floor at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
-
-            floor_std_grid.insert({static_cast<int>(std::round(gx_diff)), static_cast<int>(std::round(gy_diff))});
-        }
-        else if (spr.vid == 503) { // FLOOR_LAB
-            floor_lab_count++;
-            float dx = spr.posX - ref_503.posX;
-            float dy = spr.posY - ref_503.posY;
-            const auto& f_lab = core::FLOOR_LAB;
-            float gx_diff = ((dx / f_lab.step_x) + (dy / f_lab.step_y)) / 2.0f;
-            float gy_diff = ((dy / f_lab.step_y) - (dx / f_lab.step_x)) / 2.0f;
-
-            EXPECT_NEAR(gx_diff, std::round(gx_diff), 1e-3f)
-                << "Lab Floor at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
-            EXPECT_NEAR(gy_diff, std::round(gy_diff), 1e-3f)
-                << "Lab Floor at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
-
-            floor_lab_grid.insert({static_cast<int>(std::round(gx_diff)), static_cast<int>(std::round(gy_diff))});
-        }
-        else if (spr.vid == 504) { // CEILING_STANDARD
-            ceiling_count++;
-            float dx = spr.posX - ref_504.posX;
-            float dy = spr.posY - ref_504.posY;
-            const auto& c_prof = core::CEILING_STANDARD;
-            float gx_diff = ((dx / c_prof.step_x) + (dy / c_prof.step_y)) / 2.0f;
-            float gy_diff = ((dy / c_prof.step_y) - (dx / c_prof.step_x)) / 2.0f;
-
-            EXPECT_NEAR(gx_diff, std::round(gx_diff), 1e-3f)
-                << "Ceiling at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
-            EXPECT_NEAR(gy_diff, std::round(gy_diff), 1e-3f)
-                << "Ceiling at (" << spr.posX << ", " << spr.posY << ") is not aligned to gold grid!";
-
-            ceiling_grid.insert({static_cast<int>(std::round(gx_diff)), static_cast<int>(std::round(gy_diff))});
-        }
-    }
-
-    // 5. Ensure no duplicates/overlaps
-    EXPECT_EQ(floor_std_grid.size(), static_cast<size_t>(floor_std_count)) << "Found overlapping Standard Floor tiles!";
-    EXPECT_EQ(floor_lab_grid.size(), static_cast<size_t>(floor_lab_count)) << "Found overlapping Lab Floor tiles!";
-    EXPECT_EQ(ceiling_grid.size(), static_cast<size_t>(ceiling_count)) << "Found overlapping Ceiling tiles!";
-
-    std::cout << "[Test] FloorCeilingManualGoldAlignment summary: Standard Floors=" << floor_std_count
-              << ", Lab Floors=" << floor_lab_count << ", Ceilings=" << ceiling_count << std::endl;
 }
 
 /**
@@ -1971,7 +1973,7 @@ TEST(FloorBuilderTest, FloorGoldenMap) {
     WallBuilder builder(scene.map_size_x, scene.map_size_y);
     std::vector<io::Sprite> sprites = builder.build(scene.segments, true, false);
 
-    const std::string temp_output_path = get_test_output_path("floor/current_floor_builder.map");
+    const std::string temp_output_path = get_test_output_path("AS1/floor/current_floor_builder.map");
     TempFileCleaner cleaner(temp_output_path);
 
     bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);

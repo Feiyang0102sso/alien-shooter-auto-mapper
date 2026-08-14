@@ -1,6 +1,6 @@
 /**
  * @file wall_profiles_as1.h
- * @brief AS1-compatible wall, floor, and ceiling profile constants.
+ * @brief AS1-compatible wall and floor profile constants.
  */
 
 #pragma once
@@ -117,16 +117,6 @@ inline constexpr FloorProfile FLOOR_STANDARD_DARK = {
     .pos_z = 0.0f,
     .grid_divisor = 1,
     .direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
-};
-
-inline constexpr int CEILING_TYPE_STANDARD = 0;
-
-inline constexpr CeilingProfile CEILING_STANDARD = {
-    .vid = 504,
-    .step_x = 80.0f,
-    .step_y = 56.0f,
-    .pos_z = 90.0f,
-    .grid_divisor = 2
 };
 
 } // namespace auto_mapper::core

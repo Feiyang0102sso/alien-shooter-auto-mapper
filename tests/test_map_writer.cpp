@@ -23,7 +23,7 @@ TEST(MapWriterTest, WriteMapSuccess) {
         sprites.push_back(spr);
     }
 
-    std::string output_file = get_test_output_path("test_cpp_output.map");
+    std::string output_file = get_test_output_path("AS1/test_cpp_output.map");
     bool success = io::write_map(
         sprites, 
         output_file, 

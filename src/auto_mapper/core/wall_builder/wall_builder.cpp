@@ -135,17 +135,58 @@ const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {
     return profiles.at(FLOOR_TYPE_STANDARD);
 }
 
-const CeilingProfile& WallBuilder::get_ceiling_profile(int ceiling_type) {
-    static const std::unordered_map<int, CeilingProfile> profiles = {
-        {CEILING_TYPE_STANDARD, CEILING_STANDARD}
-    };
-    if (profiles.find(ceiling_type) != profiles.end()) {
-        return profiles.at(ceiling_type);
-    }
-    return profiles.at(CEILING_TYPE_STANDARD);
-}
-
 const CeilingCurtainProfile* WallBuilder::get_ceiling_curtain_profile(int wall_type) {
+    if (wall_type == WALL_TYPE_LAB) {
+        // Adapter only: AS1's public profile remains a plain square-tile
+        // profile. The shared exterior-edge pipeline expects AS2 part slots.
+        static const CeilingCurtainProfile lab_pipeline_adapter = {
+            .vid = CEILING_AS1_LAB.vid,
+            .pos_z = CEILING_AS1_LAB.pos_z,
+            .maximum_wide_opposing_wall_distance = 3,
+            .dir_a_long = {
+                .direction = 0,
+                .offset_x = 0.0f,
+                .offset_y = 0.0f,
+                .use_side_specific_offsets = true,
+                .negative_side_offset =
+                    CEILING_AS1_LAB.dir_a_negative_outside_offset,
+                .positive_side_offset =
+                    CEILING_AS1_LAB.dir_a_positive_outside_offset
+            },
+            .dir_b_long = {
+                .direction = 0,
+                .offset_x = 0.0f,
+                .offset_y = 0.0f,
+                .use_side_specific_offsets = true,
+                .negative_side_offset =
+                    CEILING_AS1_LAB.dir_b_negative_outside_offset,
+                .positive_side_offset =
+                    CEILING_AS1_LAB.dir_b_positive_outside_offset
+            },
+            .dir_a_wide = {
+                .direction = 0,
+                .offset_x = 0.0f,
+                .offset_y = 0.0f,
+                .use_side_specific_offsets = true,
+                .negative_side_offset =
+                    CEILING_AS1_LAB.dir_a_negative_outside_offset,
+                .positive_side_offset =
+                    CEILING_AS1_LAB.dir_a_positive_outside_offset
+            },
+            .dir_b_wide = {
+                .direction = 0,
+                .offset_x = 0.0f,
+                .offset_y = 0.0f,
+                .use_side_specific_offsets = true,
+                .negative_side_offset =
+                    CEILING_AS1_LAB.dir_b_negative_outside_offset,
+                .positive_side_offset =
+                    CEILING_AS1_LAB.dir_b_positive_outside_offset
+            }
+        };
+        return &lab_pipeline_adapter;
+    }
+
     if (wall_type == WALL_TYPE_AS2_WALL_SET1_FIXED_0) {
         return &CEILING_CURTAIN_AS2_SET1;
     }
@@ -188,6 +229,14 @@ const CeilingCurtainProfile* WallBuilder::get_ceiling_curtain_profile(int wall_t
 
     if (wall_type == WALL_TYPE_AS2_WALL_SET9_RANDOM) {
         return &CEILING_CURTAIN_AS2_SET9;
+    }
+
+    return nullptr;
+}
+
+const AS1CeilingProfile* WallBuilder::get_as1_ceiling_profile(int wall_type) {
+    if (wall_type == WALL_TYPE_LAB) {
+        return &CEILING_AS1_LAB;
     }
 
     return nullptr;
@@ -568,16 +617,12 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
 }
 
 std::vector<io::Sprite> WallBuilder::place_ceilings(
-    const std::vector<Segment>& segments,
-    const PhysicalGridContext& grid_ctx
+    const std::vector<Segment>& segments
 ) const {
-    std::vector<io::Sprite> ceiling_sprites = place_as2_ceiling_curtains(segments);
-    std::vector<io::Sprite> legacy_sprites = place_legacy_ceilings(segments, grid_ctx);
-    ceiling_sprites.insert(ceiling_sprites.end(), legacy_sprites.begin(), legacy_sprites.end());
-    return ceiling_sprites;
+    return place_wall_aligned_ceiling_curtains(segments);
 }
 
-std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
+std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
     const std::vector<Segment>& segments
 ) const {
     std::vector<io::Sprite> ceiling_sprites;
@@ -586,7 +631,10 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
     std::set<CeilingPoint> vertices;
 
     for (const Segment& segment : segments) {
-        if (!is_as2_wall_set_type(segment.wall_type)) {
+        bool supports_wall_aligned_ceiling =
+            segment.wall_type == WALL_TYPE_LAB ||
+            is_as2_wall_set_type(segment.wall_type);
+        if (!supports_wall_aligned_ceiling) {
             continue;
         }
 
@@ -750,7 +798,7 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
         );
     }
 
-    // Temporary visual experiment: attach one Long curtain to every exterior wall part.
+    // Attach one wall-aligned ceiling or Long curtain to every exterior wall part.
     constexpr bool use_only_long_ceiling_curtains = true;
     if (use_only_long_ceiling_curtains) {
         struct CornerSupplement {
@@ -1226,6 +1274,8 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             );
         }
 
+        std::map<CeilingEdgeKey, io::Sprite> lab_edge_ceiling_sprites;
+
         for (const auto& entry : exterior_edges) {
             if (removed_ceiling_edges.count(entry.first) > 0) {
                 continue;
@@ -1241,6 +1291,56 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                 edge.outside_side
             );
 
+            if (edge.wall_type == WALL_TYPE_LAB) {
+                const AS1CeilingProfile* ceiling_profile =
+                    get_as1_ceiling_profile(edge.wall_type);
+                CeilingWallOffset step_adjustment =
+                    ceiling_profile->dir_b_step_adjustment;
+                if (edge.kind == WallPartKind::DirA) {
+                    step_adjustment = ceiling_profile->dir_a_step_adjustment;
+                }
+
+                // Keep each straight Lab run attached to its own wall line.
+                // VID 504 follows its 80x56 pitch only within that run.
+                int run_step_index = 0;
+                int previous_gx = edge.gx;
+                int previous_gy = edge.gy;
+                while (true) {
+                    if (edge.kind == WallPartKind::DirA) {
+                        previous_gy -= 1;
+                    } else {
+                        previous_gx -= 1;
+                    }
+
+                    CeilingEdgeKey previous_key = {
+                        previous_gx,
+                        previous_gy,
+                        edge.kind
+                    };
+                    auto previous_edge_it = exterior_edges.find(previous_key);
+                    if (previous_edge_it == exterior_edges.end()) {
+                        break;
+                    }
+
+                    const ExteriorCeilingEdge& previous_edge =
+                        previous_edge_it->second;
+                    bool belongs_to_same_run =
+                        previous_edge.wall_type == edge.wall_type &&
+                        previous_edge.outside_side == edge.outside_side;
+                    if (!belongs_to_same_run) {
+                        break;
+                    }
+
+                    run_step_index += 1;
+                }
+
+                float run_step = static_cast<float>(run_step_index);
+                curtain_sprite.posX +=
+                    step_adjustment.x * run_step;
+                curtain_sprite.posY +=
+                    step_adjustment.y * run_step;
+            }
+
             auto side_adjustment_it = recess_side_adjustments.find(entry.first);
             if (side_adjustment_it != recess_side_adjustments.end()) {
                 const RecessSideAdjustment& adjustment = side_adjustment_it->second;
@@ -1252,6 +1352,9 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
             }
 
             ceiling_sprites.push_back(curtain_sprite);
+            if (edge.wall_type == WALL_TYPE_LAB) {
+                lab_edge_ceiling_sprites.emplace(entry.first, curtain_sprite);
+            }
 
             for (const CornerSupplement& supplement : lower_corner_supplements) {
                 if (supplement.edge != entry.first) {
@@ -1267,6 +1370,144 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains(
                 ceiling_sprites.push_back(supplemental_sprite);
             }
         }
+
+        for (const CeilingPoint& vertex : vertices) {
+            int outside_count = 0;
+            CeilingPoint inside_cell = {0, 0};
+            CeilingPoint surrounding_cells[4] = {
+                {vertex.first - 1, vertex.second - 1},
+                {vertex.first, vertex.second - 1},
+                {vertex.first - 1, vertex.second},
+                {vertex.first, vertex.second}
+            };
+
+            for (const CeilingPoint& surrounding_cell : surrounding_cells) {
+                if (outside_cells.count(surrounding_cell) > 0) {
+                    outside_count += 1;
+                } else {
+                    inside_cell = surrounding_cell;
+                }
+            }
+
+            // A square room corner has three outside cells and exactly two
+            // exterior wall tiles meeting at the vertex.
+            if (outside_count != 3) {
+                continue;
+            }
+
+            CeilingEdgeKey corner_edge_candidates[4] = {
+                {vertex.first, vertex.second, WallPartKind::DirA},
+                {vertex.first, vertex.second + 1, WallPartKind::DirA},
+                {vertex.first, vertex.second, WallPartKind::DirB},
+                {vertex.first + 1, vertex.second, WallPartKind::DirB}
+            };
+            int corner_edge_count = 0;
+            for (const CeilingEdgeKey& candidate : corner_edge_candidates) {
+                auto sprite_it = lab_edge_ceiling_sprites.find(candidate);
+                if (sprite_it != lab_edge_ceiling_sprites.end()) {
+                    corner_edge_count += 1;
+                }
+            }
+
+            if (corner_edge_count != 2) {
+                continue;
+            }
+
+            const AS1CeilingProfile* profile =
+                get_as1_ceiling_profile(WALL_TYPE_LAB);
+            int dir_a_supplement_count = 0;
+            int dir_b_supplement_count = 0;
+            if (inside_cell == CeilingPoint{vertex.first, vertex.second}) {
+                dir_a_supplement_count =
+                    profile->left_upper_corner_dir_a_supplement_count;
+                dir_b_supplement_count =
+                    profile->left_upper_corner_dir_b_supplement_count;
+            } else if (inside_cell == CeilingPoint{vertex.first, vertex.second - 1}) {
+                dir_a_supplement_count =
+                    profile->left_lower_corner_dir_a_supplement_count;
+                dir_b_supplement_count =
+                    profile->left_lower_corner_dir_b_supplement_count;
+            } else if (inside_cell == CeilingPoint{vertex.first - 1, vertex.second}) {
+                dir_a_supplement_count =
+                    profile->right_upper_corner_dir_a_supplement_count;
+                dir_b_supplement_count =
+                    profile->right_upper_corner_dir_b_supplement_count;
+            } else {
+                dir_a_supplement_count =
+                    profile->right_lower_corner_dir_a_supplement_count;
+                dir_b_supplement_count =
+                    profile->right_lower_corner_dir_b_supplement_count;
+            }
+
+            WallPartKind supplement_kinds[2] = {
+                WallPartKind::DirA,
+                WallPartKind::DirB
+            };
+            int supplement_counts[2] = {
+                dir_a_supplement_count,
+                dir_b_supplement_count
+            };
+
+            for (int direction_index = 0; direction_index < 2; ++direction_index) {
+                WallPartKind supplement_kind = supplement_kinds[direction_index];
+                int supplement_count = supplement_counts[direction_index];
+                CeilingEdgeKey supplement_edge_key{};
+                const io::Sprite* supplement_edge_sprite = nullptr;
+
+                for (const CeilingEdgeKey& candidate : corner_edge_candidates) {
+                    if (std::get<2>(candidate) != supplement_kind) {
+                        continue;
+                    }
+
+                    auto sprite_it = lab_edge_ceiling_sprites.find(candidate);
+                    if (sprite_it == lab_edge_ceiling_sprites.end()) {
+                        continue;
+                    }
+
+                    supplement_edge_key = candidate;
+                    supplement_edge_sprite = &sprite_it->second;
+                    break;
+                }
+
+                if (supplement_edge_sprite == nullptr) {
+                    continue;
+                }
+
+                // Continue the selected direction beyond the corner using the
+                // original 80x56 ceiling pitch. DirA and DirB are independent.
+                float extension_x = profile->step_x;
+                float extension_y = profile->step_y;
+                if (supplement_kind == WallPartKind::DirA) {
+                    int edge_gy = std::get<1>(supplement_edge_key);
+                    bool vertex_is_upper_endpoint =
+                        edge_gy == vertex.second + 1;
+                    if (vertex_is_upper_endpoint) {
+                        extension_y = -extension_y;
+                    } else {
+                        extension_x = -extension_x;
+                    }
+                } else {
+                    int edge_gx = std::get<0>(supplement_edge_key);
+                    bool vertex_is_left_endpoint =
+                        edge_gx == vertex.first + 1;
+                    if (vertex_is_left_endpoint) {
+                        extension_x = -extension_x;
+                        extension_y = -extension_y;
+                    }
+                }
+
+                for (int supplement_index = 1;
+                     supplement_index <= supplement_count;
+                     ++supplement_index) {
+                    float step_count = static_cast<float>(supplement_index);
+                    io::Sprite supplement_sprite = *supplement_edge_sprite;
+                    supplement_sprite.posX += extension_x * step_count;
+                    supplement_sprite.posY += extension_y * step_count;
+                    ceiling_sprites.push_back(supplement_sprite);
+                }
+            }
+        }
+
         return ceiling_sprites;
     }
 
@@ -1509,69 +1750,6 @@ std::vector<io::Sprite> WallBuilder::place_as2_ceiling_curtains_with_wide(
         ));
     }
 
-    return ceiling_sprites;
-}
-
-std::vector<io::Sprite> WallBuilder::place_legacy_ceilings(
-    const std::vector<Segment>& segments,
-    const PhysicalGridContext& grid_ctx
-) const {
-    std::vector<Segment> legacy_segments;
-    for (const Segment& segment : segments) {
-        if (!is_as2_wall_set_type(segment.wall_type)) {
-            legacy_segments.push_back(segment);
-        }
-    }
-
-    std::vector<io::Sprite> ceiling_sprites;
-    if (legacy_segments.empty()) {
-        return ceiling_sprites;
-    }
-
-    int cell_size = 5;
-
-    const CeilingProfile& c_prof = get_ceiling_profile(CEILING_TYPE_STANDARD);
-    MapPoint c_shift = get_floor_ceiling_shift(map_size_x_, c_prof.step_x, c_prof.step_y, c_prof.grid_divisor);
-
-    int min_gx = 1e9, max_gx = -1e9, min_gy = 1e9, max_gy = -1e9;
-    for (const auto& seg : legacy_segments) {
-        MapPoint p1 = get_phys(seg.start.x, seg.start.y, seg.wall_type);
-        MapPoint p2 = get_phys(seg.end.x, seg.end.y, seg.wall_type);
-        
-        int gx1 = std::round(((p1.x - c_shift.x) / c_prof.step_x + (p1.y - c_shift.y) / c_prof.step_y) / 2.0f);
-        int gy1 = std::round(((p1.y - c_shift.y) / c_prof.step_y - (p1.x - c_shift.x) / c_prof.step_x) / 2.0f);
-        
-        int gx2 = std::round(((p2.x - c_shift.x) / c_prof.step_x + (p2.y - c_shift.y) / c_prof.step_y) / 2.0f);
-        int gy2 = std::round(((p2.y - c_shift.y) / c_prof.step_y - (p2.x - c_shift.x) / c_prof.step_x) / 2.0f);
-        
-        min_gx = std::min({min_gx, gx1, gx2});
-        max_gx = std::max({max_gx, gx1, gx2});
-        min_gy = std::min({min_gy, gy1, gy2});
-        max_gy = std::max({max_gy, gy1, gy2});
-    }
-    
-    int margin_g = 6;
-    min_gx -= margin_g; max_gx += margin_g;
-    min_gy -= margin_g; max_gy += margin_g;
-
-    for (int gx = min_gx; gx <= max_gx; ++gx) {
-        for (int gy = min_gy; gy <= max_gy; ++gy) {
-            MapPoint pt = to_iso(GridPoint{gx, gy}, c_prof.step_x, c_prof.step_y, c_shift);
-            float px = pt.x;
-            float py = pt.y;
-
-            int grid_x = (px - grid_ctx.min_px) / cell_size;
-            int grid_y = (py - grid_ctx.min_py) / cell_size;
-
-            if (grid_x >= 0 && grid_x < grid_ctx.grid_w && grid_y >= 0 && grid_y < grid_ctx.grid_h) {
-                bool is_wall = grid_ctx.physical_grid[grid_y * grid_ctx.grid_w + grid_x];
-                bool is_outside = grid_ctx.outside_grid[grid_y * grid_ctx.grid_w + grid_x];
-                if (is_outside && !is_wall) {
-                    ceiling_sprites.push_back(place_single_floor_celling(gx, gy, c_prof.vid, c_prof.step_x, c_prof.step_y, c_prof.pos_z, c_prof.grid_divisor));
-                }
-            }
-        }
-    }
     return ceiling_sprites;
 }
 
@@ -1909,25 +2087,21 @@ std::vector<io::Sprite> WallBuilder::build(
     std::vector<io::Sprite> floor_sprites;
     std::vector<io::Sprite> ceiling_sprites;
 
-    // 2. grid and calculate area
-    if (gen_floor || gen_ceiling) {
+    // 2. Build the physical grid only when floor generation needs it.
+    if (gen_floor) {
         PhysicalGridContext grid_ctx = build_physical_grid(segments);
-        
-        // 3. floor
-        if (gen_floor) {
-            floor_sprites = place_floors(segments, grid_ctx);
-        }
-        
-        // 4. celling
-        if (gen_ceiling) {
-            ceiling_sprites = place_ceilings(segments, grid_ctx);
-        }
+        floor_sprites = place_floors(segments, grid_ctx);
     }
 
-    // 5. project physical coordinates and transform wall sprites
+    // 3. Wall-aligned ceilings do not depend on the floor raster.
+    if (gen_ceiling) {
+        ceiling_sprites = place_ceilings(segments);
+    }
+
+    // 4. project physical coordinates and transform wall sprites
     std::vector<io::Sprite> wall_sprites = convert_to_wall_sprites(raw_sprites);
 
-    // 6. combine all spirit lists
+    // 5. combine all spirit lists
     std::vector<io::Sprite> final_sprites;
     final_sprites.reserve(floor_sprites.size() + wall_sprites.size() + ceiling_sprites.size());
     
@@ -1986,6 +2160,25 @@ io::Sprite WallBuilder::place_single_ceiling_curtain(
     if (part_profile == nullptr) {
         Logger::warning("Ceiling Curtain cannot attach to pillar wall part");
         return {};
+    }
+
+    if (part_profile->use_side_specific_offsets) {
+        const CeilingWallOffset* side_offset =
+            &part_profile->positive_side_offset;
+        if (outside_side == WallOutsideSide::NegativeGridSide) {
+            side_offset = &part_profile->negative_side_offset;
+        }
+
+        io::Sprite wall_sprite = place_single_wall(gx, gy, wall_type, kind);
+        io::Sprite ceiling_sprite(
+            curtain_profile->vid,
+            wall_sprite.posX + side_offset->x,
+            wall_sprite.posY + side_offset->y,
+            curtain_profile->pos_z,
+            part_profile->direction
+        );
+        ceiling_sprite.army = 0;
+        return ceiling_sprite;
     }
 
     // Profile offsets come from one calibrated sample side. Convert the offset

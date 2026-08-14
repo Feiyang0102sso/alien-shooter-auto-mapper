@@ -248,6 +248,42 @@ A pillar generation mode where one logical pillar point can produce multiple pil
 
 Multi-part pillars are shared behavior for wall sets whose pillar visuals are assembled from direction-specific pieces. They are not specific to one wall set.
 
+## AS1 Lab Ceilings
+
+### Wall-Aligned AS1 Lab Ceiling
+
+A VID 504 ceiling tile attached directly to one exterior Lab wall part.
+
+Lab walls use a `90 x 64` placement pitch, while VID 504 has an `80 x 56`
+visual footprint. AS1 Lab ceilings therefore must not share one global tile
+grid: the mismatch accumulates along a run and eventually separates the
+ceiling from the wall.
+
+AS1 Lab ceiling relationships:
+
+- Every exterior Lab `DirA` or `DirB` wall part creates one VID 504 tile.
+- Each straight exterior wall run has its own wall-aligned anchor.
+- Following tiles accumulate the profile's pitch correction so VID 504 stays
+  continuous along that run without rotating away from the Lab wall.
+- Different wall directions must not share one global ceiling grid because the
+  `80/56` ceiling slope differs from the `90/64` Lab wall slope.
+- Lab ceiling corners are configured as `left/right` and `upper/lower`.
+  Each of the four corners has independent `dir_a_supplement_count` and
+  `dir_b_supplement_count` fields, matching the AS2 naming pattern.
+- Corner supplements clone the selected direction's endpoint tile and continue
+  along that same `80x56` line. They never interpolate between directions or
+  move the straight-run tiles.
+- Interior partition walls do not create ceiling tiles.
+- The four wall-direction/exterior-side combinations have independent
+  offsets stored in `CEILING_AS1_LAB`.
+- Callers do not apply ceiling corrections; calibration belongs to the
+  profile.
+- Standard and Standard Dark AS1 walls do not use this Lab profile.
+- Corner supplements, when calibrated, belong to the same profile-driven
+  wall-aligned generation path.
+
+_Avoid:_ AS1 Ceiling Region or AS1 Ceiling Anchor. Those terms describe the
+removed global-grid algorithm.
 ## Ceiling Curtains
 
 ### Exterior Wall Part

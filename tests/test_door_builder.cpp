@@ -51,7 +51,7 @@ TEST(DoorBuilderTest, DoorSceneGolden) {
     std::vector<io::Sprite> door_sprites = door_builder.build(scene.doors);
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
 
-    const std::string temp_output_path = get_test_output_path("door/current_door_builder.map");
+    const std::string temp_output_path = get_test_output_path("AS1/door/current_door_builder.map");
     TempFileCleaner cleaner(temp_output_path);
 
     bool write_success = io::write_map(sprites, temp_output_path, scene.map_size_x, scene.map_size_y);

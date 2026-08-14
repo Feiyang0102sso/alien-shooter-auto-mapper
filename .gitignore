@@ -67,6 +67,7 @@ AutoMapper.cfg
 auto_mapper_project.json
 color_palette_preview.html
 ceiling-curtain-adjustment.html
+*.bak
 
 # --- AS2 local lookup data / generated report ---
 _prepare/AS2/ini/
