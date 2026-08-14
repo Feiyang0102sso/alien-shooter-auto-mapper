@@ -812,11 +812,19 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
             float grid_y = 0.0f;
         };
 
+        struct LabCornerSupplement {
+            CeilingPoint corner;
+            WallPartKind kind;
+            int count = 0;
+            float away_from_corner_adjustment = 0.0f;
+        };
+
         std::map<CeilingPoint, CeilingPoint> deep_corner_outside_cells;
         std::set<CeilingPoint> paired_recess_corners;
         std::set<CeilingEdgeKey> removed_ceiling_edges;
         std::map<CeilingEdgeKey, RecessSideAdjustment> recess_side_adjustments;
         std::vector<CornerSupplement> lower_corner_supplements;
+        std::vector<LabCornerSupplement> lab_corner_supplements;
         for (const CeilingPoint& vertex : vertices) {
             int outside_count = 0;
             bool interior_cell_is_above_vertex = false;
@@ -1116,6 +1124,67 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                         right_corner_profile = &right_profile->lower_recess.right_corner;
                     }
 
+                    const AS1CeilingProfile* left_as1_profile =
+                        get_as1_ceiling_profile(left_exterior_edge.wall_type);
+                    const AS1CeilingProfile* right_as1_profile =
+                        get_as1_ceiling_profile(right_exterior_edge.wall_type);
+                    const AS1RecessCornerSupplementProfile* left_as1_corner = nullptr;
+                    const AS1RecessCornerSupplementProfile* right_as1_corner = nullptr;
+                    if (left_as1_profile != nullptr && is_upper_recess) {
+                        left_as1_corner = &left_as1_profile->upper_recess.left_corner;
+                    }
+                    if (right_as1_profile != nullptr && is_upper_recess) {
+                        right_as1_corner = &right_as1_profile->upper_recess.right_corner;
+                    }
+                    if (left_as1_profile != nullptr && is_lower_recess) {
+                        left_as1_corner = &left_as1_profile->lower_recess.left_corner;
+                    }
+                    if (right_as1_profile != nullptr && is_lower_recess) {
+                        right_as1_corner = &right_as1_profile->lower_recess.right_corner;
+                    }
+                    if (left_as1_corner != nullptr) {
+                        lab_corner_supplements.push_back({
+                            left_vertex,
+                            WallPartKind::DirA,
+                            left_as1_corner->supplement_count,
+                            left_as1_corner->away_from_corner_adjustment
+                        });
+                    }
+                    if (right_as1_corner != nullptr) {
+                        lab_corner_supplements.push_back({
+                            right_vertex,
+                            WallPartKind::DirA,
+                            right_as1_corner->supplement_count,
+                            right_as1_corner->away_from_corner_adjustment
+                        });
+                    }
+                    if (left_as1_corner != nullptr &&
+                        !left_as1_corner->keep_connector_ceiling) {
+                        removed_ceiling_edges.insert(left_edge);
+                    }
+                    if (right_as1_corner != nullptr &&
+                        !right_as1_corner->keep_connector_ceiling) {
+                        removed_ceiling_edges.insert(right_edge);
+                    }
+                    if (left_as1_corner != nullptr &&
+                        !left_as1_corner->keep_side_ceiling) {
+                        configure_long_at_corner(
+                            left_vertex,
+                            WallPartKind::DirA,
+                            false,
+                            0.0f
+                        );
+                    }
+                    if (right_as1_corner != nullptr &&
+                        !right_as1_corner->keep_side_ceiling) {
+                        configure_long_at_corner(
+                            right_vertex,
+                            WallPartKind::DirA,
+                            false,
+                            0.0f
+                        );
+                    }
+
                     if (!left_corner_profile->keep_connector_long) {
                         removed_ceiling_edges.insert(left_edge);
                     }
@@ -1207,6 +1276,67 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                     lower_corner_profile = &lower_profile->right_recess.lower_corner;
                 }
 
+                const AS1CeilingProfile* upper_as1_profile =
+                    get_as1_ceiling_profile(upper_exterior_edge.wall_type);
+                const AS1CeilingProfile* lower_as1_profile =
+                    get_as1_ceiling_profile(lower_exterior_edge.wall_type);
+                const AS1RecessCornerSupplementProfile* upper_as1_corner = nullptr;
+                const AS1RecessCornerSupplementProfile* lower_as1_corner = nullptr;
+                if (upper_as1_profile != nullptr && is_left_recess) {
+                    upper_as1_corner = &upper_as1_profile->left_recess.upper_corner;
+                }
+                if (lower_as1_profile != nullptr && is_left_recess) {
+                    lower_as1_corner = &lower_as1_profile->left_recess.lower_corner;
+                }
+                if (upper_as1_profile != nullptr && is_right_recess) {
+                    upper_as1_corner = &upper_as1_profile->right_recess.upper_corner;
+                }
+                if (lower_as1_profile != nullptr && is_right_recess) {
+                    lower_as1_corner = &lower_as1_profile->right_recess.lower_corner;
+                }
+                if (upper_as1_corner != nullptr) {
+                    lab_corner_supplements.push_back({
+                        upper_vertex,
+                        WallPartKind::DirB,
+                        upper_as1_corner->supplement_count,
+                        upper_as1_corner->away_from_corner_adjustment
+                    });
+                }
+                if (lower_as1_corner != nullptr) {
+                    lab_corner_supplements.push_back({
+                        lower_vertex,
+                        WallPartKind::DirB,
+                        lower_as1_corner->supplement_count,
+                        lower_as1_corner->away_from_corner_adjustment
+                    });
+                }
+                if (upper_as1_corner != nullptr &&
+                    !upper_as1_corner->keep_connector_ceiling) {
+                    removed_ceiling_edges.insert(upper_edge);
+                }
+                if (lower_as1_corner != nullptr &&
+                    !lower_as1_corner->keep_connector_ceiling) {
+                    removed_ceiling_edges.insert(lower_edge);
+                }
+                if (upper_as1_corner != nullptr &&
+                    !upper_as1_corner->keep_side_ceiling) {
+                    configure_long_at_corner(
+                        upper_vertex,
+                        WallPartKind::DirB,
+                        false,
+                        0.0f
+                    );
+                }
+                if (lower_as1_corner != nullptr &&
+                    !lower_as1_corner->keep_side_ceiling) {
+                    configure_long_at_corner(
+                        lower_vertex,
+                        WallPartKind::DirB,
+                        false,
+                        0.0f
+                    );
+                }
+
                 if (!upper_corner_profile->keep_connector_long) {
                     removed_ceiling_edges.insert(upper_edge);
                 }
@@ -1242,22 +1372,57 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
 
             const CeilingPoint& outside_cell = entry.second;
             const StandaloneDeepCornerCurtainProfile* corner_profile = nullptr;
+            const AS1CeilingProfile* as1_profile =
+                get_as1_ceiling_profile(wall_type);
+            const AS1StandaloneDeepCornerSupplementProfile* as1_corner_profile =
+                nullptr;
             // Configuration names describe where the L-shaped recess opens.
             // The single outside cell lies diagonally opposite that direction.
             if (outside_cell == CeilingPoint{corner.first - 1, corner.second - 1}) {
                 corner_profile = &profile->standalone_deep_corners.lower_right;
+                if (as1_profile != nullptr) {
+                    as1_corner_profile =
+                        &as1_profile->standalone_deep_corners.lower_right;
+                }
             }
             if (outside_cell == CeilingPoint{corner.first, corner.second - 1}) {
                 corner_profile = &profile->standalone_deep_corners.lower_left;
+                if (as1_profile != nullptr) {
+                    as1_corner_profile =
+                        &as1_profile->standalone_deep_corners.lower_left;
+                }
             }
             if (outside_cell == CeilingPoint{corner.first - 1, corner.second}) {
                 corner_profile = &profile->standalone_deep_corners.upper_right;
+                if (as1_profile != nullptr) {
+                    as1_corner_profile =
+                        &as1_profile->standalone_deep_corners.upper_right;
+                }
             }
             if (outside_cell == CeilingPoint{corner.first, corner.second}) {
                 corner_profile = &profile->standalone_deep_corners.upper_left;
+                if (as1_profile != nullptr) {
+                    as1_corner_profile =
+                        &as1_profile->standalone_deep_corners.upper_left;
+                }
             }
             if (corner_profile == nullptr) {
                 continue;
+            }
+
+            if (as1_corner_profile != nullptr) {
+                lab_corner_supplements.push_back({
+                    corner,
+                    WallPartKind::DirA,
+                    as1_corner_profile->dir_a_supplement_count,
+                    as1_corner_profile->dir_a_away_from_corner_adjustment
+                });
+                lab_corner_supplements.push_back({
+                    corner,
+                    WallPartKind::DirB,
+                    as1_corner_profile->dir_b_supplement_count,
+                    as1_corner_profile->dir_b_away_from_corner_adjustment
+                });
             }
 
             configure_long_at_corner(
@@ -1277,11 +1442,15 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
         std::map<CeilingEdgeKey, io::Sprite> lab_edge_ceiling_sprites;
 
         for (const auto& entry : exterior_edges) {
-            if (removed_ceiling_edges.count(entry.first) > 0) {
+            bool edge_is_removed =
+                removed_ceiling_edges.count(entry.first) > 0;
+            const ExteriorCeilingEdge& edge = entry.second;
+            bool removed_lab_edge_is_supplement_source =
+                edge_is_removed && edge.wall_type == WALL_TYPE_LAB;
+            if (edge_is_removed && !removed_lab_edge_is_supplement_source) {
                 continue;
             }
 
-            const ExteriorCeilingEdge& edge = entry.second;
             io::Sprite curtain_sprite = place_single_ceiling_curtain(
                 edge.gx,
                 edge.gy,
@@ -1351,10 +1520,14 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                     (adjustment.grid_x + adjustment.grid_y) * wall_profile.step_y;
             }
 
-            ceiling_sprites.push_back(curtain_sprite);
             if (edge.wall_type == WALL_TYPE_LAB) {
                 lab_edge_ceiling_sprites.emplace(entry.first, curtain_sprite);
             }
+            if (edge_is_removed) {
+                continue;
+            }
+
+            ceiling_sprites.push_back(curtain_sprite);
 
             for (const CornerSupplement& supplement : lower_corner_supplements) {
                 if (supplement.edge != entry.first) {
@@ -1505,6 +1678,87 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                     supplement_sprite.posY += extension_y * step_count;
                     ceiling_sprites.push_back(supplement_sprite);
                 }
+            }
+        }
+
+        for (const LabCornerSupplement& supplement : lab_corner_supplements) {
+            CeilingEdgeKey corner_edge_candidates[2];
+            if (supplement.kind == WallPartKind::DirA) {
+                corner_edge_candidates[0] = {
+                    supplement.corner.first,
+                    supplement.corner.second,
+                    WallPartKind::DirA
+                };
+                corner_edge_candidates[1] = {
+                    supplement.corner.first,
+                    supplement.corner.second + 1,
+                    WallPartKind::DirA
+                };
+            } else {
+                corner_edge_candidates[0] = {
+                    supplement.corner.first,
+                    supplement.corner.second,
+                    WallPartKind::DirB
+                };
+                corner_edge_candidates[1] = {
+                    supplement.corner.first + 1,
+                    supplement.corner.second,
+                    WallPartKind::DirB
+                };
+            }
+
+            CeilingEdgeKey supplement_edge_key{};
+            const io::Sprite* supplement_edge_sprite = nullptr;
+            for (const CeilingEdgeKey& candidate : corner_edge_candidates) {
+                auto sprite_it = lab_edge_ceiling_sprites.find(candidate);
+                if (sprite_it == lab_edge_ceiling_sprites.end()) {
+                    continue;
+                }
+
+                supplement_edge_key = candidate;
+                supplement_edge_sprite = &sprite_it->second;
+                break;
+            }
+
+            if (supplement_edge_sprite == nullptr) {
+                continue;
+            }
+
+            const AS1CeilingProfile* profile =
+                get_as1_ceiling_profile(WALL_TYPE_LAB);
+            float extension_x = profile->step_x;
+            float extension_y = profile->step_y;
+            if (supplement.kind == WallPartKind::DirA) {
+                int edge_gy = std::get<1>(supplement_edge_key);
+                bool corner_is_upper_endpoint =
+                    edge_gy == supplement.corner.second + 1;
+                if (corner_is_upper_endpoint) {
+                    extension_y = -extension_y;
+                } else {
+                    extension_x = -extension_x;
+                }
+            } else {
+                int edge_gx = std::get<0>(supplement_edge_key);
+                bool corner_is_left_endpoint =
+                    edge_gx == supplement.corner.first + 1;
+                if (corner_is_left_endpoint) {
+                    extension_x = -extension_x;
+                    extension_y = -extension_y;
+                }
+            }
+
+            for (int supplement_index = 1;
+                 supplement_index <= supplement.count;
+                 ++supplement_index) {
+                float distance_from_corner =
+                    static_cast<float>(supplement_index) +
+                    supplement.away_from_corner_adjustment;
+                io::Sprite supplement_sprite = *supplement_edge_sprite;
+                supplement_sprite.posX +=
+                    extension_x * distance_from_corner;
+                supplement_sprite.posY +=
+                    extension_y * distance_from_corner;
+                ceiling_sprites.push_back(supplement_sprite);
             }
         }
 

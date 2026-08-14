@@ -273,6 +273,20 @@ AS1 Lab ceiling relationships:
 - Corner supplements clone the selected direction's endpoint tile and continue
   along that same `80x56` line. They never interpolate between directions or
   move the straight-run tiles.
+- Complete recesses support one independently configured supplement at each
+  end. `upper_recess` and `lower_recess` use `left_corner` / `right_corner`;
+  `left_recess` and `right_recess` use `upper_corner` / `lower_corner`.
+- Each complete recess end has `keep_connector_ceiling`. When false, the
+  connector edge's original ceiling tile is removed while its side supplement
+  remains independently configurable.
+- Each complete recess end also has `keep_side_ceiling`. It defaults to true;
+  when false, the touching side-wall ceiling tile is removed without changing
+  the connector tile or supplement settings.
+- Standalone right-angle recesses support independent DirA and DirB
+  supplements for all four visible opening directions.
+- Recess `away_from_corner_adjustment` values use AS1 ceiling-tile pitches.
+  Positive values move a supplement farther beyond its corner; negative values
+  move it back toward the corner.
 - Interior partition walls do not create ceiling tiles.
 - The four wall-direction/exterior-side combinations have independent
   offsets stored in `CEILING_AS1_LAB`.

@@ -124,8 +124,42 @@ struct CeilingWallOffset {
     float y = 0.0f;
 };
 
-// AS1 ceiling tiles are plain square assets. The profile stores only wall
-// alignment, straight-run pitch correction, and simple convex-corner fills.
+struct AS1RecessCornerSupplementProfile {
+    // Positive adjustment moves the added square farther beyond the corner.
+    // The value is measured in AS1 ceiling-tile pitches.
+    bool keep_connector_ceiling = false;
+    bool keep_side_ceiling = true;
+    int supplement_count = 0;
+    float away_from_corner_adjustment = 0.0f;
+};
+
+struct AS1HorizontalRecessSupplementProfile {
+    AS1RecessCornerSupplementProfile left_corner{};
+    AS1RecessCornerSupplementProfile right_corner{};
+};
+
+struct AS1VerticalRecessSupplementProfile {
+    AS1RecessCornerSupplementProfile upper_corner{};
+    AS1RecessCornerSupplementProfile lower_corner{};
+};
+
+struct AS1StandaloneDeepCornerSupplementProfile {
+    // Standalone right-angle recesses can continue both touching wall runs.
+    int dir_a_supplement_count = 0;
+    float dir_a_away_from_corner_adjustment = 0.0f;
+    int dir_b_supplement_count = 0;
+    float dir_b_away_from_corner_adjustment = 0.0f;
+};
+
+struct AS1StandaloneDeepCornersSupplementProfile {
+    AS1StandaloneDeepCornerSupplementProfile upper_left{};
+    AS1StandaloneDeepCornerSupplementProfile upper_right{};
+    AS1StandaloneDeepCornerSupplementProfile lower_left{};
+    AS1StandaloneDeepCornerSupplementProfile lower_right{};
+};
+
+// AS1 ceiling tiles are plain square assets. The profile stores wall alignment,
+// straight-run pitch correction, convex corners, and concave recess fills.
 struct AS1CeilingProfile {
     int vid;
     float pos_z;
@@ -145,6 +179,11 @@ struct AS1CeilingProfile {
     int right_upper_corner_dir_b_supplement_count = 0;
     int right_lower_corner_dir_a_supplement_count = 0;
     int right_lower_corner_dir_b_supplement_count = 0;
+    AS1HorizontalRecessSupplementProfile upper_recess{};
+    AS1HorizontalRecessSupplementProfile lower_recess{};
+    AS1VerticalRecessSupplementProfile left_recess{};
+    AS1VerticalRecessSupplementProfile right_recess{};
+    AS1StandaloneDeepCornersSupplementProfile standalone_deep_corners{};
 };
 
 struct CeilingCurtainPartProfile {
