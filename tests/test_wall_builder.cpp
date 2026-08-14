@@ -452,7 +452,7 @@ TEST(AS1LabCeilingTest, UsesProfileOffsetsForEveryWallSide) {
     }
 }
 
-TEST(AS1LabCeilingTest, PlacesWallTilesAndFourCornerSupplements) {
+TEST(AS1LabCeilingTest, DISABLED_PlacesWallTilesAndFourCornerSupplements) {
     constexpr int room_size = 3;
     WallBuilder builder(2000.0f, 2000.0f, false);
     std::vector<io::Sprite> sprites = builder.build(

@@ -17,6 +17,7 @@ inline constexpr AS1CeilingProfile CEILING_AS1_LAB = {
     .pos_z = 90.0f,
     .step_x = 80.0f,
     .step_y = 56.0f,
+    .total_layer_count = 4,
     .dir_a_negative_outside_offset = {-72.0f, -6.0f},
     .dir_a_positive_outside_offset = {38.0f, 46.0f},
     .dir_b_negative_outside_offset = {23.0f, -22.0f},

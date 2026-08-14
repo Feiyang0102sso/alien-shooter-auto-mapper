@@ -250,6 +250,11 @@ Multi-part pillars are shared behavior for wall sets whose pillar visuals are as
 
 ## AS1 Lab Ceilings
 
+### AS1 Lab Ceiling Layer
+
+One complete outward band of VID 504 ceiling coverage, counted from the
+wall-aligned band as layer 1.
+
 ### Wall-Aligned AS1 Lab Ceiling
 
 A VID 504 ceiling tile attached directly to one exterior Lab wall part.
@@ -261,6 +266,25 @@ ceiling from the wall.
 
 AS1 Lab ceiling relationships:
 
+- The configured AS1 Lab Ceiling Layer count is a total count that includes
+  the Wall-Aligned AS1 Lab Ceiling; a count of 1 preserves wall-only coverage.
+- AS1 Lab ceiling coverage currently uses four total layers; this coverage
+  depth is calibration data and may be adjusted later.
+- Outward AS1 Lab Ceiling Layer growth stops locally when one expansion path
+  reaches another wall; unblocked paths continue up to the configured count.
+- Any wall type blocks outward AS1 Lab Ceiling Layer growth, including another
+  Lab wall, an AS1 Standard wall, an AS1 Standard Dark wall, or a returning
+  section of the same wall boundary.
+- Door openings retain their original wall boundary for ceiling-layer
+  collision, regardless of excavation or open-door state.
+- Calibrated convex-corner, recess, and standalone-corner supplements belong to
+  layer 1 and continue outward using their source wall direction and exterior
+  side; duplicate resulting tile positions represent one ceiling tile.
+- Each layer-1 tile produces one straight outward expansion path normal to its
+  source wall; later layers do not spread sideways into a global ceiling grid.
+- Wall collision uses the complete `80x56` VID 504 visual footprint: a tile
+  that would overlap or cross a wall is omitted and stops its path, while
+  edge-to-edge contact remains valid.
 - Every exterior Lab `DirA` or `DirB` wall part creates one VID 504 tile.
 - Each straight exterior wall run has its own wall-aligned anchor.
 - Following tiles accumulate the profile's pitch correction so VID 504 stays

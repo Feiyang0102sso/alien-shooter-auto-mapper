@@ -165,6 +165,8 @@ struct AS1CeilingProfile {
     float pos_z;
     float step_x;
     float step_y;
+    // Total coverage depth. Layer 1 is the calibrated wall-aligned layer.
+    int total_layer_count = 1;
     CeilingWallOffset dir_a_negative_outside_offset{};
     CeilingWallOffset dir_a_positive_outside_offset{};
     CeilingWallOffset dir_b_negative_outside_offset{};

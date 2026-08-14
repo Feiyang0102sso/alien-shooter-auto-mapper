@@ -22,6 +22,275 @@
 
 namespace auto_mapper::core {
 
+namespace {
+
+constexpr float GEOMETRY_EPSILON = 0.001f;
+constexpr float CEILING_POSITION_KEY_SCALE = 1000.0f;
+
+struct LabCeilingSeed {
+    io::Sprite sprite;
+    WallPartKind kind;
+    WallOutsideSide outside_side;
+};
+
+struct PhysicalWallBoundary {
+    MapPoint start;
+    MapPoint end;
+};
+
+using CeilingPositionKey = std::pair<long long, long long>;
+
+CeilingPositionKey make_ceiling_position_key(float pos_x, float pos_y) {
+    long long scaled_x = std::llround(pos_x * CEILING_POSITION_KEY_SCALE);
+    long long scaled_y = std::llround(pos_y * CEILING_POSITION_KEY_SCALE);
+    return {scaled_x, scaled_y};
+}
+
+MapPoint get_lab_ceiling_outward_step(
+    WallPartKind kind,
+    WallOutsideSide outside_side,
+    const AS1CeilingProfile& profile
+) {
+    float direction_sign = 1.0f;
+    if (outside_side == WallOutsideSide::NegativeGridSide) {
+        direction_sign = -1.0f;
+    }
+
+    if (kind == WallPartKind::DirA) {
+        return {
+            profile.step_x * direction_sign,
+            profile.step_y * direction_sign
+        };
+    }
+
+    return {
+        -profile.step_x * direction_sign,
+        profile.step_y * direction_sign
+    };
+}
+
+float cross_product(MapPoint first, MapPoint second, MapPoint third) {
+    float first_x = second.x - first.x;
+    float first_y = second.y - first.y;
+    float second_x = third.x - first.x;
+    float second_y = third.y - first.y;
+    return first_x * second_y - first_y * second_x;
+}
+
+bool point_is_on_segment(MapPoint point, MapPoint start, MapPoint end) {
+    float min_x = std::min(start.x, end.x) - GEOMETRY_EPSILON;
+    float max_x = std::max(start.x, end.x) + GEOMETRY_EPSILON;
+    float min_y = std::min(start.y, end.y) - GEOMETRY_EPSILON;
+    float max_y = std::max(start.y, end.y) + GEOMETRY_EPSILON;
+    return point.x >= min_x && point.x <= max_x &&
+        point.y >= min_y && point.y <= max_y;
+}
+
+bool line_segments_intersect(
+    MapPoint first_start,
+    MapPoint first_end,
+    MapPoint second_start,
+    MapPoint second_end
+) {
+    float first_side_start = cross_product(first_start, first_end, second_start);
+    float first_side_end = cross_product(first_start, first_end, second_end);
+    float second_side_start = cross_product(second_start, second_end, first_start);
+    float second_side_end = cross_product(second_start, second_end, first_end);
+
+    bool first_segment_straddles =
+        (first_side_start > GEOMETRY_EPSILON && first_side_end < -GEOMETRY_EPSILON) ||
+        (first_side_start < -GEOMETRY_EPSILON && first_side_end > GEOMETRY_EPSILON);
+    bool second_segment_straddles =
+        (second_side_start > GEOMETRY_EPSILON && second_side_end < -GEOMETRY_EPSILON) ||
+        (second_side_start < -GEOMETRY_EPSILON && second_side_end > GEOMETRY_EPSILON);
+    if (first_segment_straddles && second_segment_straddles) {
+        return true;
+    }
+
+    if (std::abs(first_side_start) <= GEOMETRY_EPSILON &&
+        point_is_on_segment(second_start, first_start, first_end)) {
+        return true;
+    }
+    if (std::abs(first_side_end) <= GEOMETRY_EPSILON &&
+        point_is_on_segment(second_end, first_start, first_end)) {
+        return true;
+    }
+    if (std::abs(second_side_start) <= GEOMETRY_EPSILON &&
+        point_is_on_segment(first_start, second_start, second_end)) {
+        return true;
+    }
+    if (std::abs(second_side_end) <= GEOMETRY_EPSILON &&
+        point_is_on_segment(first_end, second_start, second_end)) {
+        return true;
+    }
+
+    return false;
+}
+
+MapPoint to_ceiling_grid_delta(
+    MapPoint point,
+    MapPoint tile_center,
+    const AS1CeilingProfile& profile
+) {
+    float delta_x = point.x - tile_center.x;
+    float delta_y = point.y - tile_center.y;
+    float normalized_x = delta_x / profile.step_x;
+    float normalized_y = delta_y / profile.step_y;
+    return {
+        (normalized_x + normalized_y) / 2.0f,
+        (normalized_y - normalized_x) / 2.0f
+    };
+}
+
+bool segment_enters_ceiling_footprint(
+    const PhysicalWallBoundary& wall,
+    MapPoint tile_center,
+    const AS1CeilingProfile& profile
+) {
+    MapPoint start = to_ceiling_grid_delta(wall.start, tile_center, profile);
+    MapPoint end = to_ceiling_grid_delta(wall.end, tile_center, profile);
+
+    // A VID 504 tile occupies one isometric cell. Shrinking the open cell by a
+    // tiny epsilon permits edge-to-edge contact without accepting overlap.
+    float min_bound = -0.5f + GEOMETRY_EPSILON;
+    float max_bound = 0.5f - GEOMETRY_EPSILON;
+    float t_min = 0.0f;
+    float t_max = 1.0f;
+
+    auto clip_axis = [&](float axis_start, float axis_end) {
+        float axis_delta = axis_end - axis_start;
+        if (std::abs(axis_delta) <= GEOMETRY_EPSILON) {
+            return axis_start >= min_bound && axis_start <= max_bound;
+        }
+
+        float first_t = (min_bound - axis_start) / axis_delta;
+        float second_t = (max_bound - axis_start) / axis_delta;
+        if (first_t > second_t) {
+            std::swap(first_t, second_t);
+        }
+
+        t_min = std::max(t_min, first_t);
+        t_max = std::min(t_max, second_t);
+        return t_min <= t_max;
+    };
+
+    if (!clip_axis(start.x, end.x)) {
+        return false;
+    }
+    return clip_axis(start.y, end.y);
+}
+
+std::vector<PhysicalWallBoundary> build_physical_wall_boundaries(
+    const std::vector<Segment>& segments,
+    float map_size_x
+) {
+    std::vector<PhysicalWallBoundary> boundaries;
+    boundaries.reserve(segments.size());
+
+    for (const Segment& segment : segments) {
+        const WallProfile& profile = WallBuilder::get_wall_profile(segment.wall_type);
+        MapPoint shift = WallBuilder::get_wall_shift(map_size_x, profile);
+        MapPoint start = to_iso(segment.start, profile.step_x, profile.step_y, shift);
+        MapPoint end = to_iso(segment.end, profile.step_x, profile.step_y, shift);
+
+        if (segment.start.x == segment.end.x) {
+            start.x += profile.offset_a_x;
+            start.y += profile.offset_a_y;
+            end.x += profile.offset_a_x;
+            end.y += profile.offset_a_y;
+        } else if (segment.start.y == segment.end.y) {
+            start.x += profile.offset_b_x;
+            start.y += profile.offset_b_y;
+            end.x += profile.offset_b_x;
+            end.y += profile.offset_b_y;
+        } else {
+            continue;
+        }
+
+        boundaries.push_back({start, end});
+    }
+
+    return boundaries;
+}
+
+void append_outward_lab_ceiling_layers(
+    const std::vector<Segment>& segments,
+    float map_size_x,
+    const std::vector<LabCeilingSeed>& seeds,
+    std::vector<io::Sprite>& ceiling_sprites
+) {
+    const AS1CeilingProfile& profile = CEILING_AS1_LAB;
+    if (profile.total_layer_count <= 1 || seeds.empty()) {
+        return;
+    }
+
+    std::vector<PhysicalWallBoundary> boundaries =
+        build_physical_wall_boundaries(segments, map_size_x);
+    std::set<CeilingPositionKey> occupied_positions;
+    for (const io::Sprite& sprite : ceiling_sprites) {
+        if (sprite.vid != profile.vid) {
+            continue;
+        }
+        occupied_positions.insert(make_ceiling_position_key(sprite.posX, sprite.posY));
+    }
+
+    for (const LabCeilingSeed& seed : seeds) {
+        MapPoint outward_step = get_lab_ceiling_outward_step(
+            seed.kind,
+            seed.outside_side,
+            profile
+        );
+        MapPoint previous_center = {seed.sprite.posX, seed.sprite.posY};
+
+        for (int layer_number = 2;
+             layer_number <= profile.total_layer_count;
+             ++layer_number) {
+            MapPoint candidate_center = {
+                previous_center.x + outward_step.x,
+                previous_center.y + outward_step.y
+            };
+
+            bool hits_wall = false;
+            for (const PhysicalWallBoundary& boundary : boundaries) {
+                bool crosses_wall = line_segments_intersect(
+                    previous_center,
+                    candidate_center,
+                    boundary.start,
+                    boundary.end
+                );
+                bool overlaps_wall = segment_enters_ceiling_footprint(
+                    boundary,
+                    candidate_center,
+                    profile
+                );
+                if (crosses_wall || overlaps_wall) {
+                    hits_wall = true;
+                    break;
+                }
+            }
+
+            if (hits_wall) {
+                break;
+            }
+
+            io::Sprite layer_sprite = seed.sprite;
+            layer_sprite.posX = candidate_center.x;
+            layer_sprite.posY = candidate_center.y;
+            CeilingPositionKey position_key = make_ceiling_position_key(
+                layer_sprite.posX,
+                layer_sprite.posY
+            );
+            if (occupied_positions.insert(position_key).second) {
+                ceiling_sprites.push_back(layer_sprite);
+            }
+
+            previous_center = candidate_center;
+        }
+    }
+}
+
+} // namespace
+
 static bool is_as2_wall_set_type(int wall_type) {
     return wall_type >= WALL_TYPE_AS2_WALL_SET1_FIXED_0
         && wall_type <= WALL_TYPE_AS2_WALL_SET9_RANDOM;
@@ -626,6 +895,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
     const std::vector<Segment>& segments
 ) const {
     std::vector<io::Sprite> ceiling_sprites;
+    std::vector<LabCeilingSeed> lab_ceiling_seeds;
     std::map<CeilingPoint, int> edges_a;
     std::map<CeilingPoint, int> edges_b;
     std::set<CeilingPoint> vertices;
@@ -1528,6 +1798,13 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
             }
 
             ceiling_sprites.push_back(curtain_sprite);
+            if (edge.wall_type == WALL_TYPE_LAB) {
+                lab_ceiling_seeds.push_back({
+                    curtain_sprite,
+                    edge.kind,
+                    edge.outside_side
+                });
+            }
 
             for (const CornerSupplement& supplement : lower_corner_supplements) {
                 if (supplement.edge != entry.first) {
@@ -1677,6 +1954,14 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                     supplement_sprite.posX += extension_x * step_count;
                     supplement_sprite.posY += extension_y * step_count;
                     ceiling_sprites.push_back(supplement_sprite);
+
+                    const ExteriorCeilingEdge& source_edge =
+                        exterior_edges.at(supplement_edge_key);
+                    lab_ceiling_seeds.push_back({
+                        supplement_sprite,
+                        supplement_kind,
+                        source_edge.outside_side
+                    });
                 }
             }
         }
@@ -1759,9 +2044,23 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                 supplement_sprite.posY +=
                     extension_y * distance_from_corner;
                 ceiling_sprites.push_back(supplement_sprite);
+
+                const ExteriorCeilingEdge& source_edge =
+                    exterior_edges.at(supplement_edge_key);
+                lab_ceiling_seeds.push_back({
+                    supplement_sprite,
+                    supplement.kind,
+                    source_edge.outside_side
+                });
             }
         }
 
+        append_outward_lab_ceiling_layers(
+            segments,
+            map_size_x_,
+            lab_ceiling_seeds,
+            ceiling_sprites
+        );
         return ceiling_sprites;
     }
 
