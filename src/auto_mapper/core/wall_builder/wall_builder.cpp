@@ -240,6 +240,14 @@ void append_outward_lab_ceiling_layers(
             seed.outside_side,
             profile
         );
+
+        // Two perpendicular directions on the same isometric grid.
+        // If outward is (sx, sy), perpendicular directions are (-sx, sy) and (sx, -sy).
+        MapPoint perp_steps[2] = {
+            {-outward_step.x,  outward_step.y},
+            { outward_step.x, -outward_step.y}
+        };
+
         MapPoint previous_center = {seed.sprite.posX, seed.sprite.posY};
 
         for (int layer_number = 2;
@@ -282,6 +290,55 @@ void append_outward_lab_ceiling_layers(
             );
             if (occupied_positions.insert(position_key).second) {
                 ceiling_sprites.push_back(layer_sprite);
+            }
+
+            // Corner fill: expand this outer tile in perpendicular directions.
+            // Limited to (total_layer_count - 1) steps so corners stay bounded.
+            int max_perp_steps = profile.total_layer_count - 1;
+            for (const MapPoint& perp_step : perp_steps) {
+                MapPoint perp_previous = candidate_center;
+                for (int perp_index = 1; perp_index <= max_perp_steps; ++perp_index) {
+                    MapPoint perp_candidate = {
+                        perp_previous.x + perp_step.x,
+                        perp_previous.y + perp_step.y
+                    };
+
+                    bool perp_hits_wall = false;
+                    for (const PhysicalWallBoundary& boundary : boundaries) {
+                        bool crosses = line_segments_intersect(
+                            perp_previous,
+                            perp_candidate,
+                            boundary.start,
+                            boundary.end
+                        );
+                        bool overlaps = segment_enters_ceiling_footprint(
+                            boundary,
+                            perp_candidate,
+                            profile
+                        );
+                        if (crosses || overlaps) {
+                            perp_hits_wall = true;
+                            break;
+                        }
+                    }
+
+                    if (perp_hits_wall) {
+                        break;
+                    }
+
+                    io::Sprite perp_sprite = seed.sprite;
+                    perp_sprite.posX = perp_candidate.x;
+                    perp_sprite.posY = perp_candidate.y;
+                    CeilingPositionKey perp_key = make_ceiling_position_key(
+                        perp_sprite.posX,
+                        perp_sprite.posY
+                    );
+                    if (occupied_positions.insert(perp_key).second) {
+                        ceiling_sprites.push_back(perp_sprite);
+                    }
+
+                    perp_previous = perp_candidate;
+                }
             }
 
             previous_center = candidate_center;
