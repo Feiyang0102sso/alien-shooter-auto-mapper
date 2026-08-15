@@ -27,15 +27,31 @@ namespace {
 constexpr float GEOMETRY_EPSILON = 0.001f;
 constexpr float CEILING_POSITION_KEY_SCALE = 1000.0f;
 
-struct LabCeilingSeed {
+struct WallBoundarySource {
+    int gx;
+    int gy;
+    int wall_type;
+    WallPartKind kind;
+
+    bool operator==(const WallBoundarySource& other) const {
+        return gx == other.gx &&
+            gy == other.gy &&
+            wall_type == other.wall_type &&
+            kind == other.kind;
+    }
+};
+
+struct AS1CeilingSeed {
     io::Sprite sprite;
     WallPartKind kind;
     WallOutsideSide outside_side;
+    WallBoundarySource source_wall;
 };
 
 struct PhysicalWallBoundary {
     MapPoint start;
     MapPoint end;
+    WallBoundarySource source_wall;
 };
 
 using CeilingPositionKey = std::pair<long long, long long>;
@@ -47,7 +63,35 @@ CeilingPositionKey make_ceiling_position_key(float pos_x, float pos_y) {
     return {scaled_x, scaled_y};
 }
 
-MapPoint get_lab_ceiling_outward_step(
+void remove_as1_ceiling_at_position(
+    const io::Sprite& sprite_to_remove,
+    std::vector<io::Sprite>& ceiling_sprites
+) {
+    CeilingPositionKey position_key = make_ceiling_position_key(
+        sprite_to_remove.posX,
+        sprite_to_remove.posY
+    );
+
+    auto sprite_it = ceiling_sprites.begin();
+    while (sprite_it != ceiling_sprites.end()) {
+        CeilingPositionKey sprite_key = make_ceiling_position_key(
+            sprite_it->posX,
+            sprite_it->posY
+        );
+        bool is_target_sprite =
+            sprite_it->vid == sprite_to_remove.vid &&
+            sprite_it->direction == sprite_to_remove.direction &&
+            sprite_key == position_key;
+        if (is_target_sprite) {
+            sprite_it = ceiling_sprites.erase(sprite_it);
+            continue;
+        }
+        ++sprite_it;
+    }
+
+}
+
+MapPoint get_as1_ceiling_outward_step(
     WallPartKind kind,
     WallOutsideSide outside_side,
     const AS1CeilingProfile& profile
@@ -132,12 +176,13 @@ bool line_segments_intersect(
 MapPoint to_ceiling_grid_delta(
     MapPoint point,
     MapPoint tile_center,
-    const AS1CeilingProfile& profile
+    float step_x,
+    float step_y
 ) {
     float delta_x = point.x - tile_center.x;
     float delta_y = point.y - tile_center.y;
-    float normalized_x = delta_x / profile.step_x;
-    float normalized_y = delta_y / profile.step_y;
+    float normalized_x = delta_x / step_x;
+    float normalized_y = delta_y / step_y;
     return {
         (normalized_x + normalized_y) / 2.0f,
         (normalized_y - normalized_x) / 2.0f
@@ -147,10 +192,21 @@ MapPoint to_ceiling_grid_delta(
 bool segment_enters_ceiling_footprint(
     const PhysicalWallBoundary& wall,
     MapPoint tile_center,
-    const AS1CeilingProfile& profile
+    float step_x,
+    float step_y
 ) {
-    MapPoint start = to_ceiling_grid_delta(wall.start, tile_center, profile);
-    MapPoint end = to_ceiling_grid_delta(wall.end, tile_center, profile);
+    MapPoint start = to_ceiling_grid_delta(
+        wall.start,
+        tile_center,
+        step_x,
+        step_y
+    );
+    MapPoint end = to_ceiling_grid_delta(
+        wall.end,
+        tile_center,
+        step_x,
+        step_y
+    );
 
     // A VID 504 tile occupies one isometric cell. Shrinking the open cell by a
     // tiny epsilon permits edge-to-edge contact without accepting overlap.
@@ -187,29 +243,78 @@ std::vector<PhysicalWallBoundary> build_physical_wall_boundaries(
     float map_size_x
 ) {
     std::vector<PhysicalWallBoundary> boundaries;
-    boundaries.reserve(segments.size());
 
     for (const Segment& segment : segments) {
         const WallProfile& profile = WallBuilder::get_wall_profile(segment.wall_type);
         MapPoint shift = WallBuilder::get_wall_shift(map_size_x, profile);
-        MapPoint start = to_iso(segment.start, profile.step_x, profile.step_y, shift);
-        MapPoint end = to_iso(segment.end, profile.step_x, profile.step_y, shift);
 
         if (segment.start.x == segment.end.x) {
-            start.x += profile.offset_a_x;
-            start.y += profile.offset_a_y;
-            end.x += profile.offset_a_x;
-            end.y += profile.offset_a_y;
+            int min_y = std::min(segment.start.y, segment.end.y);
+            int max_y = std::max(segment.start.y, segment.end.y);
+            for (int gy = min_y + 1; gy <= max_y; ++gy) {
+                GridPoint unit_start = {segment.start.x, gy - 1};
+                GridPoint unit_end = {segment.start.x, gy};
+                MapPoint start = to_iso(
+                    unit_start,
+                    profile.step_x,
+                    profile.step_y,
+                    shift
+                );
+                MapPoint end = to_iso(
+                    unit_end,
+                    profile.step_x,
+                    profile.step_y,
+                    shift
+                );
+                start.x += profile.offset_a_x;
+                start.y += profile.offset_a_y;
+                end.x += profile.offset_a_x;
+                end.y += profile.offset_a_y;
+                boundaries.push_back({
+                    start,
+                    end,
+                    {
+                        segment.start.x,
+                        gy,
+                        segment.wall_type,
+                        WallPartKind::DirA
+                    }
+                });
+            }
         } else if (segment.start.y == segment.end.y) {
-            start.x += profile.offset_b_x;
-            start.y += profile.offset_b_y;
-            end.x += profile.offset_b_x;
-            end.y += profile.offset_b_y;
-        } else {
-            continue;
+            int min_x = std::min(segment.start.x, segment.end.x);
+            int max_x = std::max(segment.start.x, segment.end.x);
+            for (int gx = min_x + 1; gx <= max_x; ++gx) {
+                GridPoint unit_start = {gx - 1, segment.start.y};
+                GridPoint unit_end = {gx, segment.start.y};
+                MapPoint start = to_iso(
+                    unit_start,
+                    profile.step_x,
+                    profile.step_y,
+                    shift
+                );
+                MapPoint end = to_iso(
+                    unit_end,
+                    profile.step_x,
+                    profile.step_y,
+                    shift
+                );
+                start.x += profile.offset_b_x;
+                start.y += profile.offset_b_y;
+                end.x += profile.offset_b_x;
+                end.y += profile.offset_b_y;
+                boundaries.push_back({
+                    start,
+                    end,
+                    {
+                        gx,
+                        segment.start.y,
+                        segment.wall_type,
+                        WallPartKind::DirB
+                    }
+                });
+            }
         }
-
-        boundaries.push_back({start, end});
     }
 
     return boundaries;
@@ -232,7 +337,7 @@ static MapPoint get_floor_ceiling_shift(float map_size_x, float step_x, float st
     return {shift_x, shift_y};
 }
 
-static bool is_within_lab_ceiling_bounds(
+static bool is_within_as1_ceiling_bounds(
     float x,
     float y,
     float map_size_x,
@@ -248,22 +353,23 @@ static bool is_within_lab_ceiling_bounds(
     return true;
 }
 
-static GridPoint snap_physical_to_lab_ceiling_grid(
+static GridPoint snap_physical_to_ceiling_grid(
     const MapPoint& pos,
     const MapPoint& ceil_shift,
-    const AS1CeilingProfile& profile
+    float step_x,
+    float step_y
 ) {
     float dx = pos.x - ceil_shift.x;
     float dy = pos.y - ceil_shift.y;
-    float gx = (dx / profile.step_x + dy / profile.step_y) / 2.0f;
-    float gy = (dy / profile.step_y - dx / profile.step_x) / 2.0f;
+    float gx = (dx / step_x + dy / step_y) / 2.0f;
+    float gy = (dy / step_y - dx / step_x) / 2.0f;
     return {
         static_cast<int>(std::round(gx)),
         static_cast<int>(std::round(gy))
     };
 }
 
-static void fill_lab_ceiling_grid_holes(
+static void fill_as1_ceiling_grid_holes(
     const std::vector<PhysicalWallBoundary>& boundaries,
     float map_size_x,
     float map_size_y,
@@ -323,7 +429,7 @@ static void fill_lab_ceiling_grid_holes(
             GridPoint grid_pt = {hole.first, hole.second};
             MapPoint candidate_center = to_iso(grid_pt, profile.step_x, profile.step_y, ceil_shift);
 
-            if (!is_within_lab_ceiling_bounds(candidate_center.x, candidate_center.y, map_size_x, map_size_y, profile)) {
+            if (!is_within_as1_ceiling_bounds(candidate_center.x, candidate_center.y, map_size_x, map_size_y, profile)) {
                 continue;
             }
 
@@ -337,25 +443,48 @@ static void fill_lab_ceiling_grid_holes(
                 continue;
             }
 
-            bool hits_wall = false;
-            for (const PhysicalWallBoundary& boundary : boundaries) {
-                for (const auto& offset : neighbor_offsets) {
-                    std::pair<int, int> neighbor_cell = {hole.first + offset.first, hole.second + offset.second};
-                    if (occupied_grid_cells.count(neighbor_cell) > 0) {
-                        GridPoint n_grid = {neighbor_cell.first, neighbor_cell.second};
-                        MapPoint n_center = to_iso(n_grid, profile.step_x, profile.step_y, ceil_shift);
-                        if (line_segments_intersect(candidate_center, n_center, boundary.start, boundary.end)) {
-                            hits_wall = true;
-                            break;
-                        }
+            // A corner hole can have neighbors on both sides of a wall. It is
+            // fillable when at least one occupied exterior neighbor can reach
+            // it without crossing any wall boundary.
+            bool has_clear_connection = false;
+            for (const auto& offset : neighbor_offsets) {
+                std::pair<int, int> neighbor_cell = {
+                    hole.first + offset.first,
+                    hole.second + offset.second
+                };
+                if (occupied_grid_cells.count(neighbor_cell) == 0) {
+                    continue;
+                }
+
+                GridPoint neighbor_grid = {
+                    neighbor_cell.first,
+                    neighbor_cell.second
+                };
+                MapPoint neighbor_center = to_iso(
+                    neighbor_grid,
+                    profile.step_x,
+                    profile.step_y,
+                    ceil_shift
+                );
+                bool connection_crosses_wall = false;
+                for (const PhysicalWallBoundary& boundary : boundaries) {
+                    if (line_segments_intersect(
+                            candidate_center,
+                            neighbor_center,
+                            boundary.start,
+                            boundary.end)) {
+                        connection_crosses_wall = true;
+                        break;
                     }
                 }
-                if (hits_wall) {
+
+                if (!connection_crosses_wall) {
+                    has_clear_connection = true;
                     break;
                 }
             }
 
-            if (!hits_wall) {
+            if (has_clear_connection) {
                 holes_to_fill.push_back(hole);
             }
         }
@@ -378,82 +507,188 @@ static void fill_lab_ceiling_grid_holes(
     }
 }
 
-struct LabFrontierNode {
+struct AS1CeilingFrontierNode {
     MapPoint center;
     MapPoint outward_step;
+    WallBoundarySource source_wall;
 };
 
-void append_outward_lab_ceiling_layers(
+void append_outward_as1_ceiling_layers(
     const std::vector<Segment>& segments,
     float map_size_x,
     float map_size_y,
+    int wall_type,
+    const AS1CeilingProfile& profile,
     const std::set<CeilingPoint>& outside_cells,
-    const std::vector<LabCeilingSeed>& seeds,
+    const std::vector<AS1CeilingSeed>& seeds,
     std::vector<io::Sprite>& ceiling_sprites
 ) {
-    const AS1CeilingProfile& profile = CEILING_AS1_LAB;
     if (profile.total_layer_count <= 1 || seeds.empty()) {
         return;
     }
 
-    const WallProfile& wall_profile = WallBuilder::get_wall_profile(WALL_TYPE_LAB);
+    const WallProfile& wall_profile = WallBuilder::get_wall_profile(wall_type);
     MapPoint wall_shift = WallBuilder::get_wall_shift(map_size_x, wall_profile);
     MapPoint ceil_shift = get_floor_ceiling_shift(map_size_x, profile.step_x, profile.step_y, 1);
+    int large_tile_span = static_cast<int>(std::round(
+        profile.large_tile_step_x / profile.step_x
+    ));
+    bool large_tiles_are_enabled =
+        profile.large_tile_start_layer > 1 &&
+        profile.large_tile_start_layer <= profile.total_layer_count &&
+        large_tile_span >= 2 &&
+        std::abs(
+            profile.large_tile_step_x - profile.step_x * large_tile_span
+        ) < GEOMETRY_EPSILON &&
+        std::abs(
+            profile.large_tile_step_y - profile.step_y * large_tile_span
+        ) < GEOMETRY_EPSILON;
+    MapPoint large_ceil_shift = {
+        ceil_shift.x,
+        ceil_shift.y + profile.step_y * static_cast<float>(large_tile_span - 1)
+    };
 
     std::vector<PhysicalWallBoundary> boundaries =
         build_physical_wall_boundaries(segments, map_size_x);
 
     std::set<CeilingPositionKey> occupied_physical_positions;
     std::set<std::pair<int, int>> occupied_grid_cells;
+    std::set<std::pair<int, int>> occupied_large_grid_cells;
 
     // Layer 1 is already calibrated and must be preserved 100% without deduplication deletions.
+    // Physical positions are shared across profiles. The hole filler must also
+    // see this profile's corner supplements, not only its wall-aligned seeds.
+    // Direction separates Standard and Lab because both use VID 504.
     for (const io::Sprite& sprite : ceiling_sprites) {
-        if (sprite.vid == profile.vid) {
-            occupied_physical_positions.insert(make_ceiling_position_key(sprite.posX, sprite.posY));
-            GridPoint snapped_grid = snap_physical_to_lab_ceiling_grid(
-                {sprite.posX, sprite.posY},
-                ceil_shift,
-                profile
-            );
-            occupied_grid_cells.insert({snapped_grid.x, snapped_grid.y});
-        }
-    }
-
-    // 4 isometric diagonal directions
-    const MapPoint expansion_directions[4] = {
-        { profile.step_x,  profile.step_y},
-        {-profile.step_x, -profile.step_y},
-        {-profile.step_x,  profile.step_y},
-        { profile.step_x, -profile.step_y}
-    };
-
-    std::vector<LabFrontierNode> current_frontier;
-    current_frontier.reserve(seeds.size());
-    for (const LabCeilingSeed& seed : seeds) {
-        if (!is_within_lab_ceiling_bounds(seed.sprite.posX, seed.sprite.posY, map_size_x, map_size_y, profile)) {
+        occupied_physical_positions.insert(make_ceiling_position_key(sprite.posX, sprite.posY));
+        bool belongs_to_current_profile =
+            sprite.vid == profile.vid &&
+            sprite.direction == profile.direction;
+        if (!belongs_to_current_profile) {
             continue;
         }
-        MapPoint outward_step = get_lab_ceiling_outward_step(
+
+        GridPoint snapped_grid = snap_physical_to_ceiling_grid(
+            {sprite.posX, sprite.posY},
+            ceil_shift,
+            profile.step_x,
+            profile.step_y
+        );
+        occupied_grid_cells.insert({snapped_grid.x, snapped_grid.y});
+    }
+    for (const AS1CeilingSeed& seed : seeds) {
+        occupied_physical_positions.insert(make_ceiling_position_key(
+            seed.sprite.posX,
+            seed.sprite.posY
+        ));
+        GridPoint snapped_grid = snap_physical_to_ceiling_grid(
+            {seed.sprite.posX, seed.sprite.posY},
+            ceil_shift,
+            profile.step_x,
+            profile.step_y
+        );
+        occupied_grid_cells.insert({snapped_grid.x, snapped_grid.y});
+    }
+
+    std::vector<AS1CeilingFrontierNode> current_frontier;
+    current_frontier.reserve(seeds.size());
+    for (const AS1CeilingSeed& seed : seeds) {
+        if (!is_within_as1_ceiling_bounds(seed.sprite.posX, seed.sprite.posY, map_size_x, map_size_y, profile)) {
+            continue;
+        }
+        MapPoint outward_step = get_as1_ceiling_outward_step(
             seed.kind,
             seed.outside_side,
             profile
         );
-        current_frontier.push_back({{seed.sprite.posX, seed.sprite.posY}, outward_step});
+        current_frontier.push_back({
+            {seed.sprite.posX, seed.sprite.posY},
+            outward_step,
+            seed.source_wall
+        });
     }
 
     io::Sprite template_sprite = seeds.front().sprite;
+    bool small_grid_holes_are_filled = false;
+    std::vector<MapPoint> small_tile_centers;
 
     for (int layer_number = 2;
          layer_number <= profile.total_layer_count;
          ++layer_number) {
-        std::vector<LabFrontierNode> next_frontier;
-        bool use_grid_snapping = (layer_number >= profile.grid_snapping_start_layer);
+        bool generate_large_tiles =
+            large_tiles_are_enabled &&
+            layer_number >= profile.large_tile_start_layer;
+        if (generate_large_tiles && !small_grid_holes_are_filled) {
+            fill_as1_ceiling_grid_holes(
+                boundaries,
+                map_size_x,
+                map_size_y,
+                wall_profile,
+                wall_shift,
+                ceil_shift,
+                profile,
+                outside_cells,
+                template_sprite,
+                occupied_grid_cells,
+                occupied_physical_positions,
+                ceiling_sprites
+            );
+            small_grid_holes_are_filled = true;
 
-        for (const LabFrontierNode& node : current_frontier) {
+            for (const io::Sprite& sprite : ceiling_sprites) {
+                bool is_small_tile =
+                    sprite.vid == profile.vid &&
+                    sprite.direction == profile.direction;
+                if (is_small_tile) {
+                    small_tile_centers.push_back({sprite.posX, sprite.posY});
+                }
+            }
+        }
+
+        float tile_step_x = profile.step_x;
+        float tile_step_y = profile.step_y;
+        MapPoint active_ceil_shift = ceil_shift;
+        std::set<std::pair<int, int>>* active_grid_cells =
+            &occupied_grid_cells;
+        if (generate_large_tiles) {
+            tile_step_x = profile.large_tile_step_x;
+            tile_step_y = profile.large_tile_step_y;
+            active_ceil_shift = large_ceil_shift;
+            active_grid_cells = &occupied_large_grid_cells;
+        }
+
+        float movement_step_x = tile_step_x;
+        float movement_step_y = tile_step_y;
+        bool is_size_transition =
+            generate_large_tiles &&
+            layer_number == profile.large_tile_start_layer;
+        if (is_size_transition) {
+            movement_step_x =
+                (profile.step_x + profile.large_tile_step_x) / 2.0f;
+            movement_step_y =
+                (profile.step_y + profile.large_tile_step_y) / 2.0f;
+        }
+
+        const MapPoint expansion_directions[4] = {
+            { movement_step_x,  movement_step_y},
+            {-movement_step_x, -movement_step_y},
+            {-movement_step_x,  movement_step_y},
+            { movement_step_x, -movement_step_y}
+        };
+
+        std::vector<AS1CeilingFrontierNode> next_frontier;
+        bool use_grid_snapping = (layer_number >= profile.grid_snapping_start_layer);
+        if (generate_large_tiles) {
+            use_grid_snapping = true;
+        }
+
+        for (const AS1CeilingFrontierNode& node : current_frontier) {
             for (const MapPoint& dir : expansion_directions) {
                 // Strictly forbid expanding in the opposite direction (towards room interior)
-                if (std::abs(dir.x + node.outward_step.x) < GEOMETRY_EPSILON &&
-                    std::abs(dir.y + node.outward_step.y) < GEOMETRY_EPSILON) {
+                bool moves_towards_interior =
+                    dir.x * node.outward_step.x < 0.0f &&
+                    dir.y * node.outward_step.y < 0.0f;
+                if (moves_towards_interior) {
                     continue;
                 }
 
@@ -464,15 +699,22 @@ void append_outward_lab_ceiling_layers(
                 GridPoint candidate_grid = {0, 0};
 
                 if (use_grid_snapping) {
-                    candidate_grid = snap_physical_to_lab_ceiling_grid(
+                    candidate_grid = snap_physical_to_ceiling_grid(
                         candidate_center,
-                        ceil_shift,
-                        profile
+                        active_ceil_shift,
+                        tile_step_x,
+                        tile_step_y
                     );
-                    if (occupied_grid_cells.count({candidate_grid.x, candidate_grid.y}) > 0) {
+                    if (active_grid_cells->count(
+                            {candidate_grid.x, candidate_grid.y}) > 0) {
                         continue;
                     }
-                    candidate_center = to_iso(candidate_grid, profile.step_x, profile.step_y, ceil_shift);
+                    candidate_center = to_iso(
+                        candidate_grid,
+                        tile_step_x,
+                        tile_step_y,
+                        active_ceil_shift
+                    );
                 } else {
                     CeilingPositionKey pos_key = make_ceiling_position_key(
                         candidate_center.x,
@@ -483,7 +725,17 @@ void append_outward_lab_ceiling_layers(
                     }
                 }
 
-                if (!is_within_lab_ceiling_bounds(candidate_center.x, candidate_center.y, map_size_x, map_size_y, profile)) {
+                CeilingPositionKey candidate_position_key =
+                    make_ceiling_position_key(
+                        candidate_center.x,
+                        candidate_center.y
+                    );
+                if (occupied_physical_positions.count(
+                        candidate_position_key) > 0) {
+                    continue;
+                }
+
+                if (!is_within_as1_ceiling_bounds(candidate_center.x, candidate_center.y, map_size_x, map_size_y, profile)) {
                     continue;
                 }
 
@@ -500,6 +752,17 @@ void append_outward_lab_ceiling_layers(
 
                 bool hits_wall = false;
                 for (const PhysicalWallBoundary& boundary : boundaries) {
+                    // The calibrated first curtain may sit across its own
+                    // logical wall boundary. Its first outward step must be
+                    // allowed to leave that source wall, while every other
+                    // wall boundary continues to block expansion.
+                    bool is_own_source_wall =
+                        layer_number == 2 &&
+                        boundary.source_wall == node.source_wall;
+                    if (is_own_source_wall) {
+                        continue;
+                    }
+
                     bool crosses_wall = line_segments_intersect(
                         node.center,
                         candidate_center,
@@ -509,7 +772,8 @@ void append_outward_lab_ceiling_layers(
                     bool overlaps_wall = segment_enters_ceiling_footprint(
                         boundary,
                         candidate_center,
-                        profile
+                        tile_step_x,
+                        tile_step_y
                     );
                     if (crosses_wall || overlaps_wall) {
                         hits_wall = true;
@@ -521,17 +785,69 @@ void append_outward_lab_ceiling_layers(
                     continue;
                 }
 
-                if (use_grid_snapping) {
-                    occupied_grid_cells.insert({candidate_grid.x, candidate_grid.y});
+                bool overlaps_small_tile = false;
+                if (generate_large_tiles) {
+                    for (const MapPoint& small_tile_center : small_tile_centers) {
+                        MapPoint small_center_in_large_grid =
+                            to_ceiling_grid_delta(
+                                small_tile_center,
+                                candidate_center,
+                                tile_step_x,
+                                tile_step_y
+                            );
+                        bool small_center_is_inside_large_tile =
+                            std::abs(small_center_in_large_grid.x) <
+                                0.5f - GEOMETRY_EPSILON &&
+                            std::abs(small_center_in_large_grid.y) <
+                                0.5f - GEOMETRY_EPSILON;
+                        if (small_center_is_inside_large_tile) {
+                            overlaps_small_tile = true;
+                            break;
+                        }
+                    }
                 }
-                occupied_physical_positions.insert(make_ceiling_position_key(candidate_center.x, candidate_center.y));
 
-                io::Sprite layer_sprite = template_sprite;
-                layer_sprite.posX = candidate_center.x;
-                layer_sprite.posY = candidate_center.y;
-                ceiling_sprites.push_back(layer_sprite);
+                if (generate_large_tiles) {
+                    active_grid_cells->insert({candidate_grid.x, candidate_grid.y});
+                } else if (use_grid_snapping) {
+                    occupied_grid_cells.insert({
+                        candidate_grid.x,
+                        candidate_grid.y
+                    });
+                } else if (wall_type == WALL_TYPE_STANDARD) {
+                    // Hole filling works on the profile grid, so it must see
+                    // every Standard tile, including its unsnapped early
+                    // layers. Lab must keep those layers out until snapping
+                    // starts, otherwise they block its next wavefront.
+                    GridPoint occupied_small_grid =
+                        snap_physical_to_ceiling_grid(
+                            candidate_center,
+                            ceil_shift,
+                            profile.step_x,
+                            profile.step_y
+                        );
+                    occupied_grid_cells.insert({
+                        occupied_small_grid.x,
+                        occupied_small_grid.y
+                    });
+                }
+                if (!overlaps_small_tile) {
+                    occupied_physical_positions.insert(candidate_position_key);
 
-                next_frontier.push_back({candidate_center, node.outward_step});
+                    io::Sprite layer_sprite = template_sprite;
+                    layer_sprite.posX = candidate_center.x;
+                    layer_sprite.posY = candidate_center.y;
+                    if (generate_large_tiles) {
+                        layer_sprite.direction = profile.large_tile_direction;
+                    }
+                    ceiling_sprites.push_back(layer_sprite);
+                }
+
+                next_frontier.push_back({
+                    candidate_center,
+                    node.outward_step,
+                    node.source_wall
+                });
             }
         }
 
@@ -542,20 +858,54 @@ void append_outward_lab_ceiling_layers(
         current_frontier = std::move(next_frontier);
     }
 
-    fill_lab_ceiling_grid_holes(
-        boundaries,
-        map_size_x,
-        map_size_y,
-        wall_profile,
-        wall_shift,
-        ceil_shift,
-        profile,
-        outside_cells,
-        template_sprite,
-        occupied_grid_cells,
-        occupied_physical_positions,
-        ceiling_sprites
-    );
+    if (!small_grid_holes_are_filled) {
+        fill_as1_ceiling_grid_holes(
+            boundaries,
+            map_size_x,
+            map_size_y,
+            wall_profile,
+            wall_shift,
+            ceil_shift,
+            profile,
+            outside_cells,
+            template_sprite,
+            occupied_grid_cells,
+            occupied_physical_positions,
+            ceiling_sprites
+        );
+    }
+
+}
+
+CeilingCurtainProfile make_as1_ceiling_curtain_adapter(
+    const AS1CeilingProfile& profile
+) {
+    CeilingCurtainPartProfile dir_a_part = {
+        .direction = profile.direction,
+        .offset_x = 0.0f,
+        .offset_y = 0.0f,
+        .use_side_specific_offsets = true,
+        .negative_side_offset = profile.dir_a_negative_outside_offset,
+        .positive_side_offset = profile.dir_a_positive_outside_offset
+    };
+    CeilingCurtainPartProfile dir_b_part = {
+        .direction = profile.direction,
+        .offset_x = 0.0f,
+        .offset_y = 0.0f,
+        .use_side_specific_offsets = true,
+        .negative_side_offset = profile.dir_b_negative_outside_offset,
+        .positive_side_offset = profile.dir_b_positive_outside_offset
+    };
+
+    return {
+        .vid = profile.vid,
+        .pos_z = profile.pos_z,
+        .maximum_wide_opposing_wall_distance = 3,
+        .dir_a_long = dir_a_part,
+        .dir_b_long = dir_b_part,
+        .dir_a_wide = dir_a_part,
+        .dir_b_wide = dir_b_part
+    };
 }
 
 
@@ -676,54 +1026,19 @@ const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {
 }
 
 const CeilingCurtainProfile* WallBuilder::get_ceiling_curtain_profile(int wall_type) {
+    if (wall_type == WALL_TYPE_STANDARD) {
+        // Adapter only: AS1's public profile remains a plain square-tile
+        // profile. The shared exterior-edge pipeline expects AS2 part slots.
+        static const CeilingCurtainProfile standard_pipeline_adapter =
+            make_as1_ceiling_curtain_adapter(CEILING_AS1_STANDARD);
+        return &standard_pipeline_adapter;
+    }
+
     if (wall_type == WALL_TYPE_LAB) {
         // Adapter only: AS1's public profile remains a plain square-tile
         // profile. The shared exterior-edge pipeline expects AS2 part slots.
-        static const CeilingCurtainProfile lab_pipeline_adapter = {
-            .vid = CEILING_AS1_LAB.vid,
-            .pos_z = CEILING_AS1_LAB.pos_z,
-            .maximum_wide_opposing_wall_distance = 3,
-            .dir_a_long = {
-                .direction = 0,
-                .offset_x = 0.0f,
-                .offset_y = 0.0f,
-                .use_side_specific_offsets = true,
-                .negative_side_offset =
-                    CEILING_AS1_LAB.dir_a_negative_outside_offset,
-                .positive_side_offset =
-                    CEILING_AS1_LAB.dir_a_positive_outside_offset
-            },
-            .dir_b_long = {
-                .direction = 0,
-                .offset_x = 0.0f,
-                .offset_y = 0.0f,
-                .use_side_specific_offsets = true,
-                .negative_side_offset =
-                    CEILING_AS1_LAB.dir_b_negative_outside_offset,
-                .positive_side_offset =
-                    CEILING_AS1_LAB.dir_b_positive_outside_offset
-            },
-            .dir_a_wide = {
-                .direction = 0,
-                .offset_x = 0.0f,
-                .offset_y = 0.0f,
-                .use_side_specific_offsets = true,
-                .negative_side_offset =
-                    CEILING_AS1_LAB.dir_a_negative_outside_offset,
-                .positive_side_offset =
-                    CEILING_AS1_LAB.dir_a_positive_outside_offset
-            },
-            .dir_b_wide = {
-                .direction = 0,
-                .offset_x = 0.0f,
-                .offset_y = 0.0f,
-                .use_side_specific_offsets = true,
-                .negative_side_offset =
-                    CEILING_AS1_LAB.dir_b_negative_outside_offset,
-                .positive_side_offset =
-                    CEILING_AS1_LAB.dir_b_positive_outside_offset
-            }
-        };
+        static const CeilingCurtainProfile lab_pipeline_adapter =
+            make_as1_ceiling_curtain_adapter(CEILING_AS1_LAB);
         return &lab_pipeline_adapter;
     }
 
@@ -775,6 +1090,10 @@ const CeilingCurtainProfile* WallBuilder::get_ceiling_curtain_profile(int wall_t
 }
 
 const AS1CeilingProfile* WallBuilder::get_as1_ceiling_profile(int wall_type) {
+    if (wall_type == WALL_TYPE_STANDARD) {
+        return &CEILING_AS1_STANDARD;
+    }
+
     if (wall_type == WALL_TYPE_LAB) {
         return &CEILING_AS1_LAB;
     }
@@ -1149,14 +1468,14 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
     const std::vector<Segment>& segments
 ) const {
     std::vector<io::Sprite> ceiling_sprites;
-    std::vector<LabCeilingSeed> lab_ceiling_seeds;
+    std::map<int, std::vector<AS1CeilingSeed>> as1_ceiling_seeds_by_wall_type;
     std::map<CeilingPoint, int> edges_a;
     std::map<CeilingPoint, int> edges_b;
     std::set<CeilingPoint> vertices;
 
     for (const Segment& segment : segments) {
         bool supports_wall_aligned_ceiling =
-            segment.wall_type == WALL_TYPE_LAB ||
+            get_as1_ceiling_profile(segment.wall_type) != nullptr ||
             is_as2_wall_set_type(segment.wall_type);
         if (!supports_wall_aligned_ceiling) {
             continue;
@@ -1205,6 +1524,18 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
     }
 
     int cell_margin = CEILING_CURTAIN_AS2_SET1.maximum_wide_opposing_wall_distance + 2;
+    for (const Segment& segment : segments) {
+        const AS1CeilingProfile* as1_profile =
+            get_as1_ceiling_profile(segment.wall_type);
+        if (as1_profile == nullptr) {
+            continue;
+        }
+
+        cell_margin = std::max(
+            cell_margin,
+            as1_profile->total_layer_count + 2
+        );
+    }
     int min_cell_x = min_vertex_x - cell_margin;
     int max_cell_x = max_vertex_x + cell_margin;
     int min_cell_y = min_vertex_y - cell_margin;
@@ -1336,7 +1667,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
             float grid_y = 0.0f;
         };
 
-        struct LabCornerSupplement {
+        struct AS1CornerSupplement {
             CeilingPoint corner;
             WallPartKind kind;
             int count = 0;
@@ -1348,7 +1679,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
         std::set<CeilingEdgeKey> removed_ceiling_edges;
         std::map<CeilingEdgeKey, RecessSideAdjustment> recess_side_adjustments;
         std::vector<CornerSupplement> lower_corner_supplements;
-        std::vector<LabCornerSupplement> lab_corner_supplements;
+        std::vector<AS1CornerSupplement> as1_corner_supplements;
         for (const CeilingPoint& vertex : vertices) {
             int outside_count = 0;
             bool interior_cell_is_above_vertex = false;
@@ -1667,7 +1998,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                         right_as1_corner = &right_as1_profile->lower_recess.right_corner;
                     }
                     if (left_as1_corner != nullptr) {
-                        lab_corner_supplements.push_back({
+                        as1_corner_supplements.push_back({
                             left_vertex,
                             WallPartKind::DirA,
                             left_as1_corner->supplement_count,
@@ -1675,7 +2006,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                         });
                     }
                     if (right_as1_corner != nullptr) {
-                        lab_corner_supplements.push_back({
+                        as1_corner_supplements.push_back({
                             right_vertex,
                             WallPartKind::DirA,
                             right_as1_corner->supplement_count,
@@ -1819,7 +2150,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                     lower_as1_corner = &lower_as1_profile->right_recess.lower_corner;
                 }
                 if (upper_as1_corner != nullptr) {
-                    lab_corner_supplements.push_back({
+                    as1_corner_supplements.push_back({
                         upper_vertex,
                         WallPartKind::DirB,
                         upper_as1_corner->supplement_count,
@@ -1827,7 +2158,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                     });
                 }
                 if (lower_as1_corner != nullptr) {
-                    lab_corner_supplements.push_back({
+                    as1_corner_supplements.push_back({
                         lower_vertex,
                         WallPartKind::DirB,
                         lower_as1_corner->supplement_count,
@@ -1935,13 +2266,13 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
             }
 
             if (as1_corner_profile != nullptr) {
-                lab_corner_supplements.push_back({
+                as1_corner_supplements.push_back({
                     corner,
                     WallPartKind::DirA,
                     as1_corner_profile->dir_a_supplement_count,
                     as1_corner_profile->dir_a_away_from_corner_adjustment
                 });
-                lab_corner_supplements.push_back({
+                as1_corner_supplements.push_back({
                     corner,
                     WallPartKind::DirB,
                     as1_corner_profile->dir_b_supplement_count,
@@ -1963,15 +2294,15 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
             );
         }
 
-        std::map<CeilingEdgeKey, io::Sprite> lab_edge_ceiling_sprites;
+        std::map<CeilingEdgeKey, io::Sprite> as1_edge_ceiling_sprites;
 
         for (const auto& entry : exterior_edges) {
             bool edge_is_removed =
                 removed_ceiling_edges.count(entry.first) > 0;
             const ExteriorCeilingEdge& edge = entry.second;
-            bool removed_lab_edge_is_supplement_source =
-                edge_is_removed && edge.wall_type == WALL_TYPE_LAB;
-            if (edge_is_removed && !removed_lab_edge_is_supplement_source) {
+            bool removed_as1_edge_is_supplement_source =
+                edge_is_removed && get_as1_ceiling_profile(edge.wall_type) != nullptr;
+            if (edge_is_removed && !removed_as1_edge_is_supplement_source) {
                 continue;
             }
 
@@ -1984,17 +2315,17 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                 edge.outside_side
             );
 
-            if (edge.wall_type == WALL_TYPE_LAB) {
-                const AS1CeilingProfile* ceiling_profile =
-                    get_as1_ceiling_profile(edge.wall_type);
+            const AS1CeilingProfile* as1_ceiling_profile =
+                get_as1_ceiling_profile(edge.wall_type);
+            if (as1_ceiling_profile != nullptr) {
                 CeilingWallOffset step_adjustment =
-                    ceiling_profile->dir_b_step_adjustment;
+                    as1_ceiling_profile->dir_b_step_adjustment;
                 if (edge.kind == WallPartKind::DirA) {
-                    step_adjustment = ceiling_profile->dir_a_step_adjustment;
+                    step_adjustment = as1_ceiling_profile->dir_a_step_adjustment;
                 }
 
-                // Keep each straight Lab run attached to its own wall line.
-                // VID 504 follows its 80x56 pitch only within that run.
+                // Keep each straight AS1 run attached to its own wall line.
+                // Every ceiling profile follows its own pitch within that run.
                 int run_step_index = 0;
                 int previous_gx = edge.gx;
                 int previous_gy = edge.gy;
@@ -2044,19 +2375,20 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                     (adjustment.grid_x + adjustment.grid_y) * wall_profile.step_y;
             }
 
-            if (edge.wall_type == WALL_TYPE_LAB) {
-                lab_edge_ceiling_sprites.emplace(entry.first, curtain_sprite);
+            if (as1_ceiling_profile != nullptr) {
+                as1_edge_ceiling_sprites.emplace(entry.first, curtain_sprite);
             }
             if (edge_is_removed) {
                 continue;
             }
 
             ceiling_sprites.push_back(curtain_sprite);
-            if (edge.wall_type == WALL_TYPE_LAB) {
-                lab_ceiling_seeds.push_back({
+            if (as1_ceiling_profile != nullptr) {
+                as1_ceiling_seeds_by_wall_type[edge.wall_type].push_back({
                     curtain_sprite,
                     edge.kind,
-                    edge.outside_side
+                    edge.outside_side,
+                    {edge.gx, edge.gy, edge.wall_type, edge.kind}
                 });
             }
 
@@ -2107,8 +2439,8 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
             };
             int corner_edge_count = 0;
             for (const CeilingEdgeKey& candidate : corner_edge_candidates) {
-                auto sprite_it = lab_edge_ceiling_sprites.find(candidate);
-                if (sprite_it != lab_edge_ceiling_sprites.end()) {
+                auto sprite_it = as1_edge_ceiling_sprites.find(candidate);
+                if (sprite_it != as1_edge_ceiling_sprites.end()) {
                     corner_edge_count += 1;
                 }
             }
@@ -2117,8 +2449,12 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                 continue;
             }
 
+            int corner_wall_type = get_corner_wall_type(vertex);
             const AS1CeilingProfile* profile =
-                get_as1_ceiling_profile(WALL_TYPE_LAB);
+                get_as1_ceiling_profile(corner_wall_type);
+            if (profile == nullptr) {
+                continue;
+            }
             int dir_a_supplement_count = 0;
             int dir_b_supplement_count = 0;
             if (inside_cell == CeilingPoint{vertex.first, vertex.second}) {
@@ -2163,8 +2499,8 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                         continue;
                     }
 
-                    auto sprite_it = lab_edge_ceiling_sprites.find(candidate);
-                    if (sprite_it == lab_edge_ceiling_sprites.end()) {
+                    auto sprite_it = as1_edge_ceiling_sprites.find(candidate);
+                    if (sprite_it == as1_edge_ceiling_sprites.end()) {
                         continue;
                     }
 
@@ -2211,16 +2547,22 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
 
                     const ExteriorCeilingEdge& source_edge =
                         exterior_edges.at(supplement_edge_key);
-                    lab_ceiling_seeds.push_back({
+                    as1_ceiling_seeds_by_wall_type[source_edge.wall_type].push_back({
                         supplement_sprite,
                         supplement_kind,
-                        source_edge.outside_side
+                        source_edge.outside_side,
+                        {
+                            source_edge.gx,
+                            source_edge.gy,
+                            source_edge.wall_type,
+                            source_edge.kind
+                        }
                     });
                 }
             }
         }
 
-        for (const LabCornerSupplement& supplement : lab_corner_supplements) {
+        for (const AS1CornerSupplement& supplement : as1_corner_supplements) {
             CeilingEdgeKey corner_edge_candidates[2];
             if (supplement.kind == WallPartKind::DirA) {
                 corner_edge_candidates[0] = {
@@ -2249,8 +2591,8 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
             CeilingEdgeKey supplement_edge_key{};
             const io::Sprite* supplement_edge_sprite = nullptr;
             for (const CeilingEdgeKey& candidate : corner_edge_candidates) {
-                auto sprite_it = lab_edge_ceiling_sprites.find(candidate);
-                if (sprite_it == lab_edge_ceiling_sprites.end()) {
+                auto sprite_it = as1_edge_ceiling_sprites.find(candidate);
+                if (sprite_it == as1_edge_ceiling_sprites.end()) {
                     continue;
                 }
 
@@ -2263,8 +2605,79 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                 continue;
             }
 
+            const ExteriorCeilingEdge& source_edge =
+                exterior_edges.at(supplement_edge_key);
             const AS1CeilingProfile* profile =
-                get_as1_ceiling_profile(WALL_TYPE_LAB);
+                get_as1_ceiling_profile(source_edge.wall_type);
+            if (profile == nullptr) {
+                continue;
+            }
+
+            if (supplement.count < 0) {
+                int trim_count = -supplement.count;
+                int trim_step_gx = 0;
+                int trim_step_gy = 0;
+
+                if (supplement.kind == WallPartKind::DirA) {
+                    int edge_gy = std::get<1>(supplement_edge_key);
+                    bool corner_is_upper_endpoint =
+                        edge_gy == supplement.corner.second + 1;
+                    if (corner_is_upper_endpoint) {
+                        trim_step_gy = 1;
+                    } else {
+                        trim_step_gy = -1;
+                    }
+                } else {
+                    int edge_gx = std::get<0>(supplement_edge_key);
+                    bool corner_is_left_endpoint =
+                        edge_gx == supplement.corner.first + 1;
+                    if (corner_is_left_endpoint) {
+                        trim_step_gx = 1;
+                    } else {
+                        trim_step_gx = -1;
+                    }
+                }
+
+                int trim_gx = std::get<0>(supplement_edge_key);
+                int trim_gy = std::get<1>(supplement_edge_key);
+                for (int trim_index = 0; trim_index < trim_count; ++trim_index) {
+                    CeilingEdgeKey trim_edge_key = {
+                        trim_gx,
+                        trim_gy,
+                        supplement.kind
+                    };
+                    auto trim_sprite_it =
+                        as1_edge_ceiling_sprites.find(trim_edge_key);
+                    if (trim_sprite_it == as1_edge_ceiling_sprites.end()) {
+                        break;
+                    }
+
+                    auto trim_edge_it = exterior_edges.find(trim_edge_key);
+                    if (trim_edge_it == exterior_edges.end()) {
+                        break;
+                    }
+
+                    const ExteriorCeilingEdge& trim_edge = trim_edge_it->second;
+                    bool belongs_to_same_run =
+                        trim_edge.wall_type == source_edge.wall_type &&
+                        trim_edge.outside_side == source_edge.outside_side;
+                    if (!belongs_to_same_run) {
+                        break;
+                    }
+
+                    io::Sprite sprite_to_remove = trim_sprite_it->second;
+                    remove_as1_ceiling_at_position(
+                        sprite_to_remove,
+                        ceiling_sprites
+                    );
+                    as1_edge_ceiling_sprites.erase(trim_sprite_it);
+
+                    trim_gx += trim_step_gx;
+                    trim_gy += trim_step_gy;
+                }
+                continue;
+            }
+
             float extension_x = profile->step_x;
             float extension_y = profile->step_y;
             if (supplement.kind == WallPartKind::DirA) {
@@ -2299,24 +2712,34 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                     extension_y * distance_from_corner;
                 ceiling_sprites.push_back(supplement_sprite);
 
-                const ExteriorCeilingEdge& source_edge =
-                    exterior_edges.at(supplement_edge_key);
-                lab_ceiling_seeds.push_back({
+                as1_ceiling_seeds_by_wall_type[source_edge.wall_type].push_back({
                     supplement_sprite,
                     supplement.kind,
-                    source_edge.outside_side
+                    source_edge.outside_side,
+                    {
+                        source_edge.gx,
+                        source_edge.gy,
+                        source_edge.wall_type,
+                        source_edge.kind
+                    }
                 });
             }
         }
 
-        append_outward_lab_ceiling_layers(
-            segments,
-            map_size_x_,
-            map_size_y_,
-            outside_cells,
-            lab_ceiling_seeds,
-            ceiling_sprites
-        );
+        for (const auto& entry : as1_ceiling_seeds_by_wall_type) {
+            int wall_type = entry.first;
+            const AS1CeilingProfile* profile = get_as1_ceiling_profile(wall_type);
+            append_outward_as1_ceiling_layers(
+                segments,
+                map_size_x_,
+                map_size_y_,
+                wall_type,
+                *profile,
+                outside_cells,
+                entry.second,
+                ceiling_sprites
+            );
+        }
         return ceiling_sprites;
     }
 

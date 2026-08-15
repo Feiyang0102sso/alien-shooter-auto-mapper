@@ -411,6 +411,380 @@ static std::vector<Segment> build_concave_room_segments(
     return segments;
 }
 
+TEST(AS1StandardCeilingTest, UsesReferenceOffsetsAndDirectionForEveryWallSide) {
+    WallBuilder builder(2000.0f, 2000.0f, false);
+
+    struct PlacementCase {
+        WallPartKind kind;
+        WallOutsideSide outside_side;
+        float expected_offset_x;
+        float expected_offset_y;
+    };
+
+    const PlacementCase cases[] = {
+        {WallPartKind::DirA, WallOutsideSide::NegativeGridSide, 20.0f, 0.0f},
+        {WallPartKind::DirA, WallOutsideSide::PositiveGridSide, 60.0f, 28.0f},
+        {WallPartKind::DirB, WallOutsideSide::NegativeGridSide, -20.0f, 0.0f},
+        {WallPartKind::DirB, WallOutsideSide::PositiveGridSide, -60.0f, 28.0f}
+    };
+
+    for (const PlacementCase& placement_case : cases) {
+        io::Sprite wall = builder.place_single_wall(
+            2,
+            3,
+            WALL_TYPE_STANDARD,
+            placement_case.kind
+        );
+        io::Sprite ceiling = builder.place_single_ceiling_curtain(
+            2,
+            3,
+            WALL_TYPE_STANDARD,
+            placement_case.kind,
+            false,
+            placement_case.outside_side
+        );
+
+        EXPECT_EQ(ceiling.vid, CEILING_AS1_STANDARD.vid);
+        EXPECT_FLOAT_EQ(ceiling.posX - wall.posX, placement_case.expected_offset_x);
+        EXPECT_FLOAT_EQ(ceiling.posY - wall.posY, placement_case.expected_offset_y);
+        EXPECT_FLOAT_EQ(ceiling.posZ, CEILING_AS1_STANDARD.pos_z);
+        EXPECT_EQ(ceiling.direction, CEILING_AS1_STANDARD.direction);
+    }
+}
+
+TEST(AS1StandardCeilingTest, GeneratesOutwardLayersWithStandardPitch) {
+    EXPECT_EQ(
+        CEILING_AS1_STANDARD.standalone_deep_corners.upper_left.dir_a_supplement_count,
+        -1
+    );
+    EXPECT_EQ(
+        CEILING_AS1_STANDARD.standalone_deep_corners.upper_left.dir_b_supplement_count,
+        -1
+    );
+
+    constexpr int room_size = 6;
+    WallBuilder builder(4000.0f, 4000.0f, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_STANDARD),
+        false,
+        true
+    );
+
+    int ceiling_count = 0;
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != CEILING_AS1_STANDARD.vid) {
+            continue;
+        }
+
+        ceiling_count += 1;
+        bool uses_supported_ceiling_size =
+            sprite.direction == CEILING_AS1_STANDARD.direction ||
+            sprite.direction == CEILING_AS1_STANDARD.large_tile_direction;
+        EXPECT_TRUE(uses_supported_ceiling_size);
+        EXPECT_GE(sprite.posX, CEILING_AS1_STANDARD.min_bounds_margin);
+        EXPECT_GE(sprite.posY, CEILING_AS1_STANDARD.min_bounds_margin);
+        EXPECT_LE(sprite.posX, 4000.0f + CEILING_AS1_STANDARD.max_bounds_margin);
+        EXPECT_LE(sprite.posY, 4000.0f + CEILING_AS1_STANDARD.max_bounds_margin);
+    }
+
+    int wall_aligned_ceiling_count = room_size * 4;
+    EXPECT_GT(ceiling_count, wall_aligned_ceiling_count);
+    EXPECT_FLOAT_EQ(CEILING_AS1_STANDARD.step_x, CEILING_AS1_LAB.step_x / 2.0f);
+    EXPECT_FLOAT_EQ(CEILING_AS1_STANDARD.step_y, CEILING_AS1_LAB.step_y / 2.0f);
+    // EXPECT_EQ(CEILING_AS1_STANDARD.large_tile_start_layer, 5);
+    EXPECT_EQ(CEILING_AS1_STANDARD.large_tile_direction, 0u);
+    EXPECT_FLOAT_EQ(
+        CEILING_AS1_STANDARD.large_tile_step_x,
+        CEILING_AS1_STANDARD.step_x * 2.0f
+    );
+    EXPECT_FLOAT_EQ(
+        CEILING_AS1_STANDARD.large_tile_step_y,
+        CEILING_AS1_STANDARD.step_y * 2.0f
+    );
+}
+
+TEST(AS1StandardCeilingTest, ExpandsBeyondAllFourRoomSides) {
+    constexpr int room_size = 6;
+    constexpr int room_start = 20;
+    constexpr int room_end = room_start + room_size;
+    constexpr float map_size = 4000.0f;
+    WallBuilder builder(map_size, map_size, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments_at(
+            room_start,
+            room_start,
+            room_size,
+            WALL_TYPE_STANDARD
+        ),
+        false,
+        true
+    );
+
+    const WallProfile& profile =
+        WallBuilder::get_wall_profile(WALL_TYPE_STANDARD);
+    MapPoint shift = WallBuilder::get_wall_shift(map_size, profile);
+    bool expands_left = false;
+    bool expands_right = false;
+    bool expands_top = false;
+    bool expands_bottom = false;
+    float max_left_layers = 0.0f;
+    float max_right_layers = 0.0f;
+    float max_top_layers = 0.0f;
+    float max_bottom_layers = 0.0f;
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != CEILING_AS1_STANDARD.vid) {
+            continue;
+        }
+
+        float delta_x = (sprite.posX - shift.x) / profile.step_x;
+        float delta_y = (sprite.posY - shift.y) / profile.step_y;
+        float gx = (delta_x + delta_y) / 2.0f;
+        float gy = (delta_y - delta_x) / 2.0f;
+
+        max_left_layers = std::max(
+            max_left_layers,
+            static_cast<float>(room_start) - gx
+        );
+        max_right_layers = std::max(
+            max_right_layers,
+            gx - static_cast<float>(room_end)
+        );
+        max_top_layers = std::max(
+            max_top_layers,
+            static_cast<float>(room_start) - gy
+        );
+        max_bottom_layers = std::max(
+            max_bottom_layers,
+            gy - static_cast<float>(room_end)
+        );
+
+        bool is_middle_x =
+            gx > static_cast<float>(room_start + 1) &&
+            gx < static_cast<float>(room_end - 1);
+        bool is_middle_y =
+            gy > static_cast<float>(room_start + 1) &&
+            gy < static_cast<float>(room_end - 1);
+        if (is_middle_y && gx < static_cast<float>(room_start)) {
+            expands_left = true;
+        }
+        if (is_middle_y && gx > static_cast<float>(room_end) + 1.5f) {
+            expands_right = true;
+        }
+        if (is_middle_x && gy < static_cast<float>(room_start)) {
+            expands_top = true;
+        }
+        if (is_middle_x && gy > static_cast<float>(room_end) + 1.5f) {
+            expands_bottom = true;
+        }
+    }
+
+    EXPECT_TRUE(expands_left);
+    EXPECT_TRUE(expands_right);
+    EXPECT_TRUE(expands_top);
+    EXPECT_TRUE(expands_bottom);
+    EXPECT_GE(max_left_layers, 9.0f);
+    EXPECT_GE(max_right_layers, 9.0f);
+    EXPECT_GE(max_top_layers, 9.0f);
+    EXPECT_GE(max_bottom_layers, 9.0f);
+}
+
+TEST(AS1StandardCeilingTest, KeepsUsingSmallTilesWhenLargeTilesAreDisabled) {
+    WallBuilder builder(4000.0f, 4000.0f, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(6, WALL_TYPE_STANDARD),
+        false,
+        true
+    );
+
+    int small_tile_count = 0;
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != CEILING_AS1_STANDARD.vid) {
+            continue;
+        }
+
+        if (sprite.direction == CEILING_AS1_STANDARD.direction) {
+            small_tile_count += 1;
+        }
+        EXPECT_NE(sprite.direction, CEILING_AS1_STANDARD.large_tile_direction);
+    }
+
+    EXPECT_GT(small_tile_count, 0);
+}
+
+TEST(AS1StandardCeilingTest, FillsSingleCellExteriorGridHoles) {
+    constexpr int room_size = 6;
+    constexpr float map_size = 4000.0f;
+    WallBuilder builder(map_size, map_size, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_STANDARD),
+        false,
+        true
+    );
+
+    float half_step_x = CEILING_AS1_STANDARD.step_x / 2.0f;
+    float half_step_y = CEILING_AS1_STANDARD.step_y / 2.0f;
+    int shift_index = static_cast<int>(std::round(
+        (map_size / 2.0f - half_step_x) /
+        CEILING_AS1_STANDARD.step_x
+    ));
+    float ceiling_shift_x =
+        static_cast<float>(shift_index) * CEILING_AS1_STANDARD.step_x;
+    float ceiling_shift_y = half_step_y;
+    if (shift_index % 2 == 0) {
+        ceiling_shift_y = CEILING_AS1_STANDARD.step_y + half_step_y;
+    }
+
+    std::set<std::pair<int, int>> occupied_cells;
+    for (const io::Sprite& sprite : sprites) {
+        bool is_standard_ceiling =
+            sprite.vid == CEILING_AS1_STANDARD.vid &&
+            sprite.direction == CEILING_AS1_STANDARD.direction;
+        if (!is_standard_ceiling) {
+            continue;
+        }
+
+        float delta_x = sprite.posX - ceiling_shift_x;
+        float delta_y = sprite.posY - ceiling_shift_y;
+        float grid_x = (
+            delta_x / CEILING_AS1_STANDARD.step_x +
+            delta_y / CEILING_AS1_STANDARD.step_y
+        ) / 2.0f;
+        float grid_y = (
+            delta_y / CEILING_AS1_STANDARD.step_y -
+            delta_x / CEILING_AS1_STANDARD.step_x
+        ) / 2.0f;
+        occupied_cells.insert({
+            static_cast<int>(std::round(grid_x)),
+            static_cast<int>(std::round(grid_y))
+        });
+    }
+
+    const WallProfile& wall_profile =
+        WallBuilder::get_wall_profile(WALL_TYPE_STANDARD);
+    MapPoint wall_shift = WallBuilder::get_wall_shift(map_size, wall_profile);
+    std::set<std::pair<int, int>> exterior_holes;
+    for (const auto& cell : occupied_cells) {
+        const std::pair<int, int> neighbors[4] = {
+            {cell.first + 1, cell.second},
+            {cell.first - 1, cell.second},
+            {cell.first, cell.second + 1},
+            {cell.first, cell.second - 1}
+        };
+        for (const auto& candidate : neighbors) {
+            if (occupied_cells.count(candidate) > 0) {
+                continue;
+            }
+
+            bool right_occupied = occupied_cells.count({
+                candidate.first + 1,
+                candidate.second
+            }) > 0;
+            bool left_occupied = occupied_cells.count({
+                candidate.first - 1,
+                candidate.second
+            }) > 0;
+            bool up_occupied = occupied_cells.count({
+                candidate.first,
+                candidate.second + 1
+            }) > 0;
+            bool down_occupied = occupied_cells.count({
+                candidate.first,
+                candidate.second - 1
+            }) > 0;
+            int occupied_neighbor_count = 0;
+            if (right_occupied) {
+                occupied_neighbor_count += 1;
+            }
+            if (left_occupied) {
+                occupied_neighbor_count += 1;
+            }
+            if (up_occupied) {
+                occupied_neighbor_count += 1;
+            }
+            if (down_occupied) {
+                occupied_neighbor_count += 1;
+            }
+            bool has_opposite_pair =
+                (right_occupied && left_occupied) ||
+                (up_occupied && down_occupied);
+            if (occupied_neighbor_count < 3 && !has_opposite_pair) {
+                continue;
+            }
+
+            GridPoint candidate_grid = {
+                candidate.first,
+                candidate.second
+            };
+            MapPoint candidate_center = to_iso(
+                candidate_grid,
+                CEILING_AS1_STANDARD.step_x,
+                CEILING_AS1_STANDARD.step_y,
+                {ceiling_shift_x, ceiling_shift_y}
+            );
+            float wall_delta_x = candidate_center.x - wall_shift.x;
+            float wall_delta_y = candidate_center.y - wall_shift.y;
+            float wall_grid_x = (
+                wall_delta_x / wall_profile.step_x +
+                wall_delta_y / wall_profile.step_y
+            ) / 2.0f;
+            float wall_grid_y = (
+                wall_delta_y / wall_profile.step_y -
+                wall_delta_x / wall_profile.step_x
+            ) / 2.0f;
+            int wall_cell_x = static_cast<int>(std::floor(wall_grid_x));
+            int wall_cell_y = static_cast<int>(std::floor(wall_grid_y));
+            bool is_outside_room =
+                wall_cell_x < 0 ||
+                wall_cell_x >= room_size ||
+                wall_cell_y < 0 ||
+                wall_cell_y >= room_size;
+            if (is_outside_room) {
+                exterior_holes.insert(candidate);
+            }
+        }
+    }
+
+    EXPECT_TRUE(exterior_holes.empty());
+}
+
+TEST(AS1CeilingTest, MixedStandardAndLabKeepTheirOwnProfile) {
+    std::vector<Segment> segments = build_room_segments_at(
+        0,
+        0,
+        6,
+        WALL_TYPE_STANDARD
+    );
+    std::vector<Segment> lab_segments = build_room_segments_at(
+        20,
+        20,
+        6,
+        WALL_TYPE_LAB
+    );
+    segments.insert(segments.end(), lab_segments.begin(), lab_segments.end());
+
+    WallBuilder builder(6000.0f, 6000.0f, false);
+    std::vector<io::Sprite> sprites = builder.build(segments, false, true);
+
+    int standard_ceiling_count = 0;
+    int lab_ceiling_count = 0;
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != CEILING_AS1_STANDARD.vid) {
+            continue;
+        }
+
+        if (sprite.direction == CEILING_AS1_STANDARD.direction) {
+            standard_ceiling_count += 1;
+        }
+        if (sprite.direction == CEILING_AS1_LAB.direction) {
+            lab_ceiling_count += 1;
+        }
+    }
+
+    EXPECT_GT(standard_ceiling_count, 0);
+    EXPECT_GT(lab_ceiling_count, 0);
+}
+
 TEST(AS1LabCeilingTest, UsesProfileOffsetsForEveryWallSide) {
     WallBuilder builder(2000.0f, 2000.0f, false);
 
@@ -594,7 +968,9 @@ TEST(AS1LabCeilingTest, BFSExpansionGeneratesContinuousExteriorCeilings) {
         }
     }
 
-    EXPECT_GT(lab_ceiling_count, 0);
+    // The reference scene locks Lab's original expansion density. Registering
+    // its unsnapped second layer too early drops hundreds of later tiles.
+    EXPECT_EQ(lab_ceiling_count, 2458);
 
     std::string output_path = get_test_output_path(
         "celling/as1_lab_ceiling_bfs_validation.map"

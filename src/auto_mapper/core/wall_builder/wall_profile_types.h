@@ -144,7 +144,8 @@ struct AS1VerticalRecessSupplementProfile {
 };
 
 struct AS1StandaloneDeepCornerSupplementProfile {
-    // Standalone right-angle recesses can continue both touching wall runs.
+    // Positive counts continue a touching wall run beyond the corner.
+    // Negative counts trim existing ceiling tiles from the corner inward.
     int dir_a_supplement_count = 0;
     float dir_a_away_from_corner_adjustment = 0.0f;
     int dir_b_supplement_count = 0;
@@ -163,12 +164,20 @@ struct AS1StandaloneDeepCornersSupplementProfile {
 struct AS1CeilingProfile {
     int vid;
     float pos_z;
+    // Standard ceiling sprites use direction 238; Lab ceiling sprites use 0.
+    uint32_t direction;
     float step_x;
     float step_y;
     // Total coverage depth. Layer 1 is the calibrated wall-aligned layer.
     int total_layer_count = 1;
     // From which layer (1-based index) to start snapping to the global isometric grid.
     int grid_snapping_start_layer = 2;
+    // First layer eligible for replacing complete small-tile blocks with the
+    // larger ceiling asset. Zero disables outer-layer compaction.
+    int large_tile_start_layer = 0;
+    uint32_t large_tile_direction = 0;
+    float large_tile_step_x = 0.0f;
+    float large_tile_step_y = 0.0f;
     // Physical coordinate bounds tolerance relative to map boundaries.
     float min_bounds_margin = -20.0f;
     float max_bounds_margin = 30.0f;
@@ -200,7 +209,7 @@ struct CeilingCurtainPartProfile {
     // Extra outward distance in logical wall-grid widths for asymmetric sprites.
     float negative_side_outward_adjustment = 0.0f;
     float positive_side_outward_adjustment = 0.0f;
-    // AS1 Lab ceilings were calibrated independently on all four wall sides.
+    // AS1 ceilings are calibrated independently on all four wall sides.
     // When enabled, these offsets are applied directly from the emitted wall.
     bool use_side_specific_offsets = false;
     CeilingWallOffset negative_side_offset{};
