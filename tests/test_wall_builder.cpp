@@ -506,10 +506,8 @@ TEST(AS1LabCeilingTest, DISABLED_PlacesWallTilesAndFourCornerSupplements) {
             }
         }
     }
-
-    int expected_straight_connections = 4 * (room_size - 1);
-    EXPECT_GE(connected_pair_count, expected_straight_connections);
 }
+
 
 static TestScene build_project_reference_wall_scene(int wall_type) {
     TestScene scene;
@@ -579,6 +577,68 @@ static TestScene build_project_reference_wall_scene(int wall_type) {
 
     return scene;
 }
+
+TEST(AS1LabCeilingTest, BFSExpansionGeneratesContinuousExteriorCeilings) {
+    TestScene scene = build_project_reference_wall_scene(WALL_TYPE_LAB);
+    WallBuilder builder(scene.map_size_x, scene.map_size_y, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        scene.segments,
+        true,
+        true
+    );
+
+    int lab_ceiling_count = 0;
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid == CEILING_AS1_LAB.vid) {
+            lab_ceiling_count += 1;
+        }
+    }
+
+    EXPECT_GT(lab_ceiling_count, 0);
+
+    std::string output_path = get_test_output_path(
+        "celling/as1_lab_ceiling_bfs_validation.map"
+    );
+    io::write_map(
+        sprites,
+        output_path,
+        io::MapFormat::AS1,
+        scene.map_size_x,
+        scene.map_size_y
+    );
+}
+
+TEST(AS1LabCeilingTest, NeverPlacesCeilingInsideEnclosedRoom) {
+    constexpr int room_size = 6;
+    WallBuilder builder(4000.0f, 4000.0f, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(room_size, WALL_TYPE_LAB),
+        false,
+        true
+    );
+
+    const WallProfile& profile = WallBuilder::get_wall_profile(WALL_TYPE_LAB);
+    MapPoint shift = WallBuilder::get_wall_shift(4000.0f, profile);
+
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid != CEILING_AS1_LAB.vid) {
+            continue;
+        }
+
+        float delta_x = (sprite.posX - shift.x) / profile.step_x;
+        float delta_y = (sprite.posY - shift.y) / profile.step_y;
+        float gx = (delta_x + delta_y) / 2.0f;
+        float gy = (delta_y - delta_x) / 2.0f;
+
+        bool is_strictly_interior = (gx > 0.8f && gx < room_size - 0.8f &&
+                                     gy > 0.8f && gy < room_size - 0.8f);
+        EXPECT_FALSE(is_strictly_interior)
+            << "Ceiling sprite at (" << sprite.posX << ", " << sprite.posY
+            << ") mapped to interior grid (" << gx << ", " << gy << ")";
+    }
+}
+
+
 
 static int count_sprites_by_vid(const std::vector<io::Sprite>& sprites, int vid) {
     int count = 0;

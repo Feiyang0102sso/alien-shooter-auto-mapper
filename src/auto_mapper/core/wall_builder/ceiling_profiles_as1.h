@@ -17,8 +17,8 @@ inline constexpr AS1CeilingProfile CEILING_AS1_LAB = {
     .pos_z = 90.0f,
     .step_x = 80.0f,
     .step_y = 56.0f,
-    // TODO: have a small area not covered by celling && too many celling!!!
-    .total_layer_count = 6,
+    // Outward expansion uses 2D BFS wavefront layers.
+    .total_layer_count = 8,
     .dir_a_negative_outside_offset = {-72.0f, -6.0f},
     .dir_a_positive_outside_offset = {38.0f, 46.0f},
     .dir_b_negative_outside_offset = {23.0f, -22.0f},
@@ -72,7 +72,7 @@ inline constexpr AS1CeilingProfile CEILING_AS1_LAB = {
             .keep_connector_ceiling = false,
             .keep_side_ceiling = true,
             .supplement_count = 1,
-            .away_from_corner_adjustment = -0.5f
+            .away_from_corner_adjustment = -0.7f
         }
     },
     .right_recess = {

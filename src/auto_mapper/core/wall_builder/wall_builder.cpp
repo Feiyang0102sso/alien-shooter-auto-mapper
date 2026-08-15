@@ -39,6 +39,7 @@ struct PhysicalWallBoundary {
 };
 
 using CeilingPositionKey = std::pair<long long, long long>;
+using CeilingPoint = std::pair<int, int>;
 
 CeilingPositionKey make_ceiling_position_key(float pos_x, float pos_y) {
     long long scaled_x = std::llround(pos_x * CEILING_POSITION_KEY_SCALE);
@@ -68,6 +69,7 @@ MapPoint get_lab_ceiling_outward_step(
         profile.step_y * direction_sign
     };
 }
+
 
 float cross_product(MapPoint first, MapPoint second, MapPoint third) {
     float first_x = second.x - first.x;
@@ -213,9 +215,15 @@ std::vector<PhysicalWallBoundary> build_physical_wall_boundaries(
     return boundaries;
 }
 
+struct LabFrontierNode {
+    MapPoint center;
+    MapPoint outward_step;
+};
+
 void append_outward_lab_ceiling_layers(
     const std::vector<Segment>& segments,
     float map_size_x,
+    const std::set<CeilingPoint>& outside_cells,
     const std::vector<LabCeilingSeed>& seeds,
     std::vector<io::Sprite>& ceiling_sprites
 ) {
@@ -223,6 +231,9 @@ void append_outward_lab_ceiling_layers(
     if (profile.total_layer_count <= 1 || seeds.empty()) {
         return;
     }
+
+    const WallProfile& wall_profile = WallBuilder::get_wall_profile(WALL_TYPE_LAB);
+    MapPoint shift = WallBuilder::get_wall_shift(map_size_x, wall_profile);
 
     std::vector<PhysicalWallBoundary> boundaries =
         build_physical_wall_boundaries(segments, map_size_x);
@@ -234,117 +245,107 @@ void append_outward_lab_ceiling_layers(
         occupied_positions.insert(make_ceiling_position_key(sprite.posX, sprite.posY));
     }
 
+    // 4 isometric diagonal directions
+    const MapPoint expansion_directions[4] = {
+        { profile.step_x,  profile.step_y},
+        {-profile.step_x, -profile.step_y},
+        {-profile.step_x,  profile.step_y},
+        { profile.step_x, -profile.step_y}
+    };
+
+    std::vector<LabFrontierNode> current_frontier;
+    current_frontier.reserve(seeds.size());
     for (const LabCeilingSeed& seed : seeds) {
         MapPoint outward_step = get_lab_ceiling_outward_step(
             seed.kind,
             seed.outside_side,
             profile
         );
+        current_frontier.push_back({{seed.sprite.posX, seed.sprite.posY}, outward_step});
+    }
 
-        // Two perpendicular directions on the same isometric grid.
-        // If outward is (sx, sy), perpendicular directions are (-sx, sy) and (sx, -sy).
-        MapPoint perp_steps[2] = {
-            {-outward_step.x,  outward_step.y},
-            { outward_step.x, -outward_step.y}
-        };
+    io::Sprite template_sprite = seeds.front().sprite;
 
-        MapPoint previous_center = {seed.sprite.posX, seed.sprite.posY};
+    for (int layer_number = 2;
+         layer_number <= profile.total_layer_count;
+         ++layer_number) {
+        std::vector<LabFrontierNode> next_frontier;
 
-        for (int layer_number = 2;
-             layer_number <= profile.total_layer_count;
-             ++layer_number) {
-            MapPoint candidate_center = {
-                previous_center.x + outward_step.x,
-                previous_center.y + outward_step.y
-            };
-
-            bool hits_wall = false;
-            for (const PhysicalWallBoundary& boundary : boundaries) {
-                bool crosses_wall = line_segments_intersect(
-                    previous_center,
-                    candidate_center,
-                    boundary.start,
-                    boundary.end
-                );
-                bool overlaps_wall = segment_enters_ceiling_footprint(
-                    boundary,
-                    candidate_center,
-                    profile
-                );
-                if (crosses_wall || overlaps_wall) {
-                    hits_wall = true;
-                    break;
+        for (const LabFrontierNode& node : current_frontier) {
+            for (const MapPoint& dir : expansion_directions) {
+                // Strictly forbid expanding in the opposite direction (towards room interior)
+                if (std::abs(dir.x + node.outward_step.x) < GEOMETRY_EPSILON &&
+                    std::abs(dir.y + node.outward_step.y) < GEOMETRY_EPSILON) {
+                    continue;
                 }
-            }
 
-            if (hits_wall) {
-                break;
-            }
+                MapPoint candidate_center = {
+                    node.center.x + dir.x,
+                    node.center.y + dir.y
+                };
 
-            io::Sprite layer_sprite = seed.sprite;
-            layer_sprite.posX = candidate_center.x;
-            layer_sprite.posY = candidate_center.y;
-            CeilingPositionKey position_key = make_ceiling_position_key(
-                layer_sprite.posX,
-                layer_sprite.posY
-            );
-            if (occupied_positions.insert(position_key).second) {
-                ceiling_sprites.push_back(layer_sprite);
-            }
+                // Reject any candidate point that falls inside an interior grid cell
+                float delta_x = candidate_center.x - shift.x;
+                float delta_y = candidate_center.y - shift.y;
+                float gx = (delta_x / wall_profile.step_x + delta_y / wall_profile.step_y) / 2.0f;
+                float gy = (delta_y / wall_profile.step_y - delta_x / wall_profile.step_x) / 2.0f;
+                int cell_x = static_cast<int>(std::floor(gx));
+                int cell_y = static_cast<int>(std::floor(gy));
+                if (outside_cells.count({cell_x, cell_y}) == 0) {
+                    continue;
+                }
 
-            // Corner fill: expand this outer tile in perpendicular directions.
-            // Limited to (total_layer_count - 1) steps so corners stay bounded.
-            int max_perp_steps = profile.total_layer_count - 1;
-            for (const MapPoint& perp_step : perp_steps) {
-                MapPoint perp_previous = candidate_center;
-                for (int perp_index = 1; perp_index <= max_perp_steps; ++perp_index) {
-                    MapPoint perp_candidate = {
-                        perp_previous.x + perp_step.x,
-                        perp_previous.y + perp_step.y
-                    };
+                CeilingPositionKey position_key = make_ceiling_position_key(
+                    candidate_center.x,
+                    candidate_center.y
+                );
+                if (occupied_positions.count(position_key) > 0) {
+                    continue;
+                }
 
-                    bool perp_hits_wall = false;
-                    for (const PhysicalWallBoundary& boundary : boundaries) {
-                        bool crosses = line_segments_intersect(
-                            perp_previous,
-                            perp_candidate,
-                            boundary.start,
-                            boundary.end
-                        );
-                        bool overlaps = segment_enters_ceiling_footprint(
-                            boundary,
-                            perp_candidate,
-                            profile
-                        );
-                        if (crosses || overlaps) {
-                            perp_hits_wall = true;
-                            break;
-                        }
-                    }
-
-                    if (perp_hits_wall) {
+                bool hits_wall = false;
+                for (const PhysicalWallBoundary& boundary : boundaries) {
+                    bool crosses_wall = line_segments_intersect(
+                        node.center,
+                        candidate_center,
+                        boundary.start,
+                        boundary.end
+                    );
+                    bool overlaps_wall = segment_enters_ceiling_footprint(
+                        boundary,
+                        candidate_center,
+                        profile
+                    );
+                    if (crosses_wall || overlaps_wall) {
+                        hits_wall = true;
                         break;
                     }
-
-                    io::Sprite perp_sprite = seed.sprite;
-                    perp_sprite.posX = perp_candidate.x;
-                    perp_sprite.posY = perp_candidate.y;
-                    CeilingPositionKey perp_key = make_ceiling_position_key(
-                        perp_sprite.posX,
-                        perp_sprite.posY
-                    );
-                    if (occupied_positions.insert(perp_key).second) {
-                        ceiling_sprites.push_back(perp_sprite);
-                    }
-
-                    perp_previous = perp_candidate;
                 }
-            }
 
-            previous_center = candidate_center;
+                if (hits_wall) {
+                    continue;
+                }
+
+                occupied_positions.insert(position_key);
+
+                io::Sprite layer_sprite = template_sprite;
+                layer_sprite.posX = candidate_center.x;
+                layer_sprite.posY = candidate_center.y;
+                ceiling_sprites.push_back(layer_sprite);
+
+                next_frontier.push_back({candidate_center, node.outward_step});
+            }
         }
+
+        if (next_frontier.empty()) {
+            break;
+        }
+
+        current_frontier = std::move(next_frontier);
     }
 }
+
+
 
 } // namespace
 
@@ -2115,6 +2116,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
         append_outward_lab_ceiling_layers(
             segments,
             map_size_x_,
+            outside_cells,
             lab_ceiling_seeds,
             ceiling_sprites
         );
