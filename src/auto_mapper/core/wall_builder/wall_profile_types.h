@@ -167,6 +167,11 @@ struct AS1CeilingProfile {
     float step_y;
     // Total coverage depth. Layer 1 is the calibrated wall-aligned layer.
     int total_layer_count = 1;
+    // From which layer (1-based index) to start snapping to the global isometric grid.
+    int grid_snapping_start_layer = 2;
+    // Physical coordinate bounds tolerance relative to map boundaries.
+    float min_bounds_margin = -20.0f;
+    float max_bounds_margin = 30.0f;
     CeilingWallOffset dir_a_negative_outside_offset{};
     CeilingWallOffset dir_a_positive_outside_offset{};
     CeilingWallOffset dir_b_negative_outside_offset{};

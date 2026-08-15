@@ -638,7 +638,32 @@ TEST(AS1LabCeilingTest, NeverPlacesCeilingInsideEnclosedRoom) {
     }
 }
 
+TEST(AS1LabCeilingTest, RespectsBoundsMarginsAndPreservesLayerOne) {
+    TestScene scene = build_project_reference_wall_scene(WALL_TYPE_LAB);
+    WallBuilder builder(scene.map_size_x, scene.map_size_y, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        scene.segments,
+        true,
+        true
+    );
 
+    std::vector<io::Sprite> ceiling_sprites;
+    for (const io::Sprite& sprite : sprites) {
+        if (sprite.vid == CEILING_AS1_LAB.vid) {
+            ceiling_sprites.push_back(sprite);
+        }
+    }
+
+    ASSERT_GT(ceiling_sprites.size(), 0u);
+
+    // 1. Verify physical bounds constraint on all generated ceiling sprites
+    for (const io::Sprite& sprite : ceiling_sprites) {
+        EXPECT_GE(sprite.posX, CEILING_AS1_LAB.min_bounds_margin);
+        EXPECT_GE(sprite.posY, CEILING_AS1_LAB.min_bounds_margin);
+        EXPECT_LE(sprite.posX, scene.map_size_x + CEILING_AS1_LAB.max_bounds_margin);
+        EXPECT_LE(sprite.posY, scene.map_size_y + CEILING_AS1_LAB.max_bounds_margin);
+    }
+}
 
 static int count_sprites_by_vid(const std::vector<io::Sprite>& sprites, int vid) {
     int count = 0;

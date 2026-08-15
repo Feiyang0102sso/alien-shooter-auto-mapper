@@ -18,7 +18,10 @@ inline constexpr AS1CeilingProfile CEILING_AS1_LAB = {
     .step_x = 80.0f,
     .step_y = 56.0f,
     // Outward expansion uses 2D BFS wavefront layers.
-    .total_layer_count = 8,
+    .total_layer_count = 6,
+    .grid_snapping_start_layer = 3,
+    .min_bounds_margin = -20.0f,
+    .max_bounds_margin = 30.0f,
     .dir_a_negative_outside_offset = {-72.0f, -6.0f},
     .dir_a_positive_outside_offset = {38.0f, 46.0f},
     .dir_b_negative_outside_offset = {23.0f, -22.0f},

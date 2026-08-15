@@ -215,6 +215,169 @@ std::vector<PhysicalWallBoundary> build_physical_wall_boundaries(
     return boundaries;
 }
 
+static MapPoint get_floor_ceiling_shift(float map_size_x, float step_x, float step_y, int grid_divisor) {
+    float divisor = static_cast<float>(grid_divisor);
+    float grid_step_x = step_x / divisor;
+    float grid_step_y = step_y / divisor;
+
+    float half_step_x = grid_step_x / 2.0f;
+    float half_step_y = grid_step_y / 2.0f;
+
+    int n = static_cast<int>(std::round((map_size_x / 2.0f - half_step_x) / grid_step_x));
+    float shift_x = n * grid_step_x;
+
+    bool n_is_even = (n % 2 == 0);
+    float shift_y = n_is_even ? (grid_step_y + half_step_y) : half_step_y;
+
+    return {shift_x, shift_y};
+}
+
+static bool is_within_lab_ceiling_bounds(
+    float x,
+    float y,
+    float map_size_x,
+    float map_size_y,
+    const AS1CeilingProfile& profile
+) {
+    if (x < profile.min_bounds_margin || y < profile.min_bounds_margin) {
+        return false;
+    }
+    if (x > map_size_x + profile.max_bounds_margin || y > map_size_y + profile.max_bounds_margin) {
+        return false;
+    }
+    return true;
+}
+
+static GridPoint snap_physical_to_lab_ceiling_grid(
+    const MapPoint& pos,
+    const MapPoint& ceil_shift,
+    const AS1CeilingProfile& profile
+) {
+    float dx = pos.x - ceil_shift.x;
+    float dy = pos.y - ceil_shift.y;
+    float gx = (dx / profile.step_x + dy / profile.step_y) / 2.0f;
+    float gy = (dy / profile.step_y - dx / profile.step_x) / 2.0f;
+    return {
+        static_cast<int>(std::round(gx)),
+        static_cast<int>(std::round(gy))
+    };
+}
+
+static void fill_lab_ceiling_grid_holes(
+    const std::vector<PhysicalWallBoundary>& boundaries,
+    float map_size_x,
+    float map_size_y,
+    const WallProfile& wall_profile,
+    MapPoint wall_shift,
+    MapPoint ceil_shift,
+    const AS1CeilingProfile& profile,
+    const std::set<CeilingPoint>& outside_cells,
+    const io::Sprite& template_sprite,
+    std::set<std::pair<int, int>>& occupied_grid_cells,
+    std::set<CeilingPositionKey>& occupied_physical_positions,
+    std::vector<io::Sprite>& ceiling_sprites
+) {
+    constexpr int MAX_HOLE_FILL_PASSES = 2;
+    const std::pair<int, int> neighbor_offsets[4] = {
+        { 1,  0},
+        {-1,  0},
+        { 0,  1},
+        { 0, -1}
+    };
+
+    for (int pass = 0; pass < MAX_HOLE_FILL_PASSES; ++pass) {
+        std::set<std::pair<int, int>> candidate_holes;
+
+        for (const auto& cell : occupied_grid_cells) {
+            for (const auto& offset : neighbor_offsets) {
+                std::pair<int, int> neighbor = {cell.first + offset.first, cell.second + offset.second};
+                if (occupied_grid_cells.count(neighbor) == 0) {
+                    candidate_holes.insert(neighbor);
+                }
+            }
+        }
+
+        std::vector<std::pair<int, int>> holes_to_fill;
+        for (const auto& hole : candidate_holes) {
+            int occupied_neighbor_count = 0;
+            bool has_opposite_pair = false;
+
+            bool right_occupied = (occupied_grid_cells.count({hole.first + 1, hole.second}) > 0);
+            bool left_occupied  = (occupied_grid_cells.count({hole.first - 1, hole.second}) > 0);
+            bool up_occupied    = (occupied_grid_cells.count({hole.first, hole.second + 1}) > 0);
+            bool down_occupied  = (occupied_grid_cells.count({hole.first, hole.second - 1}) > 0);
+
+            if (right_occupied) ++occupied_neighbor_count;
+            if (left_occupied)  ++occupied_neighbor_count;
+            if (up_occupied)    ++occupied_neighbor_count;
+            if (down_occupied)  ++occupied_neighbor_count;
+
+            if ((right_occupied && left_occupied) || (up_occupied && down_occupied)) {
+                has_opposite_pair = true;
+            }
+
+            if (occupied_neighbor_count < 3 && !has_opposite_pair) {
+                continue;
+            }
+
+            GridPoint grid_pt = {hole.first, hole.second};
+            MapPoint candidate_center = to_iso(grid_pt, profile.step_x, profile.step_y, ceil_shift);
+
+            if (!is_within_lab_ceiling_bounds(candidate_center.x, candidate_center.y, map_size_x, map_size_y, profile)) {
+                continue;
+            }
+
+            float delta_x = candidate_center.x - wall_shift.x;
+            float delta_y = candidate_center.y - wall_shift.y;
+            float gx = (delta_x / wall_profile.step_x + delta_y / wall_profile.step_y) / 2.0f;
+            float gy = (delta_y / wall_profile.step_y - delta_x / wall_profile.step_x) / 2.0f;
+            int cell_x = static_cast<int>(std::floor(gx));
+            int cell_y = static_cast<int>(std::floor(gy));
+            if (outside_cells.count({cell_x, cell_y}) == 0) {
+                continue;
+            }
+
+            bool hits_wall = false;
+            for (const PhysicalWallBoundary& boundary : boundaries) {
+                for (const auto& offset : neighbor_offsets) {
+                    std::pair<int, int> neighbor_cell = {hole.first + offset.first, hole.second + offset.second};
+                    if (occupied_grid_cells.count(neighbor_cell) > 0) {
+                        GridPoint n_grid = {neighbor_cell.first, neighbor_cell.second};
+                        MapPoint n_center = to_iso(n_grid, profile.step_x, profile.step_y, ceil_shift);
+                        if (line_segments_intersect(candidate_center, n_center, boundary.start, boundary.end)) {
+                            hits_wall = true;
+                            break;
+                        }
+                    }
+                }
+                if (hits_wall) {
+                    break;
+                }
+            }
+
+            if (!hits_wall) {
+                holes_to_fill.push_back(hole);
+            }
+        }
+
+        if (holes_to_fill.empty()) {
+            break;
+        }
+
+        for (const auto& hole : holes_to_fill) {
+            occupied_grid_cells.insert(hole);
+            GridPoint grid_pt = {hole.first, hole.second};
+            MapPoint candidate_center = to_iso(grid_pt, profile.step_x, profile.step_y, ceil_shift);
+            occupied_physical_positions.insert(make_ceiling_position_key(candidate_center.x, candidate_center.y));
+
+            io::Sprite layer_sprite = template_sprite;
+            layer_sprite.posX = candidate_center.x;
+            layer_sprite.posY = candidate_center.y;
+            ceiling_sprites.push_back(layer_sprite);
+        }
+    }
+}
+
 struct LabFrontierNode {
     MapPoint center;
     MapPoint outward_step;
@@ -223,6 +386,7 @@ struct LabFrontierNode {
 void append_outward_lab_ceiling_layers(
     const std::vector<Segment>& segments,
     float map_size_x,
+    float map_size_y,
     const std::set<CeilingPoint>& outside_cells,
     const std::vector<LabCeilingSeed>& seeds,
     std::vector<io::Sprite>& ceiling_sprites
@@ -233,16 +397,26 @@ void append_outward_lab_ceiling_layers(
     }
 
     const WallProfile& wall_profile = WallBuilder::get_wall_profile(WALL_TYPE_LAB);
-    MapPoint shift = WallBuilder::get_wall_shift(map_size_x, wall_profile);
+    MapPoint wall_shift = WallBuilder::get_wall_shift(map_size_x, wall_profile);
+    MapPoint ceil_shift = get_floor_ceiling_shift(map_size_x, profile.step_x, profile.step_y, 1);
 
     std::vector<PhysicalWallBoundary> boundaries =
         build_physical_wall_boundaries(segments, map_size_x);
-    std::set<CeilingPositionKey> occupied_positions;
+
+    std::set<CeilingPositionKey> occupied_physical_positions;
+    std::set<std::pair<int, int>> occupied_grid_cells;
+
+    // Layer 1 is already calibrated and must be preserved 100% without deduplication deletions.
     for (const io::Sprite& sprite : ceiling_sprites) {
-        if (sprite.vid != profile.vid) {
-            continue;
+        if (sprite.vid == profile.vid) {
+            occupied_physical_positions.insert(make_ceiling_position_key(sprite.posX, sprite.posY));
+            GridPoint snapped_grid = snap_physical_to_lab_ceiling_grid(
+                {sprite.posX, sprite.posY},
+                ceil_shift,
+                profile
+            );
+            occupied_grid_cells.insert({snapped_grid.x, snapped_grid.y});
         }
-        occupied_positions.insert(make_ceiling_position_key(sprite.posX, sprite.posY));
     }
 
     // 4 isometric diagonal directions
@@ -256,6 +430,9 @@ void append_outward_lab_ceiling_layers(
     std::vector<LabFrontierNode> current_frontier;
     current_frontier.reserve(seeds.size());
     for (const LabCeilingSeed& seed : seeds) {
+        if (!is_within_lab_ceiling_bounds(seed.sprite.posX, seed.sprite.posY, map_size_x, map_size_y, profile)) {
+            continue;
+        }
         MapPoint outward_step = get_lab_ceiling_outward_step(
             seed.kind,
             seed.outside_side,
@@ -270,6 +447,7 @@ void append_outward_lab_ceiling_layers(
          layer_number <= profile.total_layer_count;
          ++layer_number) {
         std::vector<LabFrontierNode> next_frontier;
+        bool use_grid_snapping = (layer_number >= profile.grid_snapping_start_layer);
 
         for (const LabFrontierNode& node : current_frontier) {
             for (const MapPoint& dir : expansion_directions) {
@@ -283,23 +461,40 @@ void append_outward_lab_ceiling_layers(
                     node.center.x + dir.x,
                     node.center.y + dir.y
                 };
+                GridPoint candidate_grid = {0, 0};
+
+                if (use_grid_snapping) {
+                    candidate_grid = snap_physical_to_lab_ceiling_grid(
+                        candidate_center,
+                        ceil_shift,
+                        profile
+                    );
+                    if (occupied_grid_cells.count({candidate_grid.x, candidate_grid.y}) > 0) {
+                        continue;
+                    }
+                    candidate_center = to_iso(candidate_grid, profile.step_x, profile.step_y, ceil_shift);
+                } else {
+                    CeilingPositionKey pos_key = make_ceiling_position_key(
+                        candidate_center.x,
+                        candidate_center.y
+                    );
+                    if (occupied_physical_positions.count(pos_key) > 0) {
+                        continue;
+                    }
+                }
+
+                if (!is_within_lab_ceiling_bounds(candidate_center.x, candidate_center.y, map_size_x, map_size_y, profile)) {
+                    continue;
+                }
 
                 // Reject any candidate point that falls inside an interior grid cell
-                float delta_x = candidate_center.x - shift.x;
-                float delta_y = candidate_center.y - shift.y;
+                float delta_x = candidate_center.x - wall_shift.x;
+                float delta_y = candidate_center.y - wall_shift.y;
                 float gx = (delta_x / wall_profile.step_x + delta_y / wall_profile.step_y) / 2.0f;
                 float gy = (delta_y / wall_profile.step_y - delta_x / wall_profile.step_x) / 2.0f;
                 int cell_x = static_cast<int>(std::floor(gx));
                 int cell_y = static_cast<int>(std::floor(gy));
                 if (outside_cells.count({cell_x, cell_y}) == 0) {
-                    continue;
-                }
-
-                CeilingPositionKey position_key = make_ceiling_position_key(
-                    candidate_center.x,
-                    candidate_center.y
-                );
-                if (occupied_positions.count(position_key) > 0) {
                     continue;
                 }
 
@@ -326,7 +521,10 @@ void append_outward_lab_ceiling_layers(
                     continue;
                 }
 
-                occupied_positions.insert(position_key);
+                if (use_grid_snapping) {
+                    occupied_grid_cells.insert({candidate_grid.x, candidate_grid.y});
+                }
+                occupied_physical_positions.insert(make_ceiling_position_key(candidate_center.x, candidate_center.y));
 
                 io::Sprite layer_sprite = template_sprite;
                 layer_sprite.posX = candidate_center.x;
@@ -343,6 +541,21 @@ void append_outward_lab_ceiling_layers(
 
         current_frontier = std::move(next_frontier);
     }
+
+    fill_lab_ceiling_grid_holes(
+        boundaries,
+        map_size_x,
+        map_size_y,
+        wall_profile,
+        wall_shift,
+        ceil_shift,
+        profile,
+        outside_cells,
+        template_sprite,
+        occupied_grid_cells,
+        occupied_physical_positions,
+        ceiling_sprites
+    );
 }
 
 
@@ -584,23 +797,6 @@ MapPoint WallBuilder::get_wall_shift(float map_size_x, const WallProfile& profil
     float raw_shift_y = remainder_y;
     float grid_y_shift = std::round((raw_shift_y - remainder_y) / grid_step_y);
     float shift_y = grid_y_shift * grid_step_y + remainder_y + profile.step_y;
-
-    return {shift_x, shift_y};
-}
-
-static MapPoint get_floor_ceiling_shift(float map_size_x, float step_x, float step_y, int grid_divisor) {
-    float divisor = static_cast<float>(grid_divisor);
-    float grid_step_x = step_x / divisor;
-    float grid_step_y = step_y / divisor;
-
-    float half_step_x = grid_step_x / 2.0f;
-    float half_step_y = grid_step_y / 2.0f;
-
-    int n = static_cast<int>(std::round((map_size_x / 2.0f - half_step_x) / grid_step_x));
-    float shift_x = n * grid_step_x;
-
-    bool n_is_even = (n % 2 == 0);
-    float shift_y = n_is_even ? (grid_step_y + half_step_y) : half_step_y;
 
     return {shift_x, shift_y};
 }
@@ -2116,6 +2312,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
         append_outward_lab_ceiling_layers(
             segments,
             map_size_x_,
+            map_size_y_,
             outside_cells,
             lab_ceiling_seeds,
             ceiling_sprites
