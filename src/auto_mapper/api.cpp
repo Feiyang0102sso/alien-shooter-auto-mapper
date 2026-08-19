@@ -8,6 +8,24 @@
 #include <vector>
 #include <string>
 
+// fix gcc 15 problem in static linking AutoMapper.dll (single)
+#if defined(__MINGW32__) && defined(__x86_64__)
+#include <setjmp.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+extern "C" {
+// Compatibility shims for static libpthread / libmsvcrt on GCC 15+ MinGW-w64
+int __intrinsic_setjmpex(jmp_buf env, void* frame) {
+    return _setjmp(env, frame);
+}
+
+int __ms_vsnprintf(char* buffer, size_t count, const char* format, va_list argptr) {
+    return vsnprintf(buffer, count, format, argptr);
+}
+}
+#endif
+
 extern "C" {
 
 static constexpr int AUTO_MAPPER_API_VERSION = 6;
