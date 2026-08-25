@@ -39,6 +39,72 @@ An AS1-only project option that forces supported active doors open or closed; AS
 - An **AS2 Wall Set Preview** is shared by all **AS2 Series** Project Versions.
 - **Sprite Army Value** is independent of **Map Format**; AS1 support may use the same VID binding in a separate implementation step.
 
+## AS2 Series Decorations
+
+**Decoration Stamp**:
+An authored group of AS2 Series sprites copied as one decoration unit. Each
+placement preserves every sprite's non-positional properties and relative Map
+Coordinate offsets; placement changes only the group's Map Coordinate origin.
+_Avoid_: Decoration Array, because a stamp preserves an authored composition
+instead of regenerating a layout from rows, columns, or spacing rules.
+
+**Decoration Stamp Instance**:
+One placement of a Decoration Stamp in an editor project, identified by its
+stamp and Map Coordinate origin. The editor moves and deletes the instance as
+one unit rather than exposing its member sprites as independent decorations.
+
+**Decoration Stamp Source Map**:
+An AS2 Series map authored as the source of one Decoration Stamp. Its SPR list
+may contain both Stamp members and explicitly classified Reference Wall Assets.
+All other SPR sprites are Stamp members. SPRD behavior, commands, drops, and
+names, plus PLAY and GROU relationships, are not Stamp content and are discarded
+during import.
+
+**Reference Wall Asset**:
+An official wall sprite used only during Decoration Stamp import to calibrate the
+Decoration Stamp Frame. Its actual Map Coordinate contributes to the frame; its
+wall type, group, state, topology, and standard alignment do not. It is discarded
+after calibration and never becomes a Stamp member or generated map sprite.
+
+**Decoration Stamp Reference Wall Run**:
+A collinear group of Reference Wall Assets in one canonical wall direction. Its
+total length is the sum of its member wall-part lengths, including any door span
+represented as wall in the source map.
+
+**Decoration Stamp Frame**:
+The editor selection frame representing one complete Decoration Stamp Instance.
+First-version frame adjustment moves the whole instance and never edits member
+sprites independently. Import groups `/` and `\` Reference Wall Assets into
+collinear runs, selects the two greatest-total-length runs in each direction, and
+intersects the four selected lines to form the frame. Shorter runs caused by local
+recesses or protrusions are ignored. The resulting frame is stored in the
+Decoration Stamp profile before runtime and receives no uniform outer padding.
+
+**Decoration Sprite Footprint**:
+A manually calibrated, coarse Map Coordinate outline used to preview one Stamp
+member. Footprints are keyed by VID and sprite `direction` value because the
+same VID may represent different decoration shapes at different direction
+values.
+
+A Decoration Sprite Footprint is editor preview metadata. It is not collision
+geometry and does not alter generated sprite records.
+
+When a VID and sprite `direction` pair has no calibrated Decoration Sprite
+Footprint, the editor uses one common default placeholder footprint.
+
+Decoration Stamp relationships:
+
+- First-version placement applies one common Map Coordinate translation to all
+  member sprites.
+- First-version placement does not rotate, mirror, scale, or change internal
+  spacing.
+- A member sprite's authored scale is preserved. The first-version scaling
+  restriction means that no additional instance-level scale is applied.
+- Source object IDs are not Stamp properties. Generated map output assigns new
+  file-wide object IDs to every expanded member sprite.
+- Scaling and internal-spacing adjustment are possible future capabilities,
+  not first-version behavior.
+
 ## Wall Set
 
 A group of wall sprites that share the same physical grid step and visual style.

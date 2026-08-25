@@ -1462,7 +1462,7 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
                 if (should_place_floor) {
                     io::Sprite floor_sprite = place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor);
                     if (is_as2_wall_set_type(ft)) {
-                        floor_sprite.army = get_as2_wall_set_asset_army(f_prof.vid);
+                        floor_sprite.army = get_as2_vid_army(f_prof.vid);
                     }
                     floor_sprite.gamma = f_prof.gamma;
                     floor_sprite.direction = direction_randomizer_.select_direction(
@@ -3653,7 +3653,7 @@ io::Sprite WallBuilder::place_wall_part_asset(int gx, int gy, int wall_type, con
 
     io::Sprite sprite(asset.vid, pos.x, pos.y, 0.0f, direction);
     if (is_as2_wall_set_type(wall_type)) {
-        sprite.army = get_as2_wall_set_asset_army(asset.vid);
+        sprite.army = get_as2_vid_army(asset.vid);
     }
 
     return sprite;

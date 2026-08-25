@@ -16,7 +16,7 @@ struct ExpectedArmyBinding {
 
 } // namespace
 
-TEST(VidArmiesTest, AS2WallSetAssetsHaveCompleteUniqueBindings) {
+TEST(VidArmiesTest, AS2AssetsHaveCompleteUniqueBindings) {
     const ExpectedArmyBinding expected_bindings[] = {
         // Wall Set 1
         {1777, AS2_VID_1777_ARMY, 2},
@@ -86,9 +86,21 @@ TEST(VidArmiesTest, AS2WallSetAssetsHaveCompleteUniqueBindings) {
         {1721, AS2_VID_1721_ARMY, 2},
         {1731, AS2_VID_1731_ARMY, 0},
         {1732, AS2_VID_1732_ARMY, 0},
+
+        // Decoration assets
+        {409, AS2_VID_409_ARMY, 0},
+        {412, AS2_VID_412_ARMY, 0},
+        {413, AS2_VID_413_ARMY, 0},
+        {1270, AS2_VID_1270_ARMY, 2},
+        {1288, AS2_VID_1288_ARMY, 0},
+        {1289, AS2_VID_1289_ARMY, 2},
+        {1764, AS2_VID_1764_ARMY, 0},
+        {2300, AS2_VID_2300_ARMY, 2},
+        {2304, AS2_VID_2304_ARMY, 0},
+        {2357, AS2_VID_2357_ARMY, 0},
     };
 
-    constexpr size_t EXPECTED_BINDING_COUNT = 51;
+    constexpr size_t EXPECTED_BINDING_COUNT = 61;
     size_t binding_count = sizeof(expected_bindings) / sizeof(expected_bindings[0]);
     ASSERT_EQ(binding_count, EXPECTED_BINDING_COUNT);
 
@@ -98,11 +110,11 @@ TEST(VidArmiesTest, AS2WallSetAssetsHaveCompleteUniqueBindings) {
             << "Duplicate VID binding: " << binding.vid;
         EXPECT_EQ(binding.constant_value, binding.expected_value)
             << "Incorrect constant for VID " << binding.vid;
-        EXPECT_EQ(get_as2_wall_set_asset_army(binding.vid), binding.expected_value)
+        EXPECT_EQ(get_as2_vid_army(binding.vid), binding.expected_value)
             << "Incorrect lookup value for VID " << binding.vid;
     }
 }
 
-TEST(VidArmiesTest, UnknownAS2WallSetAssetVidThrows) {
-    EXPECT_THROW(get_as2_wall_set_asset_army(999999), std::invalid_argument);
+TEST(VidArmiesTest, UnknownAS2AssetVidThrows) {
+    EXPECT_THROW(get_as2_vid_army(999999), std::invalid_argument);
 }

@@ -72,3 +72,4 @@ ceiling-curtain-adjustment.html
 # --- AS2 local lookup data / generated report ---
 _prepare/AS2/ini/
 _prepare/AS2/_vid_army_report.txt
+_prepare/AS2/decoration/*.svg

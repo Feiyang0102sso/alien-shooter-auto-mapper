@@ -125,7 +125,7 @@ TEST(WallBuilderTest, As2WallAndFloorSpritesUseVidArmyBindings) {
     bool found_army_two = false;
 
     for (const io::Sprite& sprite : sprites) {
-        VidArmy expected_army = get_as2_wall_set_asset_army(sprite.vid);
+        VidArmy expected_army = get_as2_vid_army(sprite.vid);
         EXPECT_EQ(sprite.army, expected_army) << "Incorrect Army for VID " << sprite.vid;
 
         if (sprite.army == 0) {

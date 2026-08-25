@@ -1,6 +1,6 @@
 /**
  * @file vid_armies_as2.h
- * @brief Default Army values for every AS2 wall-set asset VID.
+ * @brief Default Army values for registered AS2 asset VIDs.
  */
 
 #pragma once
@@ -80,15 +80,27 @@ inline constexpr VidArmy AS2_VID_1721_ARMY = 2;
 inline constexpr VidArmy AS2_VID_1731_ARMY = 0;
 inline constexpr VidArmy AS2_VID_1732_ARMY = 0;
 
+// Decoration assets
+inline constexpr VidArmy AS2_VID_409_ARMY = 0;
+inline constexpr VidArmy AS2_VID_412_ARMY = 0;
+inline constexpr VidArmy AS2_VID_413_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1270_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1288_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1289_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1764_ARMY = 0;
+inline constexpr VidArmy AS2_VID_2300_ARMY = 2;
+inline constexpr VidArmy AS2_VID_2304_ARMY = 0;
+inline constexpr VidArmy AS2_VID_2357_ARMY = 0;
+
 /**
- * Return the game-defined Army value bound to an AS2 wall-set asset VID.
+ * Return the game-defined Army value bound to a registered AS2 asset VID.
  *
- * Every supported wall-set asset is registered explicitly, including Army 0.
+ * Every supported asset is registered explicitly, including Army 0.
  * An unknown VID indicates that a profile was added without its Army binding.
  */
 // why the walls should be set into army2?
 // no one knows... to prevent problems... add them...
-inline VidArmy get_as2_wall_set_asset_army(int vid) {
+inline VidArmy get_as2_vid_army(int vid) {
     switch (vid) {
         // Wall Set 1
         case 1777: return AS2_VID_1777_ARMY;
@@ -158,9 +170,21 @@ inline VidArmy get_as2_wall_set_asset_army(int vid) {
         case 1721: return AS2_VID_1721_ARMY;
         case 1731: return AS2_VID_1731_ARMY;
         case 1732: return AS2_VID_1732_ARMY;
+
+        // Decoration assets
+        case 409: return AS2_VID_409_ARMY;
+        case 412: return AS2_VID_412_ARMY;
+        case 413: return AS2_VID_413_ARMY;
+        case 1270: return AS2_VID_1270_ARMY;
+        case 1288: return AS2_VID_1288_ARMY;
+        case 1289: return AS2_VID_1289_ARMY;
+        case 1764: return AS2_VID_1764_ARMY;
+        case 2300: return AS2_VID_2300_ARMY;
+        case 2304: return AS2_VID_2304_ARMY;
+        case 2357: return AS2_VID_2357_ARMY;
     }
 
-    throw std::invalid_argument("AS2 wall-set asset VID has no Army binding");
+    throw std::invalid_argument("AS2 asset VID has no Army binding");
 }
 
 } // namespace auto_mapper::core
