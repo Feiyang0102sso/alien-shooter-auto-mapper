@@ -519,11 +519,12 @@ void append_outward_as1_ceiling_layers(
     float map_size_y,
     int wall_type,
     const AS1CeilingProfile& profile,
+    int total_layer_count,
     const std::set<CeilingPoint>& outside_cells,
     const std::vector<AS1CeilingSeed>& seeds,
     std::vector<io::Sprite>& ceiling_sprites
 ) {
-    if (profile.total_layer_count <= 1 || seeds.empty()) {
+    if (total_layer_count <= 1 || seeds.empty()) {
         return;
     }
 
@@ -535,7 +536,7 @@ void append_outward_as1_ceiling_layers(
     ));
     bool large_tiles_are_enabled =
         profile.large_tile_start_layer > 1 &&
-        profile.large_tile_start_layer <= profile.total_layer_count &&
+        profile.large_tile_start_layer <= total_layer_count &&
         large_tile_span >= 2 &&
         std::abs(
             profile.large_tile_step_x - profile.step_x * large_tile_span
@@ -613,7 +614,7 @@ void append_outward_as1_ceiling_layers(
     std::vector<MapPoint> small_tile_centers;
 
     for (int layer_number = 2;
-         layer_number <= profile.total_layer_count;
+         layer_number <= total_layer_count;
          ++layer_number) {
         bool generate_large_tiles =
             large_tiles_are_enabled &&
@@ -917,9 +918,15 @@ static bool is_as2_wall_set_type(int wall_type) {
         && wall_type <= WALL_TYPE_AS2_WALL_SET9_RANDOM;
 }
 
-WallBuilder::WallBuilder(float map_size_x, float map_size_y, bool randomize_directions)
+WallBuilder::WallBuilder(
+    float map_size_x,
+    float map_size_y,
+    bool randomize_directions,
+    AS1CeilingLayerSettings as1_ceiling_layers
+)
     : map_size_x_(map_size_x),
       map_size_y_(map_size_y),
+      as1_ceiling_layers_(as1_ceiling_layers),
       direction_randomizer_(randomize_directions) {}
 
 bool WallBuilder::RareWallPosition::operator<(const RareWallPosition& other) const {
@@ -1026,7 +1033,7 @@ const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {
 }
 
 const CeilingCurtainProfile* WallBuilder::get_ceiling_curtain_profile(int wall_type) {
-    if (wall_type == WALL_TYPE_STANDARD) {
+    if (wall_type == WALL_TYPE_STANDARD || wall_type == WALL_TYPE_STANDARD_DARK) {
         // Adapter only: AS1's public profile remains a plain square-tile
         // profile. The shared exterior-edge pipeline expects AS2 part slots.
         static const CeilingCurtainProfile standard_pipeline_adapter =
@@ -1090,7 +1097,7 @@ const CeilingCurtainProfile* WallBuilder::get_ceiling_curtain_profile(int wall_t
 }
 
 const AS1CeilingProfile* WallBuilder::get_as1_ceiling_profile(int wall_type) {
-    if (wall_type == WALL_TYPE_STANDARD) {
+    if (wall_type == WALL_TYPE_STANDARD || wall_type == WALL_TYPE_STANDARD_DARK) {
         return &CEILING_AS1_STANDARD;
     }
 
@@ -1099,6 +1106,18 @@ const AS1CeilingProfile* WallBuilder::get_as1_ceiling_profile(int wall_type) {
     }
 
     return nullptr;
+}
+
+int WallBuilder::get_as1_ceiling_layer_count(int wall_type) const {
+    if (wall_type == WALL_TYPE_STANDARD || wall_type == WALL_TYPE_STANDARD_DARK) {
+        return as1_ceiling_layers_.standard_total_layer_count;
+    }
+
+    if (wall_type == WALL_TYPE_LAB) {
+        return as1_ceiling_layers_.lab_total_layer_count;
+    }
+
+    return 0;
 }
 
 MapPoint WallBuilder::get_wall_shift(float map_size_x, const WallProfile& profile) {
@@ -1533,7 +1552,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
 
         cell_margin = std::max(
             cell_margin,
-            as1_profile->total_layer_count + 2
+            get_as1_ceiling_layer_count(segment.wall_type) + 2
         );
     }
     int min_cell_x = min_vertex_x - cell_margin;
@@ -2735,6 +2754,7 @@ std::vector<io::Sprite> WallBuilder::place_wall_aligned_ceiling_curtains(
                 map_size_y_,
                 wall_type,
                 *profile,
+                get_as1_ceiling_layer_count(wall_type),
                 outside_cells,
                 entry.second,
                 ceiling_sprites

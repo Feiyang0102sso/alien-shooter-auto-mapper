@@ -1,4 +1,5 @@
 #include "auto_mapper/api.h"
+#include "auto_mapper/common/logger.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "core/door_builder/door_builder.h"
 #include "core/door_builder/door_profiles_as1.h"
@@ -28,7 +29,7 @@ int __ms_vsnprintf(char* buffer, size_t count, const char* format, va_list argpt
 
 extern "C" {
 
-static constexpr int AUTO_MAPPER_API_VERSION = 6;
+static constexpr int AUTO_MAPPER_API_VERSION = 7;
 
 AUTO_MAPPER_API int get_auto_mapper_api_version() {
     return AUTO_MAPPER_API_VERSION;
@@ -77,6 +78,27 @@ static bool parse_map_format(int map_format, auto_mapper::io::MapFormat& parsed_
     }
 
     return false;
+}
+
+static bool is_valid_as1_ceiling_layer_count(int layer_count) {
+    return layer_count >= auto_mapper::core::AS1_CEILING_LAYER_COUNT_MIN &&
+        layer_count <= auto_mapper::core::AS1_CEILING_LAYER_COUNT_MAX;
+}
+
+AUTO_MAPPER_API bool get_as1_ceiling_layer_config(
+    CAS1CeilingLayerConfig* config
+) {
+    if (config == nullptr) {
+        return false;
+    }
+
+    config->min_layer_count = auto_mapper::core::AS1_CEILING_LAYER_COUNT_MIN;
+    config->max_layer_count = auto_mapper::core::AS1_CEILING_LAYER_COUNT_MAX;
+    config->default_standard_layer_count =
+        auto_mapper::core::DEFAULT_AS1_CEILING_LAYER_SETTINGS.standard_total_layer_count;
+    config->default_lab_layer_count =
+        auto_mapper::core::DEFAULT_AS1_CEILING_LAYER_SETTINGS.lab_total_layer_count;
+    return true;
 }
 
 AUTO_MAPPER_API bool get_incubator_array_profile(
@@ -403,10 +425,28 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_desk_arrays,
     float map_size_x,
     float map_size_y,
+    int as1_standard_ceiling_layer_count,
+    int as1_lab_ceiling_layer_count,
     bool gen_floor,
     bool gen_ceiling,
     bool random_direction
 ) {
+    if (!is_valid_as1_ceiling_layer_count(as1_standard_ceiling_layer_count)) {
+        auto_mapper::Logger::error(
+            "Invalid AS1 standard ceiling layer count: {}",
+            as1_standard_ceiling_layer_count
+        );
+        return false;
+    }
+
+    if (!is_valid_as1_ceiling_layer_count(as1_lab_ceiling_layer_count)) {
+        auto_mapper::Logger::error(
+            "Invalid AS1 lab ceiling layer count: {}",
+            as1_lab_ceiling_layer_count
+        );
+        return false;
+    }
+
     auto_mapper::io::MapFormat output_format;
     if (!parse_map_format(map_format, output_format)) {
         return false;
@@ -497,7 +537,11 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     auto_mapper::core::WallBuilder wall_builder(
         map_size_x,
         map_size_y,
-        random_direction
+        random_direction,
+        {
+            .standard_total_layer_count = as1_standard_ceiling_layer_count,
+            .lab_total_layer_count = as1_lab_ceiling_layer_count
+        }
     );
     std::vector<auto_mapper::io::Sprite> sprites = wall_builder.build(cpp_segments, gen_floor, gen_ceiling, excavations);
 

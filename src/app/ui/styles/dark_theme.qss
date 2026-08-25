@@ -151,6 +151,12 @@ QDockWidget::title {
     background: transparent;
 }
 
+#inspectorScrollArea,
+#inspectorScrollViewport {
+    background: #121b20;
+    border: 0;
+}
+
 #themePreview {
     background: #0d1317;
     border-radius: 6px;
@@ -280,6 +286,29 @@ QSlider::handle:horizontal {
 QSlider::handle:horizontal:hover {
     background: #ffffff;
     border-color: #45c797;
+}
+
+#as1CeilingPropertiesGroup:disabled,
+#as1CeilingPropertiesGroup QLabel:disabled {
+    color: #6f8580;
+}
+
+#as1CeilingPropertiesGroup QSpinBox:disabled {
+    background: #20282d;
+    border-color: #35434a;
+    color: #6f8580;
+}
+
+#as1CeilingPropertiesGroup QSlider::groove:horizontal:disabled,
+#as1CeilingPropertiesGroup QSlider::add-page:horizontal:disabled,
+#as1CeilingPropertiesGroup QSlider::sub-page:horizontal:disabled {
+    background: #263238;
+    border-color: #35434a;
+}
+
+#as1CeilingPropertiesGroup QSlider::handle:horizontal:disabled {
+    background: #65736f;
+    border-color: #465752;
 }
 
 QGroupBox {

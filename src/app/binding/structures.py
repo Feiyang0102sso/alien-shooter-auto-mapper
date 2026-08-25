@@ -106,6 +106,17 @@ class CIncubatorPreviewPoint(ctypes.Structure):
     ]
 
 
+class CAS1CeilingLayerConfig(ctypes.Structure):
+    """C-compatible AS1 ceiling-layer defaults and limits."""
+
+    _fields_ = [
+        ("min_layer_count", ctypes.c_int),
+        ("max_layer_count", ctypes.c_int),
+        ("default_standard_layer_count", ctypes.c_int),
+        ("default_lab_layer_count", ctypes.c_int),
+    ]
+
+
 class CStandardDoorZConfig(ctypes.Structure):
     """
     C-compatible standard door z-offset configuration.

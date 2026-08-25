@@ -19,6 +19,7 @@ from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.ui.panels.as1_ceiling import AS1CeilingPropertiesWidget
 from app.ui.previews.wall_assets import get_wall_component_preview_path
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.eraser import EraserPropertiesWidget
@@ -38,7 +39,7 @@ class InspectorPanel(QWidget):
     decoration_spacing_changed = Signal(float, float)
     decoration_delete_requested = Signal()
 
-    def __init__(self) -> None:
+    def __init__(self, as1_ceiling_layer_config: dict) -> None:
         super().__init__()
         self.setObjectName("inspectorPanel")
         self.setMaximumWidth(INSPECTOR_MAX_WIDTH)
@@ -82,6 +83,11 @@ class InspectorPanel(QWidget):
         map_size_layout.addWidget(self.apply_map_size_button)
 
         layout.addWidget(map_size_group)
+
+        self.as1_ceiling_properties = AS1CeilingPropertiesWidget(
+            as1_ceiling_layer_config
+        )
+        layout.addWidget(self.as1_ceiling_properties)
 
         # ── Component Preview (Component Group) ──
         component_group = QGroupBox(tr(TextKey.LABEL_COMPONENT_PREVIEW))
@@ -208,6 +214,36 @@ class InspectorPanel(QWidget):
         Return the current eraser size.
         """
         return self.eraser_properties.get_size()
+
+    def get_as1_ceiling_layer_counts(self) -> tuple:
+        """Return the project-wide Standard and Lab ceiling layer counts."""
+        return self.as1_ceiling_properties.get_layer_counts()
+
+    def set_as1_ceiling_layer_counts(
+        self,
+        standard_layer_count: int,
+        lab_layer_count: int,
+    ) -> None:
+        """Update layer controls from imported project data."""
+        self.as1_ceiling_properties.set_layer_counts(
+            standard_layer_count,
+            lab_layer_count,
+        )
+
+    def reset_as1_ceiling_layer_counts(self) -> None:
+        """Restore DLL-provided AS1 ceiling defaults."""
+        self.as1_ceiling_properties.reset_layer_counts()
+
+    def set_ceiling_project_state(
+        self,
+        project_version: str,
+        generate_ceiling: bool,
+    ) -> None:
+        """Apply project version and master-switch state to ceiling controls."""
+        self.as1_ceiling_properties.set_project_state(
+            project_version,
+            generate_ceiling,
+        )
 
     def set_tool_properties_for_mode(self, drawing_mode: DrawingMode) -> None:
         """

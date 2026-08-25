@@ -241,4 +241,17 @@ inline constexpr AS1CeilingProfile CEILING_AS1_LAB = {
     }
 };
 
+inline constexpr int AS1_CEILING_LAYER_COUNT_MIN = 1;
+inline constexpr int AS1_CEILING_LAYER_COUNT_MAX = 50;
+
+struct AS1CeilingLayerSettings {
+    int standard_total_layer_count = CEILING_AS1_STANDARD.total_layer_count;
+    int lab_total_layer_count = CEILING_AS1_LAB.total_layer_count;
+};
+
+inline constexpr AS1CeilingLayerSettings DEFAULT_AS1_CEILING_LAYER_SETTINGS = {
+    .standard_total_layer_count = CEILING_AS1_STANDARD.total_layer_count,
+    .lab_total_layer_count = CEILING_AS1_LAB.total_layer_count
+};
+
 } // namespace auto_mapper::core

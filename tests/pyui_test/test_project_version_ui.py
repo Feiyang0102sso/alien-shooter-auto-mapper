@@ -43,6 +43,7 @@ class CeilingOptionHarness:
         self.ceiling_check = QCheckBox()
         self.theme_shelf = Mock()
         self.theme_shelf.get_project_version.return_value = project_version
+        self.inspector = Mock()
         self.status_bar = Mock()
         self.ceiling_check.clicked.connect(self._on_clicked)
 
@@ -142,9 +143,9 @@ class ProjectVersionUiTest(unittest.TestCase):
         harness.is_door_open_check.close()
         application.processEvents()
 
-    def test_only_as2_series_supports_ceiling_generation(self) -> None:
-        """AS2R should support ceilings while AS1 remains unavailable."""
-        self.assertFalse(supports_ceiling_generation(PROJECT_VERSION_AS1))
+    def test_as1_and_as2r_support_ceiling_generation(self) -> None:
+        """Both supported project formats should allow ceiling generation."""
+        self.assertTrue(supports_ceiling_generation(PROJECT_VERSION_AS1))
         self.assertTrue(supports_ceiling_generation(PROJECT_VERSION_AS2R))
 
     def test_as2r_ceiling_option_is_available(self) -> None:
@@ -159,6 +160,10 @@ class ProjectVersionUiTest(unittest.TestCase):
         self.assertTrue(harness.ceiling_check.isEnabled())
         self.assertFalse(harness.ceiling_check.property("unavailable"))
         self.assertTrue(harness.ceiling_check.isChecked())
+        harness.inspector.set_ceiling_project_state.assert_called_with(
+            PROJECT_VERSION_AS2R,
+            True,
+        )
 
         with patch.object(QMessageBox, "warning") as warning:
             harness.ceiling_check.click()
@@ -169,8 +174,8 @@ class ProjectVersionUiTest(unittest.TestCase):
         harness.ceiling_check.close()
         application.processEvents()
 
-    def test_as1_ceiling_option_looks_unavailable_and_rejects_clicks(self) -> None:
-        """AS1 should keep the ceiling control visible but prevent enabling it."""
+    def test_as1_ceiling_option_is_available(self) -> None:
+        """AS1 should enable generation and its Inspector controls."""
         application = QApplication.instance()
         if application is None:
             application = QApplication([])
@@ -179,14 +184,22 @@ class ProjectVersionUiTest(unittest.TestCase):
         MainWindow._sync_ceiling_option(harness, PROJECT_VERSION_AS1, True)
 
         self.assertTrue(harness.ceiling_check.isEnabled())
-        self.assertTrue(harness.ceiling_check.property("unavailable"))
-        self.assertFalse(harness.ceiling_check.isChecked())
+        self.assertFalse(harness.ceiling_check.property("unavailable"))
+        self.assertTrue(harness.ceiling_check.isChecked())
+        harness.inspector.set_ceiling_project_state.assert_called_with(
+            PROJECT_VERSION_AS1,
+            True,
+        )
 
         with patch.object(QMessageBox, "warning") as warning:
             harness.ceiling_check.click()
 
-        warning.assert_called_once()
+        warning.assert_not_called()
         self.assertFalse(harness.ceiling_check.isChecked())
+        harness.inspector.set_ceiling_project_state.assert_called_with(
+            PROJECT_VERSION_AS1,
+            False,
+        )
 
         harness.ceiling_check.close()
         application.processEvents()

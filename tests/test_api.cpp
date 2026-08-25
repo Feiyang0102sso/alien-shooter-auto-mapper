@@ -37,8 +37,19 @@ uint32_t read_api_test_uint32(const std::vector<uint8_t>& data, size_t offset) {
 
 } // namespace
 
-TEST(ApiTest, ReportsVersionSix) {
-    EXPECT_EQ(get_auto_mapper_api_version(), 6);
+TEST(ApiTest, ReportsVersionSeven) {
+    EXPECT_EQ(get_auto_mapper_api_version(), 7);
+}
+
+TEST(ApiTest, ExposesAS1CeilingLayerConfig) {
+    CAS1CeilingLayerConfig config{};
+
+    ASSERT_TRUE(get_as1_ceiling_layer_config(&config));
+    EXPECT_EQ(config.min_layer_count, 1);
+    EXPECT_EQ(config.max_layer_count, 50);
+    EXPECT_EQ(config.default_standard_layer_count, 13);
+    EXPECT_EQ(config.default_lab_layer_count, 6);
+    EXPECT_FALSE(get_as1_ceiling_layer_config(nullptr));
 }
 
 TEST(ApiTest, ExplicitFormatControlsEmptyAS2RProjectOutput) {
@@ -57,6 +68,8 @@ TEST(ApiTest, ExplicitFormatControlsEmptyAS2RProjectOutput) {
         0,
         640.0f,
         480.0f,
+        13,
+        6,
         false,
         false,
         false
@@ -85,6 +98,32 @@ TEST(ApiTest, RejectsUnknownMapFormat) {
         0,
         640.0f,
         480.0f,
+        13,
+        6,
+        false,
+        false,
+        false
+    );
+
+    EXPECT_FALSE(success);
+}
+
+TEST(ApiTest, RejectsInvalidAS1CeilingLayerCount) {
+    bool success = generate_map_from_segments(
+        "invalid_ceiling_layers.map",
+        C_MAP_FORMAT_AS1,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        640.0f,
+        480.0f,
+        0,
+        6,
         false,
         false,
         false

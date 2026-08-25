@@ -248,12 +248,22 @@ A pillar generation mode where one logical pillar point can produce multiple pil
 
 Multi-part pillars are shared behavior for wall sets whose pillar visuals are assembled from direction-specific pieces. They are not specific to one wall set.
 
-## AS1 Lab Ceilings
+## AS1 Ceilings
 
-### AS1 Lab Ceiling Layer
+### AS1 Ceiling Layer
 
 One complete outward band of VID 504 ceiling coverage, counted from the
 wall-aligned band as layer 1.
+
+### AS1 Standard Ceiling
+
+AS1 ceiling coverage shared by Standard and Standard Dark walls. All such
+walls in one project use the same total layer count.
+
+### AS1 Lab Ceiling
+
+AS1 ceiling coverage used by Lab walls. All Lab walls in one project use a
+separate total layer count from AS1 Standard Ceiling coverage.
 
 ### Wall-Aligned AS1 Lab Ceiling
 
@@ -266,13 +276,13 @@ ceiling from the wall.
 
 AS1 Lab ceiling relationships:
 
-- The configured AS1 Lab Ceiling Layer count is a total count that includes
+- The configured AS1 Ceiling Layer count is a total count that includes
   the Wall-Aligned AS1 Lab Ceiling; a count of 1 preserves wall-only coverage.
-- AS1 Lab ceiling coverage currently uses four total layers; this coverage
+- AS1 Lab ceiling coverage currently uses six total layers; this coverage
   depth is calibration data and may be adjusted later.
-- Outward AS1 Lab Ceiling Layer growth stops locally when one expansion path
+- Outward AS1 Ceiling Layer growth stops locally when one expansion path
   reaches another wall; unblocked paths continue up to the configured count.
-- Any wall type blocks outward AS1 Lab Ceiling Layer growth, including another
+- Any wall type blocks outward AS1 Ceiling Layer growth, including another
   Lab wall, an AS1 Standard wall, an AS1 Standard Dark wall, or a returning
   section of the same wall boundary.
 - Door openings retain their original wall boundary for ceiling-layer
@@ -316,7 +326,8 @@ AS1 Lab ceiling relationships:
   offsets stored in `CEILING_AS1_LAB`.
 - Callers do not apply ceiling corrections; calibration belongs to the
   profile.
-- Standard and Standard Dark AS1 walls do not use this Lab profile.
+- Standard and Standard Dark AS1 walls share AS1 Standard Ceiling behavior;
+  Lab walls use their separate AS1 Lab Ceiling behavior.
 - Corner supplements, when calibrated, belong to the same profile-driven
   wall-aligned generation path.
 

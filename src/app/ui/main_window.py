@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QTabWidget,
     QToolBar,
@@ -29,6 +30,7 @@ from app.project.data import (
     DEFAULT_MAP_SIZE_X,
     DEFAULT_MAP_SIZE_Y,
     ProjectData,
+    resolve_as1_ceiling_layer_counts,
     supports_ceiling_generation,
     supports_global_door_state,
 )
@@ -58,6 +60,7 @@ class MainWindow(QMainWindow):
 
         self.auto_mapper_client = AutoMapperLibClient()
         self.pending_locale = get_locale()
+        self.as1_ceiling_layer_config = {}
         self._register_dll_metadata()
 
         self.viewport = MapViewport()
@@ -65,7 +68,7 @@ class MainWindow(QMainWindow):
         self.theme_shelf = ThemeShelfPanel()
         self.decoration_shelf = DecorationShelfPanel()
         self.left_shelf_tabs = QTabWidget()
-        self.inspector = InspectorPanel()
+        self.inspector = InspectorPanel(self.as1_ceiling_layer_config)
 
         self.setCentralWidget(self.viewport)
         self._build_drawing_toolbar()
@@ -90,7 +93,9 @@ class MainWindow(QMainWindow):
         Register DLL metadata before UI widgets are built.
         """
         registered = register_all_from_dll(self.auto_mapper_client)
-        if registered:
+        ceiling_config = self.auto_mapper_client.load_as1_ceiling_layer_config()
+        if registered and ceiling_config:
+            self.as1_ceiling_layer_config = ceiling_config
             return
 
         message = tr(TextKey.ERROR_DLL_REGISTER_FAILED)
@@ -121,7 +126,7 @@ class MainWindow(QMainWindow):
         self.ceiling_check = QCheckBox(tr(TextKey.CHECK_CEILING))
         self.ceiling_check.setObjectName("ceilingCheck")
         self.ceiling_check.setChecked(False)
-        self.ceiling_check.setProperty("unavailable", True)
+        self.ceiling_check.setProperty("unavailable", False)
         self.ceiling_check.setToolTip(tr(TextKey.TOOLTIP_CEILING))
         self.ceiling_check.clicked.connect(self._on_ceiling_changed)
 
@@ -189,7 +194,13 @@ class MainWindow(QMainWindow):
         right_dock = QDockWidget(self)
         right_dock.setObjectName("inspectorDock")
         right_dock.setTitleBarWidget(QWidget())  # hide docker title bar
-        right_dock.setWidget(self.inspector)
+        inspector_scroll = QScrollArea()
+        inspector_scroll.setObjectName("inspectorScrollArea")
+        inspector_scroll.viewport().setObjectName("inspectorScrollViewport")
+        inspector_scroll.setWidgetResizable(True)
+        inspector_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        inspector_scroll.setWidget(self.inspector)
+        right_dock.setWidget(inspector_scroll)
         right_dock.setAllowedAreas(Qt.RightDockWidgetArea)
         right_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.addDockWidget(Qt.RightDockWidgetArea, right_dock)
@@ -358,16 +369,10 @@ class MainWindow(QMainWindow):
         logger.info(f"Map size applied: {map_size_x:.1f} x {map_size_y:.1f}")
 
     def _on_ceiling_changed(self, checked: bool) -> None:
-        """Allow ceiling generation for AS2 projects and reject it for AS1."""
+        """Apply the ceiling master switch to version-specific controls."""
         project_version = self.theme_shelf.get_project_version()
-        if supports_ceiling_generation(project_version):
-            logger.info(f"Ceiling generation changed: {checked}")
-            return
-
-        self.ceiling_check.setChecked(False)
-        QMessageBox.warning(self, tr(TextKey.DIALOG_CEILING), tr(TextKey.ERROR_CEILING_DISABLED))
-        self.statusBar().showMessage(tr(TextKey.STATUS_CEILING_DISABLED))
-        logger.info(f"Ceiling generation unavailable: {project_version}")
+        self.inspector.set_ceiling_project_state(project_version, checked)
+        logger.info(f"Ceiling generation changed: {checked}")
 
     def _create_language_menu(self) -> QMenu:
         """
@@ -438,6 +443,7 @@ class MainWindow(QMainWindow):
         """Reset editor content while preserving the selected project version."""
         self.viewport.clear_segments()
         project_version = self.theme_shelf.get_project_version()
+        self.inspector.reset_as1_ceiling_layer_counts()
         self._sync_ceiling_option(project_version, False)
         self._sync_global_door_option(project_version, False)
         self.inspector.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
@@ -507,7 +513,10 @@ class MainWindow(QMainWindow):
 
         file_path = Path(file_name)
         try:
-            project_data = load_project_json(file_path)
+            project_data = load_project_json(
+                file_path,
+                self.as1_ceiling_layer_config,
+            )
         except OSError as error:
             QMessageBox.critical(
                 self,
@@ -618,6 +627,7 @@ class MainWindow(QMainWindow):
         Collect current UI state into project data.
         """
         map_size = self.inspector.get_map_size()
+        ceiling_layer_counts = self.inspector.get_as1_ceiling_layer_counts()
         project_data = ProjectData(
             version=self.theme_shelf.get_project_version(),
             map_size_x=map_size[0],
@@ -626,6 +636,8 @@ class MainWindow(QMainWindow):
             doors=self.viewport.get_doors(),
             decorations=self.viewport.get_decorations(),
             is_door_open=self.is_door_open_check.isChecked(),
+            as1_standard_ceiling_layer_count=ceiling_layer_counts[0],
+            as1_lab_ceiling_layer_count=ceiling_layer_counts[1],
         )
         return project_data
 
@@ -635,6 +647,14 @@ class MainWindow(QMainWindow):
         self.viewport.set_segments(project_data.segments)
         self.viewport.set_doors(project_data.doors)
         self.viewport.set_decorations(project_data.decorations)
+        ceiling_layer_counts = resolve_as1_ceiling_layer_counts(
+            project_data,
+            self.as1_ceiling_layer_config,
+        )
+        self.inspector.set_as1_ceiling_layer_counts(
+            ceiling_layer_counts[0],
+            ceiling_layer_counts[1],
+        )
         self._sync_ceiling_option(project_data.version, False)
         self._sync_global_door_option(project_data.version, project_data.is_door_open)
         self.inspector.set_map_size(project_data.map_size_x, project_data.map_size_y)
@@ -651,6 +671,10 @@ class MainWindow(QMainWindow):
         self.ceiling_check.setChecked(effective_generate_ceiling)
         self.ceiling_check.setEnabled(True)
         self._set_checkbox_unavailable(self.ceiling_check, not option_supported)
+        self.inspector.set_ceiling_project_state(
+            project_version,
+            effective_generate_ceiling,
+        )
 
     def _sync_global_door_option(self, project_version: str, is_door_open: bool) -> None:
         """Apply version support rules to the global door option and viewport."""

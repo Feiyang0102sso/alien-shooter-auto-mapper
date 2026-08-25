@@ -116,6 +116,20 @@ struct CIncubatorPreviewPoint {
     float y;
 };
 
+struct CAS1CeilingLayerConfig {
+    int min_layer_count;
+    int max_layer_count;
+    int default_standard_layer_count;
+    int default_lab_layer_count;
+};
+
+/**
+ * @brief Read AS1 ceiling-layer defaults and supported range.
+ */
+AUTO_MAPPER_API bool get_as1_ceiling_layer_config(
+    CAS1CeilingLayerConfig* config
+);
+
 /**
  * @brief Read incubator array layout values used by the C++ builder.
  */
@@ -162,6 +176,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_desk_arrays,
     float map_size_x,
     float map_size_y,
+    int as1_standard_ceiling_layer_count,
+    int as1_lab_ceiling_layer_count,
     bool gen_floor,
     bool gen_ceiling,
     bool random_direction

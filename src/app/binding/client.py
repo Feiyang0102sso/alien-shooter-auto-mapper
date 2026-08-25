@@ -5,6 +5,7 @@ import ctypes
 from pathlib import Path
 
 from app.binding.structures import (
+    CAS1CeilingLayerConfig,
     CDeskArray,
     CDeskArrayProfile,
     CDoor,
@@ -25,10 +26,11 @@ from app.project.data import (
     PROJECT_VERSION_AS2,
     PROJECT_VERSION_AS2R,
     ProjectData,
+    resolve_as1_ceiling_layer_counts,
 )
 
 
-REQUIRED_API_VERSION = 6
+REQUIRED_API_VERSION = 7
 C_MAP_FORMAT_AS1 = 0
 C_MAP_FORMAT_AS2 = 1
 C_MAP_FORMAT_AS2R = 2
@@ -80,11 +82,18 @@ class AutoMapperLibClient:
             ctypes.c_int,
             ctypes.c_float,
             ctypes.c_float,
+            ctypes.c_int,
+            ctypes.c_int,
             ctypes.c_bool,
             ctypes.c_bool,
             ctypes.c_bool,
         ]
         self.lib.generate_map_from_segments.restype = ctypes.c_bool
+
+        self.lib.get_as1_ceiling_layer_config.argtypes = [
+            ctypes.POINTER(CAS1CeilingLayerConfig),
+        ]
+        self.lib.get_as1_ceiling_layer_config.restype = ctypes.c_bool
 
         self.lib.get_standard_door_z_config.argtypes = [
             ctypes.c_int,
@@ -199,6 +208,27 @@ class AutoMapperLibClient:
 
         logger.info(f"Loaded standard door z config: {sorted(configs.keys())}")
         return configs
+
+    def load_as1_ceiling_layer_config(self) -> dict:
+        """Load AS1 ceiling-layer defaults and limits from the DLL."""
+        if not self.load():
+            return {}
+
+        c_config = CAS1CeilingLayerConfig()
+        success = self.lib.get_as1_ceiling_layer_config(ctypes.byref(c_config))
+        if not success:
+            return {}
+
+        config = {
+            "min_layer_count": int(c_config.min_layer_count),
+            "max_layer_count": int(c_config.max_layer_count),
+            "default_standard_layer_count": int(
+                c_config.default_standard_layer_count
+            ),
+            "default_lab_layer_count": int(c_config.default_lab_layer_count),
+        }
+        logger.info(f"Loaded AS1 ceiling layer config: {config}")
+        return config
 
     def load_standard_door_sizes(self) -> list:
         """
@@ -359,6 +389,11 @@ class AutoMapperLibClient:
         desk_array = self._build_desk_array(desk_decorations)
         output_path_bytes = str(output_path).encode("utf-8")
         map_format = self._get_map_format(project_data.version)
+        ceiling_layer_config = self.load_as1_ceiling_layer_config()
+        standard_layer_count, lab_layer_count = resolve_as1_ceiling_layer_counts(
+            project_data,
+            ceiling_layer_config,
+        )
 
         success = self.lib.generate_map_from_segments(
             output_path_bytes,
@@ -373,6 +408,8 @@ class AutoMapperLibClient:
             len(desk_decorations),
             float(project_data.map_size_x),
             float(project_data.map_size_y),
+            standard_layer_count,
+            lab_layer_count,
             generate_floor,
             generate_ceiling,
             random_direction,

@@ -589,6 +589,90 @@ TEST(AS1StandardCeilingTest, ExpandsBeyondAllFourRoomSides) {
     EXPECT_GE(max_bottom_layers, 9.0f);
 }
 
+TEST(AS1StandardCeilingTest, StandardDarkSharesStandardCeilingProfile) {
+    WallBuilder builder(4000.0f, 4000.0f, false);
+    std::vector<io::Sprite> sprites = builder.build(
+        build_room_segments(6, WALL_TYPE_STANDARD_DARK),
+        false,
+        true
+    );
+
+    int ceiling_count = 0;
+    for (const io::Sprite& sprite : sprites) {
+        bool is_standard_ceiling =
+            sprite.vid == CEILING_AS1_STANDARD.vid &&
+            sprite.direction == CEILING_AS1_STANDARD.direction;
+        if (is_standard_ceiling) {
+            ceiling_count += 1;
+        }
+    }
+
+    EXPECT_GT(ceiling_count, 0);
+}
+
+TEST(AS1CeilingTest, RuntimeLayerCountsControlStandardAndLabSeparately) {
+    std::vector<Segment> standard_segments = build_room_segments(
+        6,
+        WALL_TYPE_STANDARD
+    );
+    std::vector<Segment> lab_segments = build_room_segments(
+        6,
+        WALL_TYPE_LAB
+    );
+
+    WallBuilder shallow_builder(
+        4000.0f,
+        4000.0f,
+        false,
+        {
+            .standard_total_layer_count = 1,
+            .lab_total_layer_count = 1
+        }
+    );
+    WallBuilder standard_deep_builder(
+        4000.0f,
+        4000.0f,
+        false,
+        {
+            .standard_total_layer_count = 2,
+            .lab_total_layer_count = 1
+        }
+    );
+    WallBuilder lab_deep_builder(
+        4000.0f,
+        4000.0f,
+        false,
+        {
+            .standard_total_layer_count = 1,
+            .lab_total_layer_count = 2
+        }
+    );
+
+    std::vector<io::Sprite> shallow_standard = shallow_builder.build(
+        standard_segments,
+        false,
+        true
+    );
+    std::vector<io::Sprite> deep_standard = standard_deep_builder.build(
+        standard_segments,
+        false,
+        true
+    );
+    std::vector<io::Sprite> shallow_lab = shallow_builder.build(
+        lab_segments,
+        false,
+        true
+    );
+    std::vector<io::Sprite> deep_lab = lab_deep_builder.build(
+        lab_segments,
+        false,
+        true
+    );
+
+    EXPECT_GT(deep_standard.size(), shallow_standard.size());
+    EXPECT_GT(deep_lab.size(), shallow_lab.size());
+}
+
 TEST(AS1StandardCeilingTest, KeepsUsingSmallTilesWhenLargeTilesAreDisabled) {
     WallBuilder builder(4000.0f, 4000.0f, false);
     std::vector<io::Sprite> sprites = builder.build(

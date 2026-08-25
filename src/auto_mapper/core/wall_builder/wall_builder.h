@@ -58,7 +58,8 @@ public:
     WallBuilder(
         float map_size_x = 600.0f,
         float map_size_y = 600.0f,
-        bool randomize_directions = false
+        bool randomize_directions = false,
+        AS1CeilingLayerSettings as1_ceiling_layers = DEFAULT_AS1_CEILING_LAYER_SETTINGS
     );
 
     // Look up profiles (Moved to public for door_builder.cpp access)
@@ -169,6 +170,7 @@ private:
     static const FloorProfile& get_floor_profile(int floor_type);
     static const AS1CeilingProfile* get_as1_ceiling_profile(int wall_type);
     static const CeilingCurtainProfile* get_ceiling_curtain_profile(int wall_type);
+    int get_as1_ceiling_layer_count(int wall_type) const;
     const WallVariant& select_wall_variant(const WallProfile& profile) const;
     int select_wall_variant_index(const WallProfile& profile) const;
     static bool has_rare_wall_variant(const WallProfile& profile);
@@ -179,6 +181,7 @@ private:
 
     float map_size_x_;
     float map_size_y_;
+    AS1CeilingLayerSettings as1_ceiling_layers_;
     DirectionRandomizer direction_randomizer_;
 };
 

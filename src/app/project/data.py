@@ -70,6 +70,8 @@ class ProjectData:
     doors: list = field(default_factory=list)
     decorations: list = field(default_factory=list)
     is_door_open: bool = False
+    as1_standard_ceiling_layer_count: int | None = None
+    as1_lab_ceiling_layer_count: int | None = None
 
 
 def validate_project_version(version: str) -> str:
@@ -91,12 +93,59 @@ def is_as2_series_project_version(version: str) -> bool:
 def supports_ceiling_generation(version: str) -> bool:
     """Return whether the selected project format supports ceiling generation."""
     if version == PROJECT_VERSION_AS1:
-        return False
+        return True
 
     if is_as2_series_project_version(version):
         return True
 
     raise ValueError(f"Unsupported project version: {version}")
+
+
+def resolve_as1_ceiling_layer_counts(
+    project_data: ProjectData,
+    config: dict,
+) -> tuple:
+    """Resolve missing AS1 layer counts and validate them against DLL limits."""
+    minimum = config["min_layer_count"]
+    maximum = config["max_layer_count"]
+
+    standard_layer_count = project_data.as1_standard_ceiling_layer_count
+    if standard_layer_count is None:
+        standard_layer_count = config["default_standard_layer_count"]
+
+    lab_layer_count = project_data.as1_lab_ceiling_layer_count
+    if lab_layer_count is None:
+        lab_layer_count = config["default_lab_layer_count"]
+
+    _validate_as1_ceiling_layer_count(
+        "as1_standard_ceiling_layer_count",
+        standard_layer_count,
+        minimum,
+        maximum,
+    )
+    _validate_as1_ceiling_layer_count(
+        "as1_lab_ceiling_layer_count",
+        lab_layer_count,
+        minimum,
+        maximum,
+    )
+    return standard_layer_count, lab_layer_count
+
+
+def _validate_as1_ceiling_layer_count(
+    field_name: str,
+    layer_count: int,
+    minimum: int,
+    maximum: int,
+) -> None:
+    """Reject one AS1 layer count outside the DLL-supported integer range."""
+    if isinstance(layer_count, bool) or not isinstance(layer_count, int):
+        raise ValueError(f"Project JSON '{field_name}' must be an integer.")
+
+    if layer_count < minimum or layer_count > maximum:
+        raise ValueError(
+            f"Project JSON '{field_name}' must be between {minimum} and {maximum}."
+        )
 
 
 def supports_global_door_state(version: str) -> bool:

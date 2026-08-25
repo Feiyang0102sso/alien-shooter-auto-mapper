@@ -22,6 +22,7 @@ class TextKey:
 
     TOOLTIP_FLOOR = "tooltip.floor"
     TOOLTIP_CEILING = "tooltip.ceiling"
+    TOOLTIP_AS1_CEILING_LAYERS = "tooltip.as1_ceiling_layers"
     TOOLTIP_IS_DOOR_OPEN = "tooltip.is_door_open"
     TOOLTIP_RANDOM_DIRECTION = "tooltip.random_direction"
     TOOLTIP_LANGUAGE = "tooltip.language"
@@ -39,6 +40,7 @@ class TextKey:
     BUTTON_DELETE_DECORATION = "button.delete_decoration"
 
     GROUP_MAP_SIZE = "group.map_size"
+    GROUP_AS1_CEILING = "group.as1_ceiling"
     GROUP_TOOL_PROPERTIES = "group.tool_properties"
     GROUP_DECORATION_PROPERTY = "group.decoration_property"
 
@@ -51,6 +53,8 @@ class TextKey:
     LABEL_Z_OFFSET = "label.z_offset"
     LABEL_PENDING = "label.pending"
     LABEL_ERASER_SIZE = "label.eraser_size"
+    LABEL_AS1_STANDARD_CEILING_LAYERS = "label.as1_standard_ceiling_layers"
+    LABEL_AS1_LAB_CEILING_LAYERS = "label.as1_lab_ceiling_layers"
     LABEL_PREVIEW_MISSING = "label.preview_missing"
     LABEL_ITEM_SPACING = "label.item_spacing"
     LABEL_COLUMN_SPACING = "label.column_spacing"
@@ -99,7 +103,6 @@ class TextKey:
     DRAWING_RECTANGLE = "drawing.rectangle"
 
     DIALOG_DLL_ERROR = "dialog.dll_error"
-    DIALOG_CEILING = "dialog.ceiling"
     DIALOG_DOOR_OPTION = "dialog.door_option"
     DIALOG_RESTART_REQUIRED = "dialog.restart_required"
     DIALOG_EXPORT_JSON = "dialog.export_json"
@@ -120,7 +123,6 @@ class TextKey:
     ERROR_DLL_CALL_FAILED = "error.dll_call_failed"
     ERROR_CPP_ENGINE = "error.cpp_engine"
     ERROR_CPP_ENGINE_GENERATE_FAILED = "error.cpp_engine_generate_failed"
-    ERROR_CEILING_DISABLED = "error.ceiling_disabled"
     ERROR_AS2_DOOR_OPTION_UNAVAILABLE = "error.as2_door_option_unavailable"
 
     STATUS_READY = "status.ready"
@@ -139,7 +141,6 @@ class TextKey:
     STATUS_DECORATION_SPACING = "status.decoration_spacing"
     STATUS_WALL_DRAWING_CANCELLED = "status.wall_drawing_cancelled"
     STATUS_MAP_SIZE_APPLIED = "status.map_size_applied"
-    STATUS_CEILING_DISABLED = "status.ceiling_disabled"
     STATUS_AS2_DOOR_OPTION_UNAVAILABLE = "status.as2_door_option_unavailable"
     STATUS_DRAWABLE_PART_SELECTED = "status.drawable_part_selected"
     STATUS_CANVAS_CLEARED = "status.canvas_cleared"

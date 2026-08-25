@@ -12,6 +12,8 @@ from app.project.data import (
     DeskDecoration,
     IncubatorDecoration,
     ProjectData,
+    PROJECT_VERSION_AS1,
+    resolve_as1_ceiling_layer_counts,
     supports_global_door_state,
     validate_project_version,
 )
@@ -91,6 +93,14 @@ def build_project_json_data(project_data: ProjectData) -> dict:
     if supports_global_door_state(version):
         data["is_door_open"] = project_data.is_door_open
 
+    if version == PROJECT_VERSION_AS1:
+        if project_data.as1_standard_ceiling_layer_count is not None:
+            data["as1_standard_ceiling_layer_count"] = (
+                project_data.as1_standard_ceiling_layer_count
+            )
+        if project_data.as1_lab_ceiling_layer_count is not None:
+            data["as1_lab_ceiling_layer_count"] = project_data.as1_lab_ceiling_layer_count
+
     return data
 
 
@@ -103,13 +113,26 @@ def save_project_json(file_path: Path, project_data: ProjectData) -> None:
     file_path.write_text(json_text, encoding="utf-8")
 
 
-def load_project_json(file_path: Path) -> ProjectData:
+def load_project_json(
+    file_path: Path,
+    as1_ceiling_layer_config: dict | None = None,
+) -> ProjectData:
     """
     Load project data from a JSON file.
     """
     json_text = file_path.read_text(encoding="utf-8")
     data = json.loads(json_text)
-    return parse_project_data(data)
+    project_data = parse_project_data(data)
+    if as1_ceiling_layer_config is None:
+        return project_data
+
+    layer_counts = resolve_as1_ceiling_layer_counts(
+        project_data,
+        as1_ceiling_layer_config,
+    )
+    project_data.as1_standard_ceiling_layer_count = layer_counts[0]
+    project_data.as1_lab_ceiling_layer_count = layer_counts[1]
+    return project_data
 
 
 def parse_project_data(data: dict) -> ProjectData:
@@ -123,6 +146,16 @@ def parse_project_data(data: dict) -> ProjectData:
     map_size_x = float(data.get("map_size_x", 600.0))
     map_size_y = float(data.get("map_size_y", 600.0))
     is_door_open = parse_global_door_state(data, version)
+    standard_ceiling_layer_count = parse_as1_ceiling_layer_count(
+        data,
+        version,
+        "as1_standard_ceiling_layer_count",
+    )
+    lab_ceiling_layer_count = parse_as1_ceiling_layer_count(
+        data,
+        version,
+        "as1_lab_ceiling_layer_count",
+    )
     segments = parse_segments(data)
     doors = parse_doors(data)
     decorations = parse_decorations(data)
@@ -135,6 +168,8 @@ def parse_project_data(data: dict) -> ProjectData:
         doors=doors,
         decorations=decorations,
         is_door_open=is_door_open,
+        as1_standard_ceiling_layer_count=standard_ceiling_layer_count,
+        as1_lab_ceiling_layer_count=lab_ceiling_layer_count,
     )
     return project_data
 
@@ -153,6 +188,25 @@ def parse_global_door_state(data: dict, version: str) -> bool:
         return False
 
     return bool(data.get("is_door_open", False))
+
+
+def parse_as1_ceiling_layer_count(
+    data: dict,
+    version: str,
+    field_name: str,
+) -> int | None:
+    """Read one optional AS1 ceiling-layer count without copying DLL limits."""
+    if version != PROJECT_VERSION_AS1:
+        return None
+
+    if field_name not in data:
+        return None
+
+    layer_count = data[field_name]
+    if isinstance(layer_count, bool) or not isinstance(layer_count, int):
+        raise ValueError(f"Project JSON '{field_name}' must be an integer.")
+
+    return layer_count
 
 
 def parse_segments(data: dict) -> list:
