@@ -219,22 +219,3 @@ static const DecorationProfile DORMS01_DECORATION_PROFILE = {
 };
 
 } // namespace auto_mapper::core::decoration_builder
-
-/**
- * @file decoration_profiles_as2.h
- * @brief Authored AS2 decoration stamp profiles.
- */
-
-#pragma once
-
-#include "auto_mapper/core/decoration_builder/decoration_profile_types.h"
-
-namespace auto_mapper::core::decoration_builder {
-
-/**
- * Dormitory room imported from _prepare/AS2/decoration/dorms01.map.
- * Reference walls are intentionally absent from the member list.
- */
-extern const DecorationProfile DORMS01_DECORATION_PROFILE;
-
-} // namespace auto_mapper::core::decoration_builder
