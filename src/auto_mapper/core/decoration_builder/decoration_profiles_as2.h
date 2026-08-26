@@ -24,6 +24,12 @@ static const DecorationProfile DORMS01_DECORATION_PROFILE = {
             { 630.0f,    0.0f },      // right
         }},
     },
+    // Slides the furniture inside the room along the wall directions, in wall
+    // steps. The preview frame is not affected. Keep at zero to place as authored.
+    .member_nudge = {
+        .along_dir_a = 0.00f,
+        .along_dir_b = -0.15f,
+    },
     .members = {
         {
             .vid = 2357,

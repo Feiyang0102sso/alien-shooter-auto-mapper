@@ -164,6 +164,7 @@ AUTO_MAPPER_API bool get_decoration_stamp_at(
 
     copy_decoration_stamp_id(stamp->id, profile->id);
 
+    // The frame marks where the walls go, so the member nudge never touches it.
     for (int corner_index = 0; corner_index < 4; ++corner_index) {
         stamp->corner_x[corner_index] = profile->frame.corner_offsets[corner_index].x;
         stamp->corner_y[corner_index] = profile->frame.corner_offsets[corner_index].y;

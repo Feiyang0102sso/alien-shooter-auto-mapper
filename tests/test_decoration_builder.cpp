@@ -85,13 +85,16 @@ TEST(DecorationBuilderTest, BuildTranslatesEveryMemberAndPreservesSpriteValues) 
 
     ASSERT_EQ(sprites.size(), DORMS01_DECORATION_PROFILE.members.size());
 
+    // Members carry the authored member nudge on top of the placement.
+    DecorationPoint shift = resolve_member_shift(DORMS01_DECORATION_PROFILE.member_nudge);
+
     for (std::size_t index = 0; index < sprites.size(); ++index) {
         const DecorationMemberProfile& member = DORMS01_DECORATION_PROFILE.members[index];
         const io::Sprite& sprite = sprites[index];
 
         EXPECT_EQ(sprite.vid, member.vid);
-        EXPECT_FLOAT_EQ(sprite.posX, placement.center_x + member.offset_x);
-        EXPECT_FLOAT_EQ(sprite.posY, placement.center_y + member.offset_y);
+        EXPECT_FLOAT_EQ(sprite.posX, placement.center_x + member.offset_x + shift.x);
+        EXPECT_FLOAT_EQ(sprite.posY, placement.center_y + member.offset_y + shift.y);
         EXPECT_FLOAT_EQ(sprite.posZ, member.pos_z);
         EXPECT_EQ(sprite.direction, member.direction);
         EXPECT_EQ(sprite.army, core::get_as2_vid_army(member.vid));
@@ -118,8 +121,13 @@ TEST(DecorationBuilderTest, Dorms01BuildReconstructsImportedSourceCoordinates) {
     );
 
     ASSERT_EQ(sprites.size(), 27u);
-    EXPECT_FLOAT_EQ(sprites[0].posX, 659.0863647460938f);
-    EXPECT_FLOAT_EQ(sprites[0].posY, 868.5689697265625f);
+
+    // Hard-coded values are the imported source coordinates. The member nudge
+    // is the author's deliberate offset from them.
+    DecorationPoint shift = resolve_member_shift(DORMS01_DECORATION_PROFILE.member_nudge);
+
+    EXPECT_FLOAT_EQ(sprites[0].posX, 659.0863647460938f + shift.x);
+    EXPECT_FLOAT_EQ(sprites[0].posY, 868.5689697265625f + shift.y);
     EXPECT_EQ(sprites[0].vid, 2357);
     EXPECT_EQ(sprites[0].direction, 70u);
     EXPECT_EQ(sprites[0].army, 0);
@@ -128,8 +136,8 @@ TEST(DecorationBuilderTest, Dorms01BuildReconstructsImportedSourceCoordinates) {
     EXPECT_FLOAT_EQ(sprites[3].posZ, 13.0f);
 
     EXPECT_EQ(sprites[26].vid, 1270);
-    EXPECT_FLOAT_EQ(sprites[26].posX, 616.0863647460938f);
-    EXPECT_FLOAT_EQ(sprites[26].posY, 647.5689697265625f);
+    EXPECT_FLOAT_EQ(sprites[26].posX, 616.0863647460938f + shift.x);
+    EXPECT_FLOAT_EQ(sprites[26].posY, 647.5689697265625f + shift.y);
     EXPECT_EQ(sprites[26].direction, 128u);
     EXPECT_EQ(sprites[26].army, 2);
 }

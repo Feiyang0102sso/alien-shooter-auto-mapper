@@ -36,6 +36,27 @@ struct DecorationMemberProfile {
     VidScale scale{};
 };
 
+// Every AS2 wall set shares this step, so stamp nudges can rely on it.
+inline constexpr float DECORATION_WALL_STEP_X = 90.0f;
+inline constexpr float DECORATION_WALL_STEP_Y = 64.0f;
+
+/**
+ * Shift of the stamp members along the two wall directions, in wall steps.
+ *
+ * This moves the furniture only. The preview frame marks where the walls go
+ * and always stays put, so these values change how the contents sit inside
+ * the room. 1.0 moves them by exactly one wall; negative moves the other way.
+ *
+ * The two axes are independent: dir_a and dir_b are the two wall directions,
+ * so a value on one axis never introduces motion along the other.
+ */
+struct DecorationMemberNudge {
+    // '/' walls, direction (90, -64). Positive moves toward the upper right.
+    float along_dir_a = 0.0f;
+    // '' walls, direction (90, 64). Positive moves toward the lower right.
+    float along_dir_b = 0.0f;
+};
+
 /**
  * Coarse editor preview frame. Corners are stored relative to the frame center.
  */
@@ -52,6 +73,7 @@ struct DecorationFrameProfile {
 struct DecorationProfile {
     std::string_view id;
     DecorationFrameProfile frame;
+    DecorationMemberNudge member_nudge{};
     std::vector<DecorationMemberProfile> members;
 
     // Optional test-only wall style. Regular builds never emit this boundary.

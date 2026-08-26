@@ -15,13 +15,14 @@ namespace {
 void append_members(
     std::vector<io::Sprite>& sprites,
     const std::vector<DecorationMemberProfile>& members,
-    const DecorationPlacement& placement
+    const DecorationPlacement& placement,
+    const DecorationPoint& shift
 ) {
     for (const DecorationMemberProfile& member : members) {
         io::Sprite sprite;
         sprite.vid = member.vid;
-        sprite.posX = placement.center_x + member.offset_x;
-        sprite.posY = placement.center_y + member.offset_y;
+        sprite.posX = placement.center_x + member.offset_x + shift.x;
+        sprite.posY = placement.center_y + member.offset_y + shift.y;
         sprite.posZ = member.pos_z;
         sprite.direction = member.direction;
         sprite.army = get_as2_vid_army(member.vid);
@@ -122,6 +123,14 @@ void append_calculated_boundary(
 
 } // namespace
 
+DecorationPoint resolve_member_shift(const DecorationMemberNudge& nudge) {
+    // dir_a runs (90, -64) and dir_b runs (90, 64), both measured in wall steps.
+    DecorationPoint shift;
+    shift.x = (nudge.along_dir_a + nudge.along_dir_b) * DECORATION_WALL_STEP_X;
+    shift.y = (-nudge.along_dir_a + nudge.along_dir_b) * DECORATION_WALL_STEP_Y;
+    return shift;
+}
+
 std::vector<io::Sprite> DecorationBuilder::build(
     const DecorationProfile& profile,
     const DecorationPlacement& placement,
@@ -130,7 +139,8 @@ std::vector<io::Sprite> DecorationBuilder::build(
     std::vector<io::Sprite> sprites;
     sprites.reserve(profile.members.size());
 
-    append_members(sprites, profile.members, placement);
+    DecorationPoint shift = resolve_member_shift(profile.member_nudge);
+    append_members(sprites, profile.members, placement, shift);
     if (options.keep_boundary) {
         append_calculated_boundary(sprites, profile, placement);
     }
