@@ -129,5 +129,14 @@
   "button.delete_decoration": "删除装饰",
   "status.decoration_deleted": "已删除装饰",
   "decoration.desk.label": "桌子",
-  "decoration.desk.description": "绘制桌子阵列区域。预览图暂时留空。"
+  "decoration.desk.description": "绘制桌子阵列区域。预览图暂时留空。",
+  "decoration.stamp.dorms01.label": "宿舍房间",
+  "decoration.stamp.dorms01.description": "AS2 预制宿舍房间，放置后可拖动。不含外墙，需自行绘制。",
+  "panel.decoration_sets": "装饰套装",
+  "shelf.mode.wall_sets": "墙壁套装",
+  "shelf.mode.decoration_sets": "装饰套装",
+  "tooltip.decoration_sets_as2_only": "装饰套装仅在 AS2 工程中可用。",
+  "label.stamp_member_count": "包含 {member_count} 个物件。",
+  "status.stamp_placed": "已放置装饰：{stamp_name}",
+  "status.map_too_small_for_stamp": "地图尺寸不足以容纳该装饰，建议调整为 {suggested_x} x {suggested_y}。"
 }

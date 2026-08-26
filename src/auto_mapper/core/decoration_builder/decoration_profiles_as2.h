@@ -18,10 +18,10 @@ static const DecorationProfile DORMS01_DECORATION_PROFILE = {
     .id = "dorms01",
     .frame = {
         .corner_offsets = {{
-            {0.0f, -448.0f},
-            {-630.0f, 0.0f},
-            {0.0f, 448.0f},
-            {630.0f, 0.0f},
+            {   0.0f, -448.0f },      // top
+            {-630.0f,    0.0f },      // left
+            {   0.0f,  448.0f },      // bottom
+            { 630.0f,    0.0f },      // right
         }},
     },
     .members = {
@@ -217,5 +217,16 @@ static const DecorationProfile DORMS01_DECORATION_PROFILE = {
     },
     .test_boundary_wall_profile = &WALL_AS2_SET6_RANDOM,
 };
+
+/**
+ * Registry of every authored AS2 decoration profile.
+ * The C API enumerates this table, so new profiles only need to be listed here.
+ */
+static const DecorationProfile* const AS2_DECORATION_PROFILES[] = {
+    &DORMS01_DECORATION_PROFILE,
+};
+
+inline constexpr int AS2_DECORATION_PROFILE_COUNT =
+    static_cast<int>(sizeof(AS2_DECORATION_PROFILES) / sizeof(AS2_DECORATION_PROFILES[0]));
 
 } // namespace auto_mapper::core::decoration_builder

@@ -123,11 +123,47 @@ struct CAS1CeilingLayerConfig {
     int default_lab_layer_count;
 };
 
+// Fixed id buffer size shared by the stamp table and placement records.
+#define C_DECORATION_STAMP_ID_SIZE 32
+
+/**
+ * @brief One authored decoration stamp described for the editor UI.
+ * Corner order is top, left, bottom, right, relative to the stamp center.
+ */
+struct CDecorationStamp {
+    char id[C_DECORATION_STAMP_ID_SIZE];
+    float corner_x[4];
+    float corner_y[4];
+    int member_count;
+};
+
+/**
+ * @brief One decoration stamp placed by the user. Translation only.
+ */
+struct CDecorationStampPlacement {
+    char profile_id[C_DECORATION_STAMP_ID_SIZE];
+    float center_x;
+    float center_y;
+};
+
 /**
  * @brief Read AS1 ceiling-layer defaults and supported range.
  */
 AUTO_MAPPER_API bool get_as1_ceiling_layer_config(
     CAS1CeilingLayerConfig* config
+);
+
+/**
+ * @brief Return the number of authored decoration stamps.
+ */
+AUTO_MAPPER_API int get_decoration_stamp_count();
+
+/**
+ * @brief Read one authored decoration stamp by index.
+ */
+AUTO_MAPPER_API bool get_decoration_stamp_at(
+    int index,
+    CDecorationStamp* stamp
 );
 
 /**
@@ -162,6 +198,9 @@ AUTO_MAPPER_API int get_incubator_array_preview_points(
 
 /**
  * @brief Build map from segments and doors, write to file.
+ *
+ * TODO: This positional parameter list has grown past a reasonable size.
+ * Replace it with a single CMapBuildRequest struct in a dedicated refactor.
  */
 AUTO_MAPPER_API bool generate_map_from_segments(
     const char* output_path,
@@ -174,6 +213,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_incubator_arrays,
     const CDeskArray* desk_arrays,
     int num_desk_arrays,
+    const CDecorationStampPlacement* decoration_stamps,
+    int num_decoration_stamps,
     float map_size_x,
     float map_size_y,
     int as1_standard_ceiling_layer_count,

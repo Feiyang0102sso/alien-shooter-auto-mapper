@@ -68,6 +68,8 @@ DECORATION_AREA_FILL_ALPHA = 70         # Keep the decoration frame translucent 
 DECORATION_AREA_BORDER = "#45c797"      # Default decoration frame border.
 DECORATION_AREA_SELECTED_BORDER = "#f0ad4e"  # Highlight border for the selected decoration.
 DECORATION_AREA_PREVIEW_BORDER = "#f0ad4e"   # Dashed border while drawing a new decoration.
+DECORATION_STAMP_GHOST_BORDER = "#45c797"    # Dashed ghost frame following the cursor before placing.
+DECORATION_STAMP_OUT_OF_BOUNDS = "#e05252"   # Frame border when a stamp sticks out of the map.
 
 # Incubator preview unit colors.
 INCUBATOR_PREVIEW_BORDER = "#69f0ae"    # Border for each generated incubator footprint.

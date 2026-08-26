@@ -9,8 +9,10 @@ from app.project.data import (
     DEFAULT_PROJECT_VERSION,
     DECORATION_TYPE_DESK_ARRAY,
     DECORATION_TYPE_INCUBATOR_ARRAY,
+    DECORATION_TYPE_ROOM_STAMP,
     DeskDecoration,
     IncubatorDecoration,
+    StampDecoration,
     ProjectData,
     PROJECT_VERSION_AS1,
     resolve_as1_ceiling_layer_counts,
@@ -65,6 +67,10 @@ def build_project_json_data(project_data: ProjectData) -> dict:
 
     for decoration in project_data.decorations:
         if not is_supported_decoration_type(decoration.decoration_type):
+            continue
+
+        if decoration.decoration_type == DECORATION_TYPE_ROOM_STAMP:
+            decoration_items.append(build_stamp_json(decoration))
             continue
 
         decoration_item = {
@@ -309,6 +315,10 @@ def parse_decorations(data: dict) -> list:
         if not is_supported_decoration_type(decoration_type):
             continue
 
+        if decoration_type == DECORATION_TYPE_ROOM_STAMP:
+            decorations.append(build_stamp_from_json(json_decoration))
+            continue
+
         start = json_decoration.get("start", {})
         if not isinstance(start, dict):
             raise ValueError("Decoration start must be an object.")
@@ -329,7 +339,44 @@ def is_supported_decoration_type(decoration_type: str) -> bool:
     if decoration_type == DECORATION_TYPE_DESK_ARRAY:
         return True
 
+    if decoration_type == DECORATION_TYPE_ROOM_STAMP:
+        return True
+
     return False
+
+
+def build_stamp_json(decoration: StampDecoration) -> dict:
+    """
+    Serialize one room stamp. Only the profile id and center are stored.
+    """
+    stamp_item = {
+        "type": decoration.decoration_type,
+        "profile_id": decoration.profile_id,
+        "center": {
+            "x": decoration.center_x,
+            "y": decoration.center_y,
+        },
+    }
+    return stamp_item
+
+
+def build_stamp_from_json(json_decoration: dict) -> StampDecoration:
+    """
+    Build one room stamp from JSON fields.
+    """
+    profile_id = str(json_decoration.get("profile_id", ""))
+    if not profile_id:
+        raise ValueError("Room stamp requires a non-empty 'profile_id'.")
+
+    center = json_decoration.get("center", {})
+    if not isinstance(center, dict):
+        raise ValueError("Room stamp center must be an object.")
+
+    return StampDecoration(
+        profile_id=profile_id,
+        center_x=float(center.get("x", 0.0)),
+        center_y=float(center.get("y", 0.0)),
+    )
 
 
 def build_decoration_from_json(decoration_type: str, json_decoration: dict, start: dict):

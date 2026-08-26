@@ -4,6 +4,10 @@ ctypes structures that mirror src/auto_mapper/api.h.
 import ctypes
 
 
+# Must stay in sync with C_DECORATION_STAMP_ID_SIZE in api.h.
+DECORATION_STAMP_ID_SIZE = 32
+
+
 class CSegment(ctypes.Structure):
     """
     C-compatible wall segment.
@@ -159,4 +163,30 @@ class CDrawablePart(ctypes.Structure):
 
     _fields_ = [
         ("part_id", ctypes.c_char_p),
+    ]
+
+
+class CDecorationStamp(ctypes.Structure):
+    """
+    C-compatible authored decoration stamp description.
+    Corner order is top, left, bottom, right, relative to the stamp center.
+    """
+
+    _fields_ = [
+        ("id", ctypes.c_char * DECORATION_STAMP_ID_SIZE),
+        ("corner_x", ctypes.c_float * 4),
+        ("corner_y", ctypes.c_float * 4),
+        ("member_count", ctypes.c_int),
+    ]
+
+
+class CDecorationStampPlacement(ctypes.Structure):
+    """
+    C-compatible decoration stamp placement. Translation only.
+    """
+
+    _fields_ = [
+        ("profile_id", ctypes.c_char * DECORATION_STAMP_ID_SIZE),
+        ("center_x", ctypes.c_float),
+        ("center_y", ctypes.c_float),
     ]

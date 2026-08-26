@@ -89,7 +89,7 @@ QDockWidget::title {
     padding: 8px;
 }
 
-#themeShelfPanel,
+#leftShelfPanel,
 #decorationShelfPanel,
 #inspectorPanel {
     background: #121b20;
@@ -203,12 +203,14 @@ QPushButton:hover {
     color: #07110d;
 }
 
-#gameFamilyButton {
+#gameFamilyButton,
+#shelfModeButton {
     min-height: 34px;
     font-weight: 700;
 }
 
-#gameFamilyButton:checked {
+#gameFamilyButton:checked,
+#shelfModeButton:checked {
     background: #2aa879;
     border-color: #45c797;
     color: #07110d;

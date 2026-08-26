@@ -6,7 +6,6 @@ from pathlib import Path
 from PySide6.QtCore import QPointF, Signal, Qt
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
-    QButtonGroup,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -85,7 +84,6 @@ class ThemeShelfPanel(QWidget):
     """
 
     wall_set_selected = Signal(int, str)
-    project_version_changed = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -95,24 +93,8 @@ class ThemeShelfPanel(QWidget):
         self.profiles = self._load_sorted_profiles()
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 8, 14, 14)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
-
-        title = QLabel(tr(TextKey.PANEL_WALL_SETS))
-        title.setObjectName("panelTitle")
-        layout.addWidget(title)
-
-        family_layout = QHBoxLayout()
-        family_layout.setContentsMargins(0, 0, 0, 0)
-        family_layout.setSpacing(8)
-
-        self.family_button_group = QButtonGroup(self)
-        self.family_button_group.setExclusive(True)
-        self.as1_button = self._create_version_button(PROJECT_VERSION_AS1)
-        self.as2r_button = self._create_version_button(PROJECT_VERSION_AS2R)
-        family_layout.addWidget(self.as1_button)
-        family_layout.addWidget(self.as2r_button)
-        layout.addLayout(family_layout)
 
         scroll_area = QScrollArea()
         scroll_area.setObjectName("themeShelfScrollArea")
@@ -128,20 +110,7 @@ class ThemeShelfPanel(QWidget):
         scroll_area.setWidget(self.content)
         layout.addWidget(scroll_area)
 
-        self._sync_version_buttons()
         self._populate_wall_cards()
-
-    def _create_version_button(self, project_version: str) -> QPushButton:
-        """
-        Create one project version toggle button.
-        """
-        button = QPushButton(project_version)
-        button.setObjectName("gameFamilyButton")
-        button.setCheckable(True)
-        button.setProperty("project_version", project_version)
-        button.clicked.connect(self._on_version_button_clicked)
-        self.family_button_group.addButton(button)
-        return button
 
     def _load_sorted_profiles(self) -> list:
         """
@@ -316,29 +285,10 @@ class ThemeShelfPanel(QWidget):
 
         image.setText(tr(TextKey.LABEL_PREVIEW_MISSING))
 
-    def _on_version_button_clicked(self) -> None:
-        """
-        Switch between project format wall entries.
-        """
-        sender = self.sender()
-        if sender is None:
-            return
-
-        project_version = sender.property("project_version")
-        if not project_version:
-            return
-
-        if project_version == self.current_project_version:
-            return
-
-        self.set_project_version(str(project_version))
-        self.project_version_changed.emit(str(project_version))
-
     def set_project_version(self, project_version: str) -> None:
         """Select a project version without emitting a user-change signal."""
         validated_version = validate_project_version(project_version)
         self.current_project_version = validated_version
-        self._sync_version_buttons()
         self._populate_wall_cards()
         self._select_first_wall_set()
 
@@ -374,17 +324,6 @@ class ThemeShelfPanel(QWidget):
     def _select_wall_set(self, wall_type: int, wall_name: str) -> None:
         self.selected_wall_type = wall_type
         self.wall_set_selected.emit(wall_type, wall_name)
-
-    def _sync_version_buttons(self) -> None:
-        """
-        Keep the project version buttons checked without triggering selection.
-        """
-        self.as1_button.blockSignals(True)
-        self.as2r_button.blockSignals(True)
-        self.as1_button.setChecked(self.current_project_version == PROJECT_VERSION_AS1)
-        self.as2r_button.setChecked(self.current_project_version == PROJECT_VERSION_AS2R)
-        self.as1_button.blockSignals(False)
-        self.as2r_button.blockSignals(False)
 
     def _profile_belongs_to_current_version(self, wall_type: int) -> bool:
         if self.current_project_version == PROJECT_VERSION_AS1:

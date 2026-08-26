@@ -27,8 +27,8 @@ from app.i18n.locale import LOCALE_EN_US, LOCALE_ZH_CN, get_locale, save_locale_
 from app.i18n.text_keys import TextKey
 from app.logger import logger
 from app.project.data import (
-    DEFAULT_MAP_SIZE_X,
-    DEFAULT_MAP_SIZE_Y,
+    DECORATION_TYPE_ROOM_STAMP,
+    get_default_map_size,
     ProjectData,
     resolve_as1_ceiling_layer_counts,
     supports_ceiling_generation,
@@ -38,14 +38,19 @@ from app.project.io import load_project_json, save_project_json
 from app.ui.canvas.viewport import MapViewport
 from app.ui.panels.decoration_shelf import DecorationShelfPanel
 from app.ui.panels.inspector import InspectorPanel
-from app.ui.panels.theme_shelf import ThemeShelfPanel
+from app.ui.panels.left_shelf import LeftShelfPanel
 from app.ui.tools.drawing_modes import DRAWING_MODE_LABELS, DrawingMode
 from app.ui.tools.drawing_toolbar import DrawingToolbar
 from app.binding.dll_registry import register_all_from_dll
+from app.editor.decoration_stamps import get_stamp_frame_size
 from app.editor.wall_profiles import get_wall_profile
 
 
 LANGUAGE_BUTTON_TEXT = "语言\nlanguage"
+
+
+# Breathing room added to the suggested map size when a stamp does not fit.
+STAMP_MAP_SIZE_MARGIN = 200.0
 
 
 class MainWindow(QMainWindow):
@@ -65,7 +70,7 @@ class MainWindow(QMainWindow):
 
         self.viewport = MapViewport()
         self.drawing_toolbar = DrawingToolbar(self)
-        self.theme_shelf = ThemeShelfPanel()
+        self.shelf_panel = LeftShelfPanel()
         self.decoration_shelf = DecorationShelfPanel()
         self.left_shelf_tabs = QTabWidget()
         self.inspector = InspectorPanel(self.as1_ceiling_layer_config)
@@ -75,7 +80,7 @@ class MainWindow(QMainWindow):
         self._build_toolbar()
         self._build_docks()
         self._connect_signals()
-        project_version = self.theme_shelf.get_project_version()
+        project_version = self.shelf_panel.get_project_version()
         self._sync_ceiling_option(project_version, False)
         self._sync_global_door_option(project_version, False)
 
@@ -179,7 +184,7 @@ class MainWindow(QMainWindow):
         left_dock.setObjectName("themeShelfDock")
         left_dock.setTitleBarWidget(QWidget())  # hide docker title bar
         self.left_shelf_tabs.setObjectName("leftShelfTabs")
-        self.left_shelf_tabs.addTab(self.theme_shelf, tr(TextKey.PANEL_WALL_SETS))
+        self.left_shelf_tabs.addTab(self.shelf_panel, tr(TextKey.PANEL_WALL_SETS))
         self.left_shelf_tabs.addTab(self.decoration_shelf, tr(TextKey.PANEL_DECORATIONS))
 
         # Decoration tools are kept for a future redesign, but are not ready for users.
@@ -209,8 +214,9 @@ class MainWindow(QMainWindow):
         """
         Connect first-pass panel interactions.
         """
-        self.theme_shelf.project_version_changed.connect(self._on_project_version_changed)
-        self.theme_shelf.wall_set_selected.connect(self._on_wall_set_selected)
+        self.shelf_panel.project_version_changed.connect(self._on_project_version_changed)
+        self.shelf_panel.wall_set_selected.connect(self._on_wall_set_selected)
+        self.shelf_panel.stamp_selected.connect(self._on_stamp_tool_selected)
         self.decoration_shelf.decoration_selected.connect(self._on_decoration_tool_selected)
         self.drawing_toolbar.drawing_mode_changed.connect(self._on_drawing_mode_changed)
         self.viewport.grid_point_selected.connect(self._on_grid_point_selected)
@@ -220,6 +226,7 @@ class MainWindow(QMainWindow):
         self.viewport.segment_created.connect(self._on_segment_created)
         self.viewport.door_created.connect(self._on_door_created)
         self.viewport.decoration_created.connect(self._on_decoration_created)
+        self.viewport.stamp_placed.connect(self._on_stamp_placed)
         self.viewport.decoration_selected.connect(self._on_decoration_selected)
         self.viewport.decoration_changed.connect(self._on_decoration_changed)
         self.viewport.drawing_cancelled.connect(self._on_drawing_cancelled)
@@ -320,6 +327,33 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
         logger.info(f"Door #{count}: ({grid_x}, {grid_y})")
 
+    def _on_stamp_tool_selected(self, profile_id: str, stamp_name: str) -> None:
+        """
+        Arm click-to-place for one authored room stamp.
+        """
+        self.viewport.set_active_decoration_stamp(profile_id)
+        self.inspector.set_decoration_tool(DECORATION_TYPE_ROOM_STAMP, stamp_name)
+        self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_TOOL_SELECTED, decoration_name=stamp_name))
+        logger.info(f"Stamp tool selected: {profile_id}")
+
+    def _on_stamp_placed(self, profile_id: str, out_of_bounds: bool) -> None:
+        """
+        Report a placed stamp and warn when the map cannot hold it.
+        """
+        if not out_of_bounds:
+            self.statusBar().showMessage(tr(TextKey.STATUS_STAMP_PLACED, stamp_name=profile_id))
+            logger.info(f"Stamp placed: {profile_id}")
+            return
+
+        frame_size = get_stamp_frame_size(profile_id)
+        message = tr(
+            TextKey.STATUS_MAP_TOO_SMALL_FOR_STAMP,
+            suggested_x=f"{frame_size[0] + STAMP_MAP_SIZE_MARGIN:.0f}",
+            suggested_y=f"{frame_size[1] + STAMP_MAP_SIZE_MARGIN:.0f}",
+        )
+        self.statusBar().showMessage(message)
+        logger.info(f"Stamp placed out of bounds: {profile_id}")
+
     def _on_decoration_created(self, count: int) -> None:
         """
         Show the committed decoration.
@@ -370,7 +404,7 @@ class MainWindow(QMainWindow):
 
     def _on_ceiling_changed(self, checked: bool) -> None:
         """Apply the ceiling master switch to version-specific controls."""
-        project_version = self.theme_shelf.get_project_version()
+        project_version = self.shelf_panel.get_project_version()
         self.inspector.set_ceiling_project_state(project_version, checked)
         logger.info(f"Ceiling generation changed: {checked}")
 
@@ -437,17 +471,18 @@ class MainWindow(QMainWindow):
         Create an empty project using the currently selected version.
         """
         self._reset_empty_project()
-        logger.info(f"New project created: {self.theme_shelf.get_project_version()}")
+        logger.info(f"New project created: {self.shelf_panel.get_project_version()}")
 
     def _reset_empty_project(self) -> None:
         """Reset editor content while preserving the selected project version."""
         self.viewport.clear_segments()
-        project_version = self.theme_shelf.get_project_version()
+        project_version = self.shelf_panel.get_project_version()
         self.inspector.reset_as1_ceiling_layer_counts()
         self._sync_ceiling_option(project_version, False)
         self._sync_global_door_option(project_version, False)
-        self.inspector.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
-        self.viewport.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y)
+        default_map_size = get_default_map_size(project_version)
+        self.inspector.set_map_size(default_map_size[0], default_map_size[1])
+        self.viewport.set_map_size(default_map_size[0], default_map_size[1])
         profile = get_wall_profile(self.viewport.active_wall_type)
         self.inspector.set_wall_set(self.viewport.active_wall_type, profile["short_label"])
         self.inspector.clear_decoration_selection()
@@ -629,7 +664,7 @@ class MainWindow(QMainWindow):
         map_size = self.inspector.get_map_size()
         ceiling_layer_counts = self.inspector.get_as1_ceiling_layer_counts()
         project_data = ProjectData(
-            version=self.theme_shelf.get_project_version(),
+            version=self.shelf_panel.get_project_version(),
             map_size_x=map_size[0],
             map_size_y=map_size[1],
             segments=self.viewport.get_segments(),
@@ -643,7 +678,7 @@ class MainWindow(QMainWindow):
 
     def _replace_project(self, project_data: ProjectData) -> None:
         """Replace all editor state with one imported project."""
-        self.theme_shelf.set_project_version(project_data.version)
+        self.shelf_panel.set_project_version(project_data.version)
         self.viewport.set_segments(project_data.segments)
         self.viewport.set_doors(project_data.doors)
         self.viewport.set_decorations(project_data.decorations)
@@ -710,7 +745,7 @@ class MainWindow(QMainWindow):
 
     def _on_is_door_open_changed(self, checked: bool) -> None:
         """Update the viewport open door state and redraw."""
-        project_version = self.theme_shelf.get_project_version()
+        project_version = self.shelf_panel.get_project_version()
         if not supports_global_door_state(project_version):
             self.is_door_open_check.setChecked(False)
             self.viewport.set_is_door_open(False)

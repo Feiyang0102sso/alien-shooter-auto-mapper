@@ -18,7 +18,11 @@ from app.editor.drawable_parts import AS2_SET1_WALL_TYPES, get_wall_set_drawable
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
-from app.project.data import DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y
+from app.project.data import (
+    AS1_DEFAULT_MAP_SIZE_X,
+    AS1_DEFAULT_MAP_SIZE_Y,
+    DECORATION_TYPE_ROOM_STAMP,
+)
 from app.ui.panels.as1_ceiling import AS1CeilingPropertiesWidget
 from app.ui.previews.wall_assets import get_wall_component_preview_path
 from app.ui.tools.drawing_modes import DrawingMode
@@ -66,13 +70,13 @@ class InspectorPanel(QWidget):
         self.map_size_x_input.setRange(1.0, 100000.0)
         self.map_size_x_input.setDecimals(1)
         self.map_size_x_input.setSingleStep(50.0)
-        self.map_size_x_input.setValue(DEFAULT_MAP_SIZE_X)
+        self.map_size_x_input.setValue(AS1_DEFAULT_MAP_SIZE_X)
 
         self.map_size_y_input = QDoubleSpinBox()
         self.map_size_y_input.setRange(1.0, 100000.0)
         self.map_size_y_input.setDecimals(1)
         self.map_size_y_input.setSingleStep(50.0)
-        self.map_size_y_input.setValue(DEFAULT_MAP_SIZE_Y)
+        self.map_size_y_input.setValue(AS1_DEFAULT_MAP_SIZE_Y)
 
         map_size_form.addRow(tr(TextKey.LABEL_MAP_SIZE_X), self.map_size_x_input)
         map_size_form.addRow(tr(TextKey.LABEL_MAP_SIZE_Y), self.map_size_y_input)
@@ -150,6 +154,7 @@ class InspectorPanel(QWidget):
         decoration_form.addRow(tr(TextKey.LABEL_ITEM_SPACING), self.item_spacing_input)
         decoration_form.addRow(tr(TextKey.LABEL_COLUMN_SPACING), self.row_spacing_input)
         decoration_layout.addLayout(decoration_form)
+        self.decoration_spacing_form = decoration_form
 
         self.delete_decoration_button = QPushButton(tr(TextKey.BUTTON_DELETE_DECORATION))
         self.delete_decoration_button.clicked.connect(self.decoration_delete_requested)
@@ -255,6 +260,12 @@ class InspectorPanel(QWidget):
         """
         Show properties for the selected decoration.
         """
+        if decoration.decoration_type == DECORATION_TYPE_ROOM_STAMP:
+            self._set_spacing_rows_visible(False)
+            self.decoration_properties_group.setVisible(True)
+            return
+
+        self._set_spacing_rows_visible(True)
         self.item_spacing_input.blockSignals(True)
         self.row_spacing_input.blockSignals(True)
         self.item_spacing_input.setValue(decoration.item_spacing_scale)
@@ -268,6 +279,13 @@ class InspectorPanel(QWidget):
         Hide decoration properties when no decoration is selected.
         """
         self.decoration_properties_group.setVisible(False)
+
+    def _set_spacing_rows_visible(self, visible: bool) -> None:
+        """
+        Show or hide the array-only spacing rows.
+        """
+        self.decoration_spacing_form.setRowVisible(0, visible)
+        self.decoration_spacing_form.setRowVisible(1, visible)
 
     def _emit_map_size_applied(self) -> None:
         """

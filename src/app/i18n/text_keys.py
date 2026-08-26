@@ -32,6 +32,13 @@ class TextKey:
 
     PANEL_WALL_SETS = "panel.wall_sets"
     PANEL_DECORATIONS = "panel.decorations"
+    PANEL_DECORATION_SETS = "panel.decoration_sets"
+    SHELF_MODE_WALL_SETS = "shelf.mode.wall_sets"
+    SHELF_MODE_DECORATION_SETS = "shelf.mode.decoration_sets"
+    TOOLTIP_DECORATION_SETS_AS2_ONLY = "tooltip.decoration_sets_as2_only"
+    LABEL_STAMP_MEMBER_COUNT = "label.stamp_member_count"
+    STATUS_STAMP_PLACED = "status.stamp_placed"
+    STATUS_MAP_TOO_SMALL_FOR_STAMP = "status.map_too_small_for_stamp"
     PANEL_INSPECTOR = "panel.inspector"
     PANEL_TOOLS = "panel.tools"
 
@@ -63,6 +70,8 @@ class TextKey:
     DECORATION_INCUBATOR_DESCRIPTION = "decoration.incubator.description"
     DECORATION_DESK_LABEL = "decoration.desk.label"
     DECORATION_DESK_DESCRIPTION = "decoration.desk.description"
+    DECORATION_STAMP_DORMS01_LABEL = "decoration.stamp.dorms01.label"
+    DECORATION_STAMP_DORMS01_DESCRIPTION = "decoration.stamp.dorms01.description"
 
     CANVAS_TITLE = "canvas.title"
     CANVAS_INFO = "canvas.info"

@@ -4,8 +4,10 @@ Plain project state shared by UI, JSON, and DLL binding layers.
 from dataclasses import dataclass, field
 
 
-DEFAULT_MAP_SIZE_X = 600.0
-DEFAULT_MAP_SIZE_Y = 600.0
+AS1_DEFAULT_MAP_SIZE_X = 600.0
+AS1_DEFAULT_MAP_SIZE_Y = 600.0
+AS2_DEFAULT_MAP_SIZE_X = 3000.0
+AS2_DEFAULT_MAP_SIZE_Y = 3000.0
 PROJECT_VERSION_AS1 = "AS1"
 PROJECT_VERSION_AS2 = "AS2"
 PROJECT_VERSION_AS2R = "AS2R"
@@ -20,6 +22,7 @@ AS2_SERIES_PROJECT_VERSIONS = {
 }
 DECORATION_TYPE_INCUBATOR_ARRAY = "incubator_array"
 DECORATION_TYPE_DESK_ARRAY = "desk_array"
+DECORATION_TYPE_ROOM_STAMP = "room_stamp"
 
 # TODO: Decoration arrays are now split by type and can generate maps, but
 # this whole area still needs a focused cleanup pass. Unify shared array
@@ -58,14 +61,26 @@ class DeskDecoration:
 
 
 @dataclass
+class StampDecoration:
+    """
+    Authored room stamp placed at one map position. Translation only.
+    """
+
+    profile_id: str
+    center_x: float
+    center_y: float
+    decoration_type: str = DECORATION_TYPE_ROOM_STAMP
+
+
+@dataclass
 class ProjectData:
     """
     Editor project data shared by JSON, UI, and DLL binding layers.
     """
 
     version: str = DEFAULT_PROJECT_VERSION
-    map_size_x: float = DEFAULT_MAP_SIZE_X
-    map_size_y: float = DEFAULT_MAP_SIZE_Y
+    map_size_x: float = AS1_DEFAULT_MAP_SIZE_X
+    map_size_y: float = AS1_DEFAULT_MAP_SIZE_Y
     segments: list = field(default_factory=list)
     doors: list = field(default_factory=list)
     decorations: list = field(default_factory=list)
@@ -83,6 +98,17 @@ def validate_project_version(version: str) -> str:
         raise ValueError(f"Unsupported project version: {version}")
 
     return version
+
+
+def get_default_map_size(version: str) -> tuple:
+    """Return the default map size for a project version."""
+    if version == PROJECT_VERSION_AS1:
+        return AS1_DEFAULT_MAP_SIZE_X, AS1_DEFAULT_MAP_SIZE_Y
+
+    if is_as2_series_project_version(version):
+        return AS2_DEFAULT_MAP_SIZE_X, AS2_DEFAULT_MAP_SIZE_Y
+
+    raise ValueError(f"Unsupported project version: {version}")
 
 
 def is_as2_series_project_version(version: str) -> bool:

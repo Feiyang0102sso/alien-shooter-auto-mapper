@@ -3,11 +3,14 @@
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "core/door_builder/door_builder.h"
 #include "core/door_builder/door_profiles_as1.h"
+#include "auto_mapper/core/decoration_builder/decoration_builder.h"
+#include "auto_mapper/core/decoration_builder/decoration_profiles_as2.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include <vector>
 #include <string>
+#include <string_view>
 
 // fix gcc 15 problem in static linking AutoMapper.dll (single)
 #if defined(__MINGW32__) && defined(__x86_64__)
@@ -29,7 +32,7 @@ int __ms_vsnprintf(char* buffer, size_t count, const char* format, va_list argpt
 
 extern "C" {
 
-static constexpr int AUTO_MAPPER_API_VERSION = 7;
+static constexpr int AUTO_MAPPER_API_VERSION = 8;
 
 AUTO_MAPPER_API int get_auto_mapper_api_version() {
     return AUTO_MAPPER_API_VERSION;
@@ -98,6 +101,75 @@ AUTO_MAPPER_API bool get_as1_ceiling_layer_config(
         auto_mapper::core::DEFAULT_AS1_CEILING_LAYER_SETTINGS.standard_total_layer_count;
     config->default_lab_layer_count =
         auto_mapper::core::DEFAULT_AS1_CEILING_LAYER_SETTINGS.lab_total_layer_count;
+    return true;
+}
+
+/**
+ * Copy an authored profile id into a fixed C buffer, always null terminated.
+ */
+static void copy_decoration_stamp_id(char* destination, std::string_view source) {
+    size_t copy_length = source.size();
+    if (copy_length >= C_DECORATION_STAMP_ID_SIZE) {
+        copy_length = C_DECORATION_STAMP_ID_SIZE - 1;
+    }
+
+    for (size_t i = 0; i < copy_length; ++i) {
+        destination[i] = source[i];
+    }
+
+    destination[copy_length] = '\0';
+}
+
+/**
+ * Look up an authored profile by its string id. Returns nullptr when unknown.
+ */
+static const auto_mapper::core::decoration_builder::DecorationProfile* find_decoration_profile(
+    const char* profile_id
+) {
+    if (profile_id == nullptr) {
+        return nullptr;
+    }
+
+    std::string_view wanted_id(profile_id);
+
+    for (int i = 0; i < auto_mapper::core::decoration_builder::AS2_DECORATION_PROFILE_COUNT; ++i) {
+        const auto_mapper::core::decoration_builder::DecorationProfile* profile =
+            auto_mapper::core::decoration_builder::AS2_DECORATION_PROFILES[i];
+        if (profile->id == wanted_id) {
+            return profile;
+        }
+    }
+
+    return nullptr;
+}
+
+AUTO_MAPPER_API int get_decoration_stamp_count() {
+    return auto_mapper::core::decoration_builder::AS2_DECORATION_PROFILE_COUNT;
+}
+
+AUTO_MAPPER_API bool get_decoration_stamp_at(
+    int index,
+    CDecorationStamp* stamp
+) {
+    if (stamp == nullptr) {
+        return false;
+    }
+
+    if (index < 0 || index >= auto_mapper::core::decoration_builder::AS2_DECORATION_PROFILE_COUNT) {
+        return false;
+    }
+
+    const auto_mapper::core::decoration_builder::DecorationProfile* profile =
+        auto_mapper::core::decoration_builder::AS2_DECORATION_PROFILES[index];
+
+    copy_decoration_stamp_id(stamp->id, profile->id);
+
+    for (int corner_index = 0; corner_index < 4; ++corner_index) {
+        stamp->corner_x[corner_index] = profile->frame.corner_offsets[corner_index].x;
+        stamp->corner_y[corner_index] = profile->frame.corner_offsets[corner_index].y;
+    }
+
+    stamp->member_count = static_cast<int>(profile->members.size());
     return true;
 }
 
@@ -423,6 +495,8 @@ AUTO_MAPPER_API bool generate_map_from_segments(
     int num_incubator_arrays,
     const CDeskArray* desk_arrays,
     int num_desk_arrays,
+    const CDecorationStampPlacement* decoration_stamps,
+    int num_decoration_stamps,
     float map_size_x,
     float map_size_y,
     int as1_standard_ceiling_layer_count,
@@ -566,6 +640,29 @@ AUTO_MAPPER_API bool generate_map_from_segments(
 
         std::vector<auto_mapper::io::Sprite> array_sprites = desk_builder.build_array(array);
         decoration_sprites.insert(decoration_sprites.end(), array_sprites.begin(), array_sprites.end());
+    }
+
+    // 3b. Build authored decoration stamps
+    auto_mapper::core::decoration_builder::DecorationBuilder stamp_builder;
+
+    for (int i = 0; i < num_decoration_stamps; ++i) {
+        const auto_mapper::core::decoration_builder::DecorationProfile* profile =
+            find_decoration_profile(decoration_stamps[i].profile_id);
+
+        if (profile == nullptr) {
+            auto_mapper::Logger::error(
+                "Unknown decoration stamp profile: {}",
+                decoration_stamps[i].profile_id
+            );
+            continue;
+        }
+
+        auto_mapper::core::decoration_builder::DecorationPlacement placement;
+        placement.center_x = decoration_stamps[i].center_x;
+        placement.center_y = decoration_stamps[i].center_y;
+
+        std::vector<auto_mapper::io::Sprite> stamp_sprites = stamp_builder.build(*profile, placement);
+        decoration_sprites.insert(decoration_sprites.end(), stamp_sprites.begin(), stamp_sprites.end());
     }
 
     // 4. Merge sprites

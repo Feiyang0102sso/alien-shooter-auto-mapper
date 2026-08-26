@@ -30,6 +30,7 @@ STANDARD_DOOR_Z_CONFIGS = {}
 STANDARD_DOOR_SIZES = []
 INCUBATOR_ARRAY_PROFILE = {}
 DESK_ARRAY_PROFILE = {}
+DECORATION_STAMPS = []
 AUTO_MAPPER_CLIENT = None
 WALL_TYPE_STANDARD = 0
 WALL_TYPE_LAB = 1
@@ -161,12 +162,14 @@ def register_all_from_dll(auto_mapper_client) -> bool:
     standard_door_z_configs = auto_mapper_client.load_standard_door_z_config(standard_door_sizes)
     incubator_array_profile = auto_mapper_client.load_incubator_array_profile()
     desk_array_profile = auto_mapper_client.load_desk_array_profile()
+    decoration_stamps = auto_mapper_client.load_decoration_stamps()
 
     register_wall_profiles(wall_profiles)
     register_standard_door_sizes(standard_door_sizes)
     register_standard_door_z_configs(standard_door_z_configs)
     register_incubator_array_profile(incubator_array_profile)
     register_desk_array_profile(desk_array_profile)
+    register_decoration_stamps(decoration_stamps)
 
     logger.info("Registered DLL metadata for UI.")
     return True
@@ -225,6 +228,39 @@ def register_desk_array_profile(profile: dict) -> None:
 
     for key, value in profile.items():
         DESK_ARRAY_PROFILE[key] = value
+
+
+def register_decoration_stamps(stamps: list) -> None:
+    """
+    Replace registered decoration stamp descriptions.
+    """
+    DECORATION_STAMPS.clear()
+
+    for stamp in stamps:
+        DECORATION_STAMPS.append(dict(stamp))
+
+
+def get_decoration_stamps() -> list:
+    """
+    Return every DLL-exported decoration stamp in table order.
+    """
+    stamps = []
+
+    for stamp in DECORATION_STAMPS:
+        stamps.append(dict(stamp))
+
+    return stamps
+
+
+def get_decoration_stamp(profile_id: str) -> dict:
+    """
+    Return one decoration stamp by profile id. Raises when unknown.
+    """
+    for stamp in DECORATION_STAMPS:
+        if stamp["profile_id"] == profile_id:
+            return dict(stamp)
+
+    raise KeyError(f"Unknown decoration stamp profile: {profile_id}")
 
 
 def get_wall_profile(wall_type: int) -> dict:

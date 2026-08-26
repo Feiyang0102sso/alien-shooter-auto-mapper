@@ -6,6 +6,8 @@ from pathlib import Path
 
 from app.binding.structures import (
     CAS1CeilingLayerConfig,
+    CDecorationStamp,
+    CDecorationStampPlacement,
     CDeskArray,
     CDeskArrayProfile,
     CDoor,
@@ -22,6 +24,7 @@ from app.logger import logger
 from app.project.data import (
     DECORATION_TYPE_DESK_ARRAY,
     DECORATION_TYPE_INCUBATOR_ARRAY,
+    DECORATION_TYPE_ROOM_STAMP,
     PROJECT_VERSION_AS1,
     PROJECT_VERSION_AS2,
     PROJECT_VERSION_AS2R,
@@ -30,7 +33,7 @@ from app.project.data import (
 )
 
 
-REQUIRED_API_VERSION = 7
+REQUIRED_API_VERSION = 8
 C_MAP_FORMAT_AS1 = 0
 C_MAP_FORMAT_AS2 = 1
 C_MAP_FORMAT_AS2R = 2
@@ -80,6 +83,8 @@ class AutoMapperLibClient:
             ctypes.c_int,
             ctypes.POINTER(CDeskArray),
             ctypes.c_int,
+            ctypes.POINTER(CDecorationStampPlacement),
+            ctypes.c_int,
             ctypes.c_float,
             ctypes.c_float,
             ctypes.c_int,
@@ -94,6 +99,15 @@ class AutoMapperLibClient:
             ctypes.POINTER(CAS1CeilingLayerConfig),
         ]
         self.lib.get_as1_ceiling_layer_config.restype = ctypes.c_bool
+
+        self.lib.get_decoration_stamp_count.argtypes = []
+        self.lib.get_decoration_stamp_count.restype = ctypes.c_int
+
+        self.lib.get_decoration_stamp_at.argtypes = [
+            ctypes.c_int,
+            ctypes.POINTER(CDecorationStamp),
+        ]
+        self.lib.get_decoration_stamp_at.restype = ctypes.c_bool
 
         self.lib.get_standard_door_z_config.argtypes = [
             ctypes.c_int,
@@ -229,6 +243,44 @@ class AutoMapperLibClient:
         }
         logger.info(f"Loaded AS1 ceiling layer config: {config}")
         return config
+
+    def load_decoration_stamps(self) -> list:
+        """Load every authored decoration stamp description from the DLL."""
+        if not self.load():
+            return []
+
+        stamps = []
+        count = self.lib.get_decoration_stamp_count()
+
+        index = 0
+        while index < count:
+            c_stamp = CDecorationStamp()
+            success = self.lib.get_decoration_stamp_at(index, ctypes.byref(c_stamp))
+            if success:
+                stamps.append(self._convert_decoration_stamp(c_stamp))
+
+            index += 1
+
+        logger.info(f"Loaded decoration stamps: {len(stamps)}")
+        return stamps
+
+    def _convert_decoration_stamp(self, c_stamp: CDecorationStamp) -> dict:
+        """Convert one C decoration stamp into Python data."""
+        corner_offsets = []
+
+        corner_index = 0
+        while corner_index < 4:
+            corner_x = float(c_stamp.corner_x[corner_index])
+            corner_y = float(c_stamp.corner_y[corner_index])
+            corner_offsets.append((corner_x, corner_y))
+            corner_index += 1
+
+        stamp = {
+            "profile_id": c_stamp.id.decode("utf-8"),
+            "corner_offsets": corner_offsets,
+            "member_count": int(c_stamp.member_count),
+        }
+        return stamp
 
     def load_standard_door_sizes(self) -> list:
         """
@@ -385,8 +437,10 @@ class AutoMapperLibClient:
         door_array = self._build_door_array(project_data.doors, project_data.is_door_open)
         incubator_decorations = self._filter_decorations(project_data.decorations, DECORATION_TYPE_INCUBATOR_ARRAY)
         desk_decorations = self._filter_decorations(project_data.decorations, DECORATION_TYPE_DESK_ARRAY)
+        stamp_decorations = self._filter_decorations(project_data.decorations, DECORATION_TYPE_ROOM_STAMP)
         incubator_array = self._build_incubator_array(incubator_decorations)
         desk_array = self._build_desk_array(desk_decorations)
+        stamp_array = self._build_decoration_stamp_array(stamp_decorations)
         output_path_bytes = str(output_path).encode("utf-8")
         map_format = self._get_map_format(project_data.version)
         ceiling_layer_config = self.load_as1_ceiling_layer_config()
@@ -406,6 +460,8 @@ class AutoMapperLibClient:
             len(incubator_decorations),
             desk_array,
             len(desk_decorations),
+            stamp_array,
+            len(stamp_decorations),
             float(project_data.map_size_x),
             float(project_data.map_size_y),
             standard_layer_count,
@@ -554,6 +610,22 @@ class AutoMapperLibClient:
         desk_array.item_spacing_scale = float(decoration.item_spacing_scale)
         desk_array.row_spacing_scale = float(decoration.row_spacing_scale)
         return desk_array
+
+    def _build_decoration_stamp_array(self, decorations: list):
+        """
+        Convert placed room stamps into a C array.
+        """
+        array_type = CDecorationStampPlacement * len(decorations)
+        c_array = array_type()
+
+        index = 0
+        for decoration in decorations:
+            c_array[index].profile_id = decoration.profile_id.encode("utf-8")
+            c_array[index].center_x = float(decoration.center_x)
+            c_array[index].center_y = float(decoration.center_y)
+            index += 1
+
+        return c_array
 
     def _filter_decorations(self, decorations: list, decoration_type: str) -> list:
         """

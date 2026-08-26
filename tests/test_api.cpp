@@ -37,8 +37,8 @@ uint32_t read_api_test_uint32(const std::vector<uint8_t>& data, size_t offset) {
 
 } // namespace
 
-TEST(ApiTest, ReportsVersionSeven) {
-    EXPECT_EQ(get_auto_mapper_api_version(), 7);
+TEST(ApiTest, ReportsVersionEight) {
+    EXPECT_EQ(get_auto_mapper_api_version(), 8);
 }
 
 TEST(ApiTest, ExposesAS1CeilingLayerConfig) {
@@ -58,6 +58,8 @@ TEST(ApiTest, ExplicitFormatControlsEmptyAS2RProjectOutput) {
     bool success = generate_map_from_segments(
         output_file.c_str(),
         C_MAP_FORMAT_AS2R,
+        nullptr,
+        0,
         nullptr,
         0,
         nullptr,
@@ -96,6 +98,8 @@ TEST(ApiTest, RejectsUnknownMapFormat) {
         0,
         nullptr,
         0,
+        nullptr,
+        0,
         640.0f,
         480.0f,
         13,
@@ -112,6 +116,8 @@ TEST(ApiTest, RejectsInvalidAS1CeilingLayerCount) {
     bool success = generate_map_from_segments(
         "invalid_ceiling_layers.map",
         C_MAP_FORMAT_AS1,
+        nullptr,
+        0,
         nullptr,
         0,
         nullptr,

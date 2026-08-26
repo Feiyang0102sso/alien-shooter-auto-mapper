@@ -8,6 +8,7 @@ from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPainterPath, QPen,
 from PySide6.QtWidgets import QWidget
 
 from app.binding import dll_registry
+from app.editor.decoration_stamps import get_decoration_stamp
 from app.editor.drawable_parts import PART_WALL_BODY
 from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
@@ -15,10 +16,12 @@ from app.i18n.text_keys import TextKey
 from app.project.data import (
     DECORATION_TYPE_DESK_ARRAY,
     DECORATION_TYPE_INCUBATOR_ARRAY,
-    DEFAULT_MAP_SIZE_X,
-    DEFAULT_MAP_SIZE_Y,
+    DECORATION_TYPE_ROOM_STAMP,
+    AS1_DEFAULT_MAP_SIZE_X,
+    AS1_DEFAULT_MAP_SIZE_Y,
     DeskDecoration,
     IncubatorDecoration,
+    StampDecoration,
 )
 from app.ui.colors import (
     CANVAS_BACKGROUND,
@@ -31,6 +34,8 @@ from app.ui.colors import (
     DECORATION_AREA_FILL,
     DECORATION_AREA_FILL_ALPHA,
     DECORATION_AREA_PREVIEW_BORDER,
+    DECORATION_STAMP_GHOST_BORDER,
+    DECORATION_STAMP_OUT_OF_BOUNDS,
     DECORATION_AREA_SELECTED_BORDER,
     DOOR_AS2_DOT,
     DOOR_AS2_LINE,
@@ -81,6 +86,7 @@ class MapViewport(QWidget):
     segment_created = Signal(int, int, int, int, int)
     door_created = Signal(int, int, int)
     decoration_created = Signal(int)
+    stamp_placed = Signal(str, bool)
     decoration_selected = Signal(object)
     decoration_changed = Signal(object)
     drawing_cancelled = Signal()
@@ -97,8 +103,8 @@ class MapViewport(QWidget):
         self.theme_color = QColor(default_profile["color"])
         self.grid_color = QColor(default_profile["color"])
         self.active_drawable_part = PART_WALL_BODY
-        self.map_size_x = DEFAULT_MAP_SIZE_X
-        self.map_size_y = DEFAULT_MAP_SIZE_Y
+        self.map_size_x = AS1_DEFAULT_MAP_SIZE_X
+        self.map_size_y = AS1_DEFAULT_MAP_SIZE_Y
         self.grid_columns = 1
         self.grid_rows = 1
         self.zoom_factor = 1.0
@@ -119,12 +125,14 @@ class MapViewport(QWidget):
         self.decoration_drag_mode = None
         self.decoration_drag_start_physical = None
         self.decoration_drag_original = None
+        self.active_stamp_profile_id = None
+        self.stamp_ghost_physical = None
         self.last_cursor_grid_point = None
         self.is_panning = False
         self.pan_start_position = QPointF(0.0, 0.0)
         self.pan_start_offset = QPointF(0.0, 0.0)
 
-        self.set_map_size(DEFAULT_MAP_SIZE_X, DEFAULT_MAP_SIZE_Y, fit_to_view=False)
+        self.set_map_size(AS1_DEFAULT_MAP_SIZE_X, AS1_DEFAULT_MAP_SIZE_Y, fit_to_view=False)
 
     def set_theme(self, theme_id: str) -> None:
         """
@@ -170,12 +178,29 @@ class MapViewport(QWidget):
         self.decoration_drag_mode = None
         self.decoration_drag_start_physical = None
         self.decoration_drag_original = None
+        self.active_stamp_profile_id = None
+        self.stamp_ghost_physical = None
+
+    def set_active_decoration_stamp(self, profile_id: str) -> None:
+        """
+        Select an authored room stamp for click-to-place.
+        """
+        self.active_decoration_type = DECORATION_TYPE_ROOM_STAMP
+        self.active_stamp_profile_id = profile_id
+        self.active_drawable_part = ""
+        self.cancel_pending_segment()
+        self.decoration_start_physical = None
+        self.decoration_preview_physical = None
+        self.stamp_ghost_physical = None
+        self.update()
 
     def set_active_decoration(self, decoration_type: str) -> None:
         """
         Select a decoration drawing target.
         """
         self.active_decoration_type = decoration_type
+        self.active_stamp_profile_id = None
+        self.stamp_ghost_physical = None
         self.active_drawable_part = ""
         self.cancel_pending_segment()
         self.decoration_start_physical = None
@@ -188,6 +213,8 @@ class MapViewport(QWidget):
         """
         if drawing_mode != DrawingMode.RECTANGLE and self.active_decoration_type is not None:
             self.active_decoration_type = None
+            self.active_stamp_profile_id = None
+            self.stamp_ghost_physical = None
             self.active_drawable_part = PART_WALL_BODY
             self.decoration_start_physical = None
             self.decoration_preview_physical = None
@@ -228,6 +255,7 @@ class MapViewport(QWidget):
         self._draw_segments(painter)
         self._draw_doors(painter)
         self._draw_decoration_preview(painter)
+        self._draw_stamp_ghost(painter)
         self._draw_preview_segment(painter)
         self._draw_selected_point(painter)
         self._draw_origin_marker(painter)
@@ -303,6 +331,7 @@ class MapViewport(QWidget):
 
         self.eraser_tool.handle_mouse_move(event.position())
         self._update_decoration_cursor(event.position())
+        self._update_stamp_ghost(event.position())
 
         grid_point = self.screen_to_grid(event.position())
         if grid_point is not None:
@@ -598,12 +627,27 @@ class MapViewport(QWidget):
         index = 0
         for decoration in self.decorations:
             corners = self._get_decoration_corners(decoration)
-            self._draw_decoration_rect(painter, corners, index == self.selected_decoration_index)
+            out_of_bounds = False
+            if decoration.decoration_type == DECORATION_TYPE_ROOM_STAMP:
+                out_of_bounds = self._is_stamp_out_of_bounds(decoration)
+
+            self._draw_decoration_rect(
+                painter,
+                corners,
+                index == self.selected_decoration_index,
+                out_of_bounds,
+            )
             if decoration.decoration_type == DECORATION_TYPE_INCUBATOR_ARRAY:
                 self._draw_incubator_preview_points(painter, decoration)
             index += 1
 
-    def _draw_decoration_rect(self, painter: QPainter, rect: tuple, selected: bool) -> None:
+    def _draw_decoration_rect(
+        self,
+        painter: QPainter,
+        rect: tuple,
+        selected: bool,
+        out_of_bounds: bool = False,
+    ) -> None:
         """
         Draw one decoration parallelogram in physical map coordinates.
         """
@@ -612,6 +656,10 @@ class MapViewport(QWidget):
         border_color = QColor(DECORATION_AREA_BORDER)
         if selected:
             border_color = QColor(DECORATION_AREA_SELECTED_BORDER)
+
+        # The map bound warning wins over the selection highlight.
+        if out_of_bounds:
+            border_color = QColor(DECORATION_STAMP_OUT_OF_BOUNDS)
 
         painter.setBrush(QBrush(fill_color))
         pen = QPen(border_color)
@@ -662,6 +710,33 @@ class MapViewport(QWidget):
         fill_color = QColor(INCUBATOR_PREVIEW_FILL)
         fill_color.setAlpha(INCUBATOR_PREVIEW_FILL_ALPHA)
         painter.setBrush(QBrush(fill_color))
+        painter.drawPolygon(self._physical_polygon_to_screen(corners))
+
+    def _draw_stamp_ghost(self, painter: QPainter) -> None:
+        """
+        Draw the pending stamp frame following the cursor.
+        """
+        if self.active_stamp_profile_id is None:
+            return
+        if self.stamp_ghost_physical is None:
+            return
+
+        corners = self._build_stamp_corners(
+            self.active_stamp_profile_id,
+            self.stamp_ghost_physical.x(),
+            self.stamp_ghost_physical.y(),
+        )
+
+        border_color = QColor(DECORATION_STAMP_GHOST_BORDER)
+        if self._is_polygon_out_of_bounds(corners):
+            border_color = QColor(DECORATION_STAMP_OUT_OF_BOUNDS)
+
+        pen = QPen(border_color)
+        pen.setWidth(2)
+        pen.setCosmetic(True)
+        pen.setStyle(Qt.DashLine)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
         painter.drawPolygon(self._physical_polygon_to_screen(corners))
 
     def _draw_decoration_preview(self, painter: QPainter) -> None:
@@ -741,6 +816,10 @@ class MapViewport(QWidget):
         """
         if not self._is_supported_decoration_type(self.active_decoration_type):
             return False
+
+        if self.active_decoration_type == DECORATION_TYPE_ROOM_STAMP:
+            return self._place_stamp(screen_point)
+
         if self.drawing_tool.mode != DrawingMode.RECTANGLE:
             return False
 
@@ -767,6 +846,37 @@ class MapViewport(QWidget):
         self.selected_decoration_index = len(self.decorations) - 1
         self.decoration_created.emit(len(self.decorations))
         self.decoration_selected.emit(decoration)
+        return True
+
+    def _update_stamp_ghost(self, screen_point: QPointF) -> None:
+        """
+        Follow the cursor with the pending stamp frame.
+        """
+        if self.active_stamp_profile_id is None:
+            return
+
+        self.stamp_ghost_physical = self.screen_to_physical(screen_point)
+        self.update()
+
+    def _place_stamp(self, screen_point: QPointF) -> bool:
+        """
+        Drop one authored room stamp at the clicked point.
+        """
+        if self.active_stamp_profile_id is None:
+            return False
+
+        physical_point = self.screen_to_physical(screen_point)
+        stamp = StampDecoration(
+            profile_id=self.active_stamp_profile_id,
+            center_x=physical_point.x(),
+            center_y=physical_point.y(),
+        )
+
+        self.decorations.append(stamp)
+        self.selected_decoration_index = len(self.decorations) - 1
+        self.decoration_created.emit(len(self.decorations))
+        self.decoration_selected.emit(stamp)
+        self.stamp_placed.emit(stamp.profile_id, self._is_stamp_out_of_bounds(stamp))
         return True
 
     def _try_start_decoration_drag(self, screen_point: QPointF) -> bool:
@@ -801,6 +911,14 @@ class MapViewport(QWidget):
         delta_y = current_physical.y() - self.decoration_drag_start_physical.y()
 
         original = self.decoration_drag_original
+
+        if original.decoration_type == DECORATION_TYPE_ROOM_STAMP:
+            stamp = self.decorations[self.selected_decoration_index]
+            stamp.center_x = original.center_x + delta_x
+            stamp.center_y = original.center_y + delta_y
+            self.decoration_changed.emit(stamp)
+            return
+
         axes = self._get_decoration_axes(original.decoration_type)
         row_axis = axes[0]
         column_axis = axes[1]
@@ -850,6 +968,10 @@ class MapViewport(QWidget):
         """
         Show resize/move cursors when hovering a decoration.
         """
+        if self.active_decoration_type is None:
+            self.setCursor(QCursor(Qt.CrossCursor))
+            return
+
         hit = self._hit_test_decoration(screen_point)
         if hit is None:
             self.setCursor(QCursor(Qt.CrossCursor))
@@ -876,6 +998,14 @@ class MapViewport(QWidget):
         while index >= 0:
             decoration = self.decorations[index]
             corners = self._get_decoration_corners(decoration)
+
+            # A stamp cannot be resized, so its edges must not offer resize cursors.
+            if decoration.decoration_type == DECORATION_TYPE_ROOM_STAMP:
+                if self._physical_polygon_contains(corners, physical_point):
+                    return index, "move"
+
+                index -= 1
+                continue
 
             if self._point_to_segment_distance(physical_point, corners[0], corners[3]) <= margin:
                 return index, "left"
@@ -1491,6 +1621,13 @@ class MapViewport(QWidget):
         """
         Return decoration corners along its layout axes.
         """
+        if decoration.decoration_type == DECORATION_TYPE_ROOM_STAMP:
+            return self._build_stamp_corners(
+                decoration.profile_id,
+                decoration.center_x,
+                decoration.center_y,
+            )
+
         origin = QPointF(decoration.start_x, decoration.start_y)
         return self._build_decoration_corners(
             origin,
@@ -1498,6 +1635,36 @@ class MapViewport(QWidget):
             decoration.column_length,
             decoration.decoration_type,
         )
+
+    def _build_stamp_corners(self, profile_id: str, center_x: float, center_y: float) -> list:
+        """
+        Build the authored stamp frame around a center point.
+        """
+        corner_offsets = get_decoration_stamp(profile_id)["corner_offsets"]
+        corners = []
+
+        for corner_offset in corner_offsets:
+            corners.append(QPointF(center_x + corner_offset[0], center_y + corner_offset[1]))
+
+        return corners
+
+    def _is_stamp_out_of_bounds(self, decoration) -> bool:
+        """
+        Return whether any stamp corner falls outside the map area.
+        """
+        return self._is_polygon_out_of_bounds(self._get_decoration_corners(decoration))
+
+    def _is_polygon_out_of_bounds(self, corners: list) -> bool:
+        """
+        Return whether any corner falls outside the map area.
+        """
+        for corner in corners:
+            if corner.x() < 0.0 or corner.x() > self.map_size_x:
+                return True
+            if corner.y() < 0.0 or corner.y() > self.map_size_y:
+                return True
+
+        return False
 
     def _build_decoration_corners(
         self,
@@ -1659,6 +1826,13 @@ class MapViewport(QWidget):
         """
         Return a copied decoration.
         """
+        if decoration.decoration_type == DECORATION_TYPE_ROOM_STAMP:
+            return StampDecoration(
+                profile_id=decoration.profile_id,
+                center_x=decoration.center_x,
+                center_y=decoration.center_y,
+            )
+
         return self._create_decoration(
             decoration.decoration_type,
             decoration.start_x,
@@ -1709,6 +1883,9 @@ class MapViewport(QWidget):
             return True
 
         if decoration_type == DECORATION_TYPE_DESK_ARRAY:
+            return True
+
+        if decoration_type == DECORATION_TYPE_ROOM_STAMP:
             return True
 
         return False
