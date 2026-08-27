@@ -28,13 +28,22 @@ class DrawingToolbar(QToolBar):
 
         self.action_group = QActionGroup(self)
         self.action_group.setExclusive(True)
+        # Placing a decoration stamp owns the left button, so no drawing tool is
+        # active then. The group must be able to show nothing checked.
+        self.action_group.setExclusionPolicy(QActionGroup.ExclusionPolicy.ExclusiveOptional)
         self._actions = {}
+        self._separators = {}
         self._suppress_emit = False
 
+        # Select comes first: it is the only tool that edits already placed things.
+        self._add_mode_action(DrawingMode.SELECT, tr(TextKey.DRAWING_SELECT))
+        # Each hideable tool owns the separator next to it, so hiding the tool
+        # does not leave a dangling divider behind.
+        self._separators[DrawingMode.SELECT] = self.addSeparator()
         self._add_mode_action(DrawingMode.POLYLINE, tr(TextKey.DRAWING_POLYLINE))
         self._add_mode_action(DrawingMode.STRAIGHT_LINE, tr(TextKey.DRAWING_LINE))
         self._add_mode_action(DrawingMode.RECTANGLE, tr(TextKey.DRAWING_RECT))
-        self.addSeparator()
+        self._separators[DrawingMode.ERASER] = self.addSeparator()
         self._add_mode_action(DrawingMode.ERASER, tr(TextKey.DRAWING_ERASER))
 
         default_action = self._actions[DrawingMode.POLYLINE]
@@ -50,6 +59,48 @@ class DrawingToolbar(QToolBar):
 
         self._suppress_emit = True
         action.setChecked(True)
+        self._suppress_emit = False
+
+    def get_checked_mode(self):
+        """
+        Return the active tool mode, or None when no tool is checked.
+        """
+        checked_action = self.action_group.checkedAction()
+        if checked_action is None:
+            return None
+
+        for mode, action in self._actions.items():
+            if action is checked_action:
+                return mode
+
+        return None
+
+    def set_mode_visible(self, mode: DrawingMode, visible: bool) -> None:
+        """
+        Show or hide one tool together with its separator.
+
+        A tool that cannot act on the current shelf is only a dead button.
+        """
+        action = self._actions.get(mode)
+        if action is None:
+            return
+
+        action.setVisible(visible)
+
+        separator = self._separators.get(mode)
+        if separator is not None:
+            separator.setVisible(visible)
+
+    def clear_mode(self) -> None:
+        """
+        Uncheck every tool, for when something outside the toolbar takes over.
+        """
+        checked_action = self.action_group.checkedAction()
+        if checked_action is None:
+            return
+
+        self._suppress_emit = True
+        checked_action.setChecked(False)
         self._suppress_emit = False
 
     def _add_mode_action(self, mode: DrawingMode, text: str) -> None:

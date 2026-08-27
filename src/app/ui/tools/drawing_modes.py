@@ -12,6 +12,7 @@ class DrawingMode(str, Enum):
     POLYLINE = "polyline"
     RECTANGLE = "rectangle"
     ERASER = "eraser"
+    SELECT = "select"
 
 
 DRAWING_MODE_LABELS = {
@@ -19,4 +20,5 @@ DRAWING_MODE_LABELS = {
     DrawingMode.POLYLINE: tr(TextKey.DRAWING_POLYLINE),
     DrawingMode.RECTANGLE: tr(TextKey.DRAWING_RECTANGLE),
     DrawingMode.ERASER: tr(TextKey.DRAWING_ERASER),
+    DrawingMode.SELECT: tr(TextKey.DRAWING_SELECT_TOOL),
 }

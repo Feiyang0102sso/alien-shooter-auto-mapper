@@ -88,7 +88,9 @@ class MapViewport(QWidget):
     decoration_created = Signal(int)
     stamp_placed = Signal(str, bool)
     decoration_selected = Signal(object)
+    decoration_deselected = Signal()
     decoration_changed = Signal(object)
+    decoration_placing_ended = Signal()
     drawing_cancelled = Signal()
 
     def __init__(self) -> None:
@@ -163,15 +165,19 @@ class MapViewport(QWidget):
         """
         Update the current drawable tool.
         """
-        self.active_drawable_part = part_id
         self.clear_active_decoration_tool()
+        self.active_drawable_part = part_id
         self.cancel_pending_segment()
         self.update()
 
     def clear_active_decoration_tool(self) -> None:
         """
         Exit decoration drawing and dragging state.
+
+        Arming a decoration blanks the drawable part, so disarming has to hand
+        the part back to the wall tools. Otherwise they draw nothing at all.
         """
+        self.active_drawable_part = PART_WALL_BODY
         self.active_decoration_type = None
         self.decoration_start_physical = None
         self.decoration_preview_physical = None
@@ -180,6 +186,26 @@ class MapViewport(QWidget):
         self.decoration_drag_original = None
         self.active_stamp_profile_id = None
         self.stamp_ghost_physical = None
+
+    def is_placing_decoration(self) -> bool:
+        """
+        Return whether a decoration tool is armed for placing new decorations.
+
+        Placing owns the left button: clicks always drop a new decoration and
+        never grab an existing one.
+        """
+        return self.active_decoration_type is not None
+
+    def is_editing_decoration(self) -> bool:
+        """
+        Return whether the select tool may pick and drag existing decorations.
+
+        Placing wins over editing, so an armed decoration tool disables it.
+        """
+        if self.is_placing_decoration():
+            return False
+
+        return self.drawing_tool.mode == DrawingMode.SELECT
 
     def set_active_decoration_stamp(self, profile_id: str) -> None:
         """
@@ -192,6 +218,8 @@ class MapViewport(QWidget):
         self.decoration_start_physical = None
         self.decoration_preview_physical = None
         self.stamp_ghost_physical = None
+        # Placing and editing must never be on screen at the same time.
+        self.clear_decoration_selection()
         self.update()
 
     def set_active_decoration(self, decoration_type: str) -> None:
@@ -205,19 +233,22 @@ class MapViewport(QWidget):
         self.cancel_pending_segment()
         self.decoration_start_physical = None
         self.decoration_preview_physical = None
+        # Placing and editing must never be on screen at the same time.
+        self.clear_decoration_selection()
         self.update()
 
     def set_drawing_mode(self, drawing_mode) -> None:
         """
         Update the active drawing tool mode.
         """
+        # Only the rectangle tool draws decoration areas, so every other tool
+        # disarms placing. The select tool then takes over the left button.
         if drawing_mode != DrawingMode.RECTANGLE and self.active_decoration_type is not None:
-            self.active_decoration_type = None
-            self.active_stamp_profile_id = None
-            self.stamp_ghost_physical = None
-            self.active_drawable_part = PART_WALL_BODY
-            self.decoration_start_physical = None
-            self.decoration_preview_physical = None
+            self.clear_active_decoration_tool()
+
+        # A wall tool cannot act on a decoration, so a stale highlight would lie.
+        if drawing_mode != DrawingMode.RECTANGLE and drawing_mode != DrawingMode.SELECT:
+            self.clear_decoration_selection()
 
         self.drawing_tool.set_mode(drawing_mode)
         self.pending_start_point = None
@@ -282,12 +313,14 @@ class MapViewport(QWidget):
                 event.accept()
                 return
 
-            if self.active_decoration_type is not None and self._try_start_decoration_drag(event.position()):
+            if self.is_placing_decoration():
+                self._handle_decoration_left_click(event.position())
                 self.update()
                 event.accept()
                 return
 
-            if self._handle_decoration_left_click(event.position()):
+            if self.is_editing_decoration():
+                self._handle_decoration_edit_click(event.position())
                 self.update()
                 event.accept()
                 return
@@ -300,6 +333,11 @@ class MapViewport(QWidget):
 
         if event.button() == Qt.RightButton:
             if self._cancel_pending_decoration():
+                self.update()
+                event.accept()
+                return
+
+            if self._end_decoration_placing():
                 self.update()
                 event.accept()
                 return
@@ -380,8 +418,10 @@ class MapViewport(QWidget):
         """
         self.last_cursor_grid_point = None
         self.eraser_tool.clear_hover()
+        self.stamp_ghost_physical = None
         if self.decoration_drag_mode is None:
             self.setCursor(QCursor(Qt.CrossCursor))
+        self.update()
         super().leaveEvent(event)
 
     def wheelEvent(self, event) -> None:
@@ -716,6 +756,8 @@ class MapViewport(QWidget):
         """
         Draw the pending stamp frame following the cursor.
         """
+        if not self.is_placing_decoration():
+            return
         if self.active_stamp_profile_id is None:
             return
         if self.stamp_ghost_physical is None:
@@ -775,7 +817,19 @@ class MapViewport(QWidget):
             grid_rows=self.grid_rows,
         )
         painter.drawText(24, 54, size_text)
-        painter.drawText(24, 76, tr(TextKey.CANVAS_HELP))
+        painter.drawText(24, 76, self._get_canvas_help_text())
+
+    def _get_canvas_help_text(self) -> str:
+        """
+        Return the help line for whichever tool currently owns the left button.
+        """
+        if self.is_placing_decoration():
+            return tr(TextKey.CANVAS_HELP_PLACING)
+
+        if self.is_editing_decoration():
+            return tr(TextKey.CANVAS_HELP_SELECTING)
+
+        return tr(TextKey.CANVAS_HELP)
 
     def _handle_left_click(self, grid_point) -> None:
         """
@@ -872,11 +926,32 @@ class MapViewport(QWidget):
             center_y=physical_point.y(),
         )
 
+        # Placing stays armed for repeat drops, so the fresh stamp is not
+        # highlighted: the orange frame only ever means "the select tool acts
+        # on this one", and it must not share the screen with the ghost frame.
         self.decorations.append(stamp)
-        self.selected_decoration_index = len(self.decorations) - 1
         self.decoration_created.emit(len(self.decorations))
-        self.decoration_selected.emit(stamp)
         self.stamp_placed.emit(stamp.profile_id, self._is_stamp_out_of_bounds(stamp))
+        return True
+
+    def _handle_decoration_edit_click(self, screen_point: QPointF) -> None:
+        """
+        Pick a decoration under the cursor, or drop the selection on a miss.
+        """
+        if self._try_start_decoration_drag(screen_point):
+            return
+
+        self.clear_decoration_selection()
+
+    def _end_decoration_placing(self) -> bool:
+        """
+        Leave placing mode and hand the left button to the select tool.
+        """
+        if not self.is_placing_decoration():
+            return False
+
+        self.set_drawing_mode(DrawingMode.SELECT)
+        self.decoration_placing_ended.emit()
         return True
 
     def _try_start_decoration_drag(self, screen_point: QPointF) -> bool:
@@ -885,7 +960,6 @@ class MapViewport(QWidget):
         """
         hit = self._hit_test_decoration(screen_point)
         if hit is None:
-            self.selected_decoration_index = None
             return False
 
         self.selected_decoration_index = hit[0]
@@ -968,7 +1042,7 @@ class MapViewport(QWidget):
         """
         Show resize/move cursors when hovering a decoration.
         """
-        if self.active_decoration_type is None:
+        if not self.is_editing_decoration():
             self.setCursor(QCursor(Qt.CrossCursor))
             return
 
@@ -1125,6 +1199,20 @@ class MapViewport(QWidget):
         decoration.item_spacing_scale = item_spacing_scale
         decoration.row_spacing_scale = row_spacing_scale
         self.decoration_changed.emit(decoration)
+        self.update()
+
+    def clear_decoration_selection(self) -> None:
+        """
+        Drop the decoration highlight without touching the decoration itself.
+
+        Every caller goes through here so the Inspector never keeps showing
+        properties for a decoration that is no longer highlighted.
+        """
+        if self.selected_decoration_index is None:
+            return
+
+        self.selected_decoration_index = None
+        self.decoration_deselected.emit()
         self.update()
 
     def delete_selected_decoration(self) -> bool:

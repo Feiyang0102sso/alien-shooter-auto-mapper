@@ -37,7 +37,7 @@ from app.project.io import load_project_json, save_project_json
 from app.ui.canvas.viewport import MapViewport
 from app.ui.panels.decoration_shelf import DecorationShelfPanel
 from app.ui.panels.inspector import InspectorPanel
-from app.ui.panels.left_shelf import LeftShelfPanel
+from app.ui.panels.left_shelf import SHELF_MODE_DECORATIONS, LeftShelfPanel
 from app.ui.tools.drawing_modes import DRAWING_MODE_LABELS, DrawingMode
 from app.ui.tools.drawing_toolbar import DrawingToolbar
 from app.binding.dll_registry import register_all_from_dll
@@ -79,6 +79,7 @@ class MainWindow(QMainWindow):
         self._build_toolbar()
         self._build_docks()
         self._connect_signals()
+        self._on_shelf_mode_changed(self.shelf_panel.get_shelf_mode())
         project_version = self.shelf_panel.get_project_version()
         self._sync_ceiling_option(project_version, False)
         self._sync_global_door_option(project_version, False)
@@ -214,6 +215,7 @@ class MainWindow(QMainWindow):
         Connect first-pass panel interactions.
         """
         self.shelf_panel.project_version_changed.connect(self._on_project_version_changed)
+        self.shelf_panel.shelf_mode_changed.connect(self._on_shelf_mode_changed)
         self.shelf_panel.wall_set_selected.connect(self._on_wall_set_selected)
         self.shelf_panel.stamp_selected.connect(self._on_stamp_tool_selected)
         self.decoration_shelf.decoration_selected.connect(self._on_decoration_tool_selected)
@@ -227,7 +229,9 @@ class MainWindow(QMainWindow):
         self.viewport.decoration_created.connect(self._on_decoration_created)
         self.viewport.stamp_placed.connect(self._on_stamp_placed)
         self.viewport.decoration_selected.connect(self._on_decoration_selected)
+        self.viewport.decoration_deselected.connect(self._on_decoration_deselected)
         self.viewport.decoration_changed.connect(self._on_decoration_changed)
+        self.viewport.decoration_placing_ended.connect(self._on_decoration_placing_ended)
         self.viewport.drawing_cancelled.connect(self._on_drawing_cancelled)
         self.inspector.map_size_applied.connect(self._on_map_size_applied)
         self.inspector.drawable_part_changed.connect(self._on_drawable_part_changed)
@@ -236,6 +240,44 @@ class MainWindow(QMainWindow):
         self.inspector.eraser_size_changed.connect(self._on_eraser_size_changed)
         self.inspector.decoration_spacing_changed.connect(self._on_decoration_spacing_changed)
         self.inspector.decoration_delete_requested.connect(self._on_decoration_delete_requested)
+
+    def _on_shelf_mode_changed(self, shelf_mode: int) -> None:
+        """
+        Show only the tools that can act on the shelf now on screen.
+
+        Select edits placed decorations and the eraser only rubs out walls and
+        doors, so each one is hidden where it would do nothing.
+        """
+        is_decoration_shelf = shelf_mode == SHELF_MODE_DECORATIONS
+        self.drawing_toolbar.set_mode_visible(DrawingMode.SELECT, is_decoration_shelf)
+        self.drawing_toolbar.set_mode_visible(DrawingMode.ERASER, not is_decoration_shelf)
+        self._leave_hidden_drawing_mode(is_decoration_shelf)
+        logger.info(f"Shelf mode changed: {shelf_mode}")
+
+    def _leave_hidden_drawing_mode(self, is_decoration_shelf: bool) -> None:
+        """
+        Move off a tool that the current shelf just hid.
+        """
+        if not is_decoration_shelf and self.viewport.is_placing_decoration():
+            self._apply_drawing_mode(DrawingMode.POLYLINE)
+            return
+
+        checked_mode = self.drawing_toolbar.get_checked_mode()
+
+        if is_decoration_shelf and checked_mode == DrawingMode.ERASER:
+            self._apply_drawing_mode(DrawingMode.SELECT)
+            return
+
+        if not is_decoration_shelf and checked_mode == DrawingMode.SELECT:
+            self._apply_drawing_mode(DrawingMode.POLYLINE)
+
+    def _apply_drawing_mode(self, drawing_mode: DrawingMode) -> None:
+        """
+        Switch tool from code, keeping toolbar, canvas and Inspector in step.
+        """
+        self.drawing_toolbar.set_mode(drawing_mode)
+        self.viewport.set_drawing_mode(drawing_mode)
+        self.inspector.set_tool_properties_for_mode(drawing_mode)
 
     def _on_wall_set_selected(self, wall_type: int, wall_name: str) -> None:
         """
@@ -332,7 +374,10 @@ class MainWindow(QMainWindow):
         Arm click-to-place for one authored room stamp.
         """
         self.viewport.set_active_decoration_stamp(profile_id)
+        # Placing owns the left button, so no drawing tool stays checked.
+        self.drawing_toolbar.clear_mode()
         self.inspector.set_decoration_stamp_tool(profile_id, stamp_name)
+        self.inspector.clear_decoration_selection()
         self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_TOOL_SELECTED, decoration_name=stamp_name))
         logger.info(f"Stamp tool selected: {profile_id}")
 
@@ -341,6 +386,8 @@ class MainWindow(QMainWindow):
         Apply a right-panel stamp series member selection.
         """
         self.viewport.set_active_decoration_stamp(profile_id)
+        self.drawing_toolbar.clear_mode()
+        self.inspector.clear_decoration_selection()
         self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_TOOL_SELECTED, decoration_name=variant_name))
         logger.info(f"Stamp variant selected: {profile_id}")
 
@@ -375,6 +422,22 @@ class MainWindow(QMainWindow):
         """
         self.inspector.set_decoration_selection(decoration)
         self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_SELECTED))
+
+    def _on_decoration_deselected(self) -> None:
+        """
+        Hide decoration properties after clicking empty canvas.
+        """
+        self.inspector.clear_decoration_selection()
+        self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_DESELECTED))
+
+    def _on_decoration_placing_ended(self) -> None:
+        """
+        Sync the toolbar after the canvas leaves placing mode on right click.
+        """
+        self.drawing_toolbar.set_mode(DrawingMode.SELECT)
+        self.inspector.set_tool_properties_for_mode(DrawingMode.SELECT)
+        self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_PLACING_ENDED))
+        logger.info("Decoration placing ended, select tool active")
 
     def _on_decoration_changed(self, decoration) -> None:
         """

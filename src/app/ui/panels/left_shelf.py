@@ -39,6 +39,7 @@ class LeftShelfPanel(QWidget):
     wall_set_selected = Signal(int, str)
     stamp_selected = Signal(str, str)
     project_version_changed = Signal(str)
+    shelf_mode_changed = Signal(int)
 
     def __init__(self) -> None:
         super().__init__()
@@ -173,7 +174,21 @@ class LeftShelfPanel(QWidget):
         if shelf_mode is None:
             return
 
-        self.shelf_stack.setCurrentIndex(int(shelf_mode))
+        self.set_shelf_mode(int(shelf_mode))
+
+    def get_shelf_mode(self) -> int:
+        """Return the shelf currently on screen."""
+        return self.shelf_stack.currentIndex()
+
+    def set_shelf_mode(self, shelf_mode: int) -> None:
+        """
+        Show one shelf and tell listeners, so the toolbar can follow.
+        """
+        if self.shelf_stack.currentIndex() == shelf_mode:
+            return
+
+        self.shelf_stack.setCurrentIndex(shelf_mode)
+        self.shelf_mode_changed.emit(shelf_mode)
 
     def _sync_version_buttons(self) -> None:
         """
@@ -199,4 +214,4 @@ class LeftShelfPanel(QWidget):
 
         self.decoration_mode_button.setToolTip(tr(TextKey.TOOLTIP_DECORATION_SETS_AS2_ONLY))
         self.wall_mode_button.setChecked(True)
-        self.shelf_stack.setCurrentIndex(SHELF_MODE_WALLS)
+        self.set_shelf_mode(SHELF_MODE_WALLS)

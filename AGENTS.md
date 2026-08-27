@@ -150,6 +150,30 @@ UI 画布规则：
 - 装饰物区域主要跟 Physical 坐标绑定。
 - active wall profile 会影响网格边界、颜色、预览和可绘制部件。
 
+装饰物交互只有三种互斥状态，判定入口是 `MapViewport.is_placing_decoration()` 和
+`MapViewport.is_editing_decoration()`，改交互前先读这两个方法：
+
+- 放置：装饰物工具已装载（`active_decoration_type` 非空）。绿色虚线 ghost 跟随光标，
+  左键一律放新的，不做 hit test，因此允许重叠放置。放置后不选中刚放的装饰物。
+- 编辑：绘制模式是 `DrawingMode.SELECT` 且没有装载装饰物工具。不画 ghost，
+  左键选中并拖动已有装饰物，点空白取消选中。
+- 关闭：墙体与橡皮工具。装饰物只是背景，点击一律交给墙体逻辑。
+
+放置模式下右键退出到编辑模式。橙色高亮只表示"选择工具正在操作它"，
+不允许和 ghost 同屏——这是当初把两种状态揉在一个变量里踩过的坑。
+
+注意 `clear_active_decoration_tool()` 会把 `active_drawable_part` 还原成 `PART_WALL_BODY`。
+装载装饰物工具时该字段被置空，不还原的话之后墙体工具画不出任何东西。
+
+工具栏按钮跟着左侧货架模式走，入口是 `MainWindow._on_shelf_mode_changed()`：
+
+- Wall Sets 货架：显示橡皮，隐藏 Select。
+- Decoration Sets 货架：显示 Select，隐藏橡皮。
+- 每个可隐藏的工具在 `DrawingToolbar._separators` 里绑定了自己的分隔线，一起显隐。
+
+隐藏当前选中的工具会留下一个死状态，所以 `_leave_hidden_drawing_mode()` 必须同时换到
+一个还看得见的工具：橡皮换 Select，Select 换 Polyline，切回墙体货架时顺带卸下装饰物工具。
+
 ## 测试与 Golden 文件
 
 C++ 测试在 `tests/test_*.cpp`。

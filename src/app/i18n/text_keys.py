@@ -93,6 +93,8 @@ class TextKey:
     CANVAS_TITLE = "canvas.title"
     CANVAS_INFO = "canvas.info"
     CANVAS_HELP = "canvas.help"
+    CANVAS_HELP_PLACING = "canvas.help_placing"
+    CANVAS_HELP_SELECTING = "canvas.help_selecting"
 
     WALL_STANDARD_SHORT_LABEL = "wall.standard.short_label"
     WALL_STANDARD_DESCRIPTION = "wall.standard.description"
@@ -127,6 +129,8 @@ class TextKey:
     DRAWING_ERASER = "drawing.eraser"
     DRAWING_STRAIGHT_LINE = "drawing.straight_line"
     DRAWING_RECTANGLE = "drawing.rectangle"
+    DRAWING_SELECT = "drawing.select"
+    DRAWING_SELECT_TOOL = "drawing.select_tool"
 
     DIALOG_DLL_ERROR = "dialog.dll_error"
     DIALOG_DOOR_OPTION = "dialog.door_option"
@@ -164,6 +168,8 @@ class TextKey:
     STATUS_DECORATION_CREATED = "status.decoration_created"
     STATUS_DECORATION_DELETED = "status.decoration_deleted"
     STATUS_DECORATION_SELECTED = "status.decoration_selected"
+    STATUS_DECORATION_DESELECTED = "status.decoration_deselected"
+    STATUS_DECORATION_PLACING_ENDED = "status.decoration_placing_ended"
     STATUS_DECORATION_SPACING = "status.decoration_spacing"
     STATUS_WALL_DRAWING_CANCELLED = "status.wall_drawing_cancelled"
     STATUS_MAP_SIZE_APPLIED = "status.map_size_applied"
