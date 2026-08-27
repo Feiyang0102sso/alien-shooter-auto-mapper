@@ -27,7 +27,6 @@ from app.i18n.locale import LOCALE_EN_US, LOCALE_ZH_CN, get_locale, save_locale_
 from app.i18n.text_keys import TextKey
 from app.logger import logger
 from app.project.data import (
-    DECORATION_TYPE_ROOM_STAMP,
     get_default_map_size,
     ProjectData,
     resolve_as1_ceiling_layer_counts,
@@ -233,6 +232,7 @@ class MainWindow(QMainWindow):
         self.inspector.map_size_applied.connect(self._on_map_size_applied)
         self.inspector.drawable_part_changed.connect(self._on_drawable_part_changed)
         self.inspector.wall_set_variant_changed.connect(self._on_wall_set_variant_changed)
+        self.inspector.stamp_variant_changed.connect(self._on_stamp_variant_changed)
         self.inspector.eraser_size_changed.connect(self._on_eraser_size_changed)
         self.inspector.decoration_spacing_changed.connect(self._on_decoration_spacing_changed)
         self.inspector.decoration_delete_requested.connect(self._on_decoration_delete_requested)
@@ -332,9 +332,17 @@ class MainWindow(QMainWindow):
         Arm click-to-place for one authored room stamp.
         """
         self.viewport.set_active_decoration_stamp(profile_id)
-        self.inspector.set_decoration_tool(DECORATION_TYPE_ROOM_STAMP, stamp_name)
+        self.inspector.set_decoration_stamp_tool(profile_id, stamp_name)
         self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_TOOL_SELECTED, decoration_name=stamp_name))
         logger.info(f"Stamp tool selected: {profile_id}")
+
+    def _on_stamp_variant_changed(self, profile_id: str, variant_name: str) -> None:
+        """
+        Apply a right-panel stamp series member selection.
+        """
+        self.viewport.set_active_decoration_stamp(profile_id)
+        self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_TOOL_SELECTED, decoration_name=variant_name))
+        logger.info(f"Stamp variant selected: {profile_id}")
 
     def _on_stamp_placed(self, profile_id: str, out_of_bounds: bool) -> None:
         """

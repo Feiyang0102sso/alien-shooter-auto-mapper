@@ -82,12 +82,23 @@ inline constexpr VidArmy AS2_VID_1732_ARMY = 0;
 
 // Decoration assets
 inline constexpr VidArmy AS2_VID_409_ARMY = 0;
+inline constexpr VidArmy AS2_VID_411_ARMY = 2;
 inline constexpr VidArmy AS2_VID_412_ARMY = 0;
 inline constexpr VidArmy AS2_VID_413_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1232_ARMY = 0;
 inline constexpr VidArmy AS2_VID_1270_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1273_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1274_ARMY = 2;
 inline constexpr VidArmy AS2_VID_1288_ARMY = 0;
 inline constexpr VidArmy AS2_VID_1289_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1304_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1550_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1748_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1760_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1763_ARMY = 0;
 inline constexpr VidArmy AS2_VID_1764_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1765_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1767_ARMY = 0;
 inline constexpr VidArmy AS2_VID_2300_ARMY = 2;
 inline constexpr VidArmy AS2_VID_2304_ARMY = 0;
 inline constexpr VidArmy AS2_VID_2357_ARMY = 0;
@@ -173,12 +184,23 @@ inline VidArmy get_as2_vid_army(int vid) {
 
         // Decoration assets
         case 409: return AS2_VID_409_ARMY;
+        case 411: return AS2_VID_411_ARMY;
         case 412: return AS2_VID_412_ARMY;
         case 413: return AS2_VID_413_ARMY;
+        case 1232: return AS2_VID_1232_ARMY;
         case 1270: return AS2_VID_1270_ARMY;
+        case 1273: return AS2_VID_1273_ARMY;
+        case 1274: return AS2_VID_1274_ARMY;
         case 1288: return AS2_VID_1288_ARMY;
         case 1289: return AS2_VID_1289_ARMY;
+        case 1304: return AS2_VID_1304_ARMY;
+        case 1550: return AS2_VID_1550_ARMY;
+        case 1748: return AS2_VID_1748_ARMY;
+        case 1760: return AS2_VID_1760_ARMY;
+        case 1763: return AS2_VID_1763_ARMY;
         case 1764: return AS2_VID_1764_ARMY;
+        case 1765: return AS2_VID_1765_ARMY;
+        case 1767: return AS2_VID_1767_ARMY;
         case 2300: return AS2_VID_2300_ARMY;
         case 2304: return AS2_VID_2304_ARMY;
         case 2357: return AS2_VID_2357_ARMY;

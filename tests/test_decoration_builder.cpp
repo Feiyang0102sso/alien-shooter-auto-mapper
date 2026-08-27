@@ -13,6 +13,32 @@ using namespace auto_mapper;
 using namespace auto_mapper::core::decoration_builder;
 using namespace auto_mapper::test;
 
+TEST(DecorationBuilderTest, RegistersAllDormProfilesFromPreparedDecorationFiles) {
+    const DecorationProfile* profiles[] = {
+        &DORMS01_DECORATION_PROFILE,
+        &DORMS02_DECORATION_PROFILE,
+        &DORMS03_DECORATION_PROFILE,
+        &DORMS04_DECORATION_PROFILE,
+        &DORMS05_DECORATION_PROFILE,
+        &DORMS06_DECORATION_PROFILE,
+        &DORMS07_DECORATION_PROFILE,
+        &DORMS08_DECORATION_PROFILE,
+    };
+    const int expected_member_counts[] = {27, 28, 22, 30, 26, 12, 11, 11};
+
+    EXPECT_EQ(AS2_DECORATION_PROFILE_COUNT, 8);
+    EXPECT_EQ(
+        profiles[0]->test_boundary_wall_profile,
+        &core::WALL_AS2_SET6_RANDOM
+    );
+
+    for (int index = 1; index < 8; ++index) {
+        EXPECT_EQ(AS2_DECORATION_PROFILES[index], profiles[index]);
+        EXPECT_EQ(profiles[index]->members.size(), expected_member_counts[index]);
+        EXPECT_EQ(profiles[index]->test_boundary_wall_profile, &core::WALL_AS2_SET1_RANDOM);
+    }
+}
+
 TEST(DecorationBuilderTest, Dorms01ProfileKeepsImportedFrameAndMembers) {
     EXPECT_EQ(DORMS01_DECORATION_PROFILE.id, "dorms01");
     ASSERT_EQ(DORMS01_DECORATION_PROFILE.members.size(), 27u);

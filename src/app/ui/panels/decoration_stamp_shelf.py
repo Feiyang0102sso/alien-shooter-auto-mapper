@@ -1,5 +1,5 @@
 """
-Decoration stamp shelf panel for choosing an authored room stamp.
+Decoration stamp shelf panel for choosing an authored room stamp series.
 """
 
 from PySide6.QtCore import Qt, Signal
@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.editor.decoration_stamps import get_decoration_stamp_items
+from app.editor.decoration_stamps import get_decoration_stamp_series_items
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 
@@ -24,7 +24,10 @@ STAMP_PREVIEW_HEIGHT = 118
 
 class DecorationStampShelfPanel(QWidget):
     """
-    Large-card selector for authored decoration stamps.
+    Large-card selector for authored decoration stamp series.
+
+    One card stands for a whole series; the member stamps are picked from the
+    inspector dropdown, the same way AS2 Wall Set 1 exposes its wall variants.
     """
 
     stamp_selected = Signal(str, str)
@@ -51,20 +54,20 @@ class DecorationStampShelfPanel(QWidget):
         scroll_area.setWidget(self.content)
         layout.addWidget(scroll_area)
 
-        self._populate_stamp_cards()
+        self._populate_series_cards()
 
-    def _populate_stamp_cards(self) -> None:
+    def _populate_series_cards(self) -> None:
         """
-        Fill the shelf with one card per authored stamp.
+        Fill the shelf with one card per authored stamp series.
         """
-        for stamp in get_decoration_stamp_items():
-            self._add_card(stamp)
+        for series in get_decoration_stamp_series_items():
+            self._add_card(series)
 
         self.content_layout.addStretch(1)
 
-    def _add_card(self, stamp: dict) -> None:
+    def _add_card(self, series: dict) -> None:
         """
-        Add one decoration stamp selector card.
+        Add one decoration stamp series selector card.
         """
         card = QFrame()
         card.setObjectName("themeCard")
@@ -79,27 +82,31 @@ class DecorationStampShelfPanel(QWidget):
         preview.setFixedHeight(STAMP_PREVIEW_HEIGHT)
         card_layout.addWidget(preview)
 
-        title = QLabel(stamp["label"])
+        title = QLabel(series["label"])
         title.setObjectName("cardTitle")
         title.setWordWrap(True)
         card_layout.addWidget(title)
 
-        detail = QLabel(stamp["description"])
+        detail = QLabel(series["description"])
         detail.setObjectName("cardDetail")
         detail.setWordWrap(True)
         card_layout.addWidget(detail)
 
-        member_text = tr(TextKey.LABEL_STAMP_MEMBER_COUNT, member_count=stamp["member_count"])
-        member_label = QLabel(member_text)
-        member_label.setObjectName("cardDetail")
-        member_label.setWordWrap(True)
-        card_layout.addWidget(member_label)
+        variant_text = tr(
+            TextKey.LABEL_STAMP_VARIANT_COUNT,
+            variant_count=series["variant_count"],
+        )
+        variant_label = QLabel(variant_text)
+        variant_label.setObjectName("cardDetail")
+        variant_label.setWordWrap(True)
+        card_layout.addWidget(variant_label)
 
-        profile_id = stamp["profile_id"]
-        stamp_label = stamp["label"]
+        # Selecting the card arms the first stamp of the series.
+        default_profile_id = series["default_profile_id"]
+        series_label = series["label"]
         button = QPushButton(tr(TextKey.BUTTON_SELECT))
         button.clicked.connect(
-            lambda checked=False: self.stamp_selected.emit(profile_id, stamp_label)
+            lambda checked=False: self.stamp_selected.emit(default_profile_id, series_label)
         )
         card_layout.addWidget(button)
 

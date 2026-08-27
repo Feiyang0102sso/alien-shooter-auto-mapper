@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "stamp_id": "dorms06",
+  "source_file": "dorms06.map",
+  "source_format": "AS2R/AS2C/ZS2",
+  "wall_profile": "AS2 Wall Set 1",
+  "frame": {
+    "source_center_x": 352.611083984375,
+    "source_center_y": 541.47216796875,
+    "source_corners": [
+      {
+        "x": 262.611083984375,
+        "y": 285.47216796875
+      },
+      {
+        "x": -7.388916015625,
+        "y": 477.47216796875
+      },
+      {
+        "x": 442.611083984375,
+        "y": 797.47216796875
+      },
+      {
+        "x": 712.611083984375,
+        "y": 605.47216796875
+      }
+    ],
+    "corner_offsets": [
+      {
+        "x": -90.0,
+        "y": -256.0
+      },
+      {
+        "x": -360.0,
+        "y": -64.0
+      },
+      {
+        "x": 90.0,
+        "y": 256.0
+      },
+      {
+        "x": 360.0,
+        "y": 64.0
+      }
+    ],
+    "side_lengths": [
+      331.30650461468457,
+      552.1775076911409,
+      331.30650461468457,
+      552.1775076911409
+    ],
+    "axis_aligned_bounds": {
+      "minimum_x": -7.388916015625,
+      "minimum_y": 285.47216796875,
+      "maximum_x": 712.611083984375,
+      "maximum_y": 797.47216796875
+    }
+  },
+  "wall_fit": {
+    "line_tolerance": 8.0,
+    "selected_edges": {
+      "dir_a": [
+        {
+          "wall_count": 3,
+          "total_length": 331.3065046146845
+        },
+        {
+          "wall_count": 3,
+          "total_length": 331.3065046146845
+        }
+      ],
+      "dir_b": [
+        {
+          "wall_count": 4,
+          "total_length": 441.7420061529127
+        },
+        {
+          "wall_count": 5,
+          "total_length": 552.1775076911409
+        }
+      ]
+    }
+  },
+  "preview": {
+    "default_placeholder_width": 40.0,
+    "default_placeholder_height": 28.0
+  },
+  "member_count": 12,
+  "members": [
+    {
+      "vid": 1763,
+      "source_x": 592.611083984375,
+      "source_y": 637.47216796875,
+      "offset_x": 240.0,
+      "offset_y": 96.0,
+      "pos_z": 40.0,
+      "direction": 160,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1763,
+      "source_x": 613.611083984375,
+      "source_y": 595.47216796875,
+      "offset_x": 261.0,
+      "offset_y": 54.0,
+      "pos_z": 0.0,
+      "direction": 19,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1764,
+      "source_x": 553.611083984375,
+      "source_y": 656.47216796875,
+      "offset_x": 201.0,
+      "offset_y": 115.0,
+      "pos_z": 0.0,
+      "direction": 115,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1763,
+      "source_x": 283.611083984375,
+      "source_y": 401.47216796875,
+      "offset_x": -69.0,
+      "offset_y": -140.0,
+      "pos_z": 0.0,
+      "direction": 76,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1763,
+      "source_x": 389.611083984375,
+      "source_y": 431.47216796875,
+      "offset_x": 37.0,
+      "offset_y": -110.0,
+      "pos_z": 60.0,
+      "direction": 32,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 2300,
+      "source_x": 255.611083984375,
+      "source_y": 482.47216796875,
+      "offset_x": -97.0,
+      "offset_y": -59.0,
+      "pos_z": 0.0,
+      "direction": 115,
+      "army": 2,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1304,
+      "source_x": 599.611083984375,
+      "source_y": 770.47216796875,
+      "offset_x": 247.0,
+      "offset_y": 229.0,
+      "pos_z": 104.0,
+      "direction": 137,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1765,
+      "source_x": 517.611083984375,
+      "source_y": 678.47216796875,
+      "offset_x": 165.0,
+      "offset_y": 137.0,
+      "pos_z": 40.0,
+      "direction": 64,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1765,
+      "source_x": 513.611083984375,
+      "source_y": 681.47216796875,
+      "offset_x": 161.0,
+      "offset_y": 140.0,
+      "pos_z": 40.0,
+      "direction": 51,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1765,
+      "source_x": 512.611083984375,
+      "source_y": 677.47216796875,
+      "offset_x": 160.0,
+      "offset_y": 136.0,
+      "pos_z": 40.0,
+      "direction": 32,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1765,
+      "source_x": 551.611083984375,
+      "source_y": 651.47216796875,
+      "offset_x": 199.0,
+      "offset_y": 110.0,
+      "pos_z": 40.0,
+      "direction": 38,
+      "army": 0,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    },
+    {
+      "vid": 1289,
+      "source_x": 517.611083984375,
+      "source_y": 635.47216796875,
+      "offset_x": 165.0,
+      "offset_y": 94.0,
+      "pos_z": 0.0,
+      "direction": 56,
+      "army": 2,
+      "gamma": {
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "alpha": 0
+      },
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "scale_z": 1.0
+    }
+  ],
+  "test_boundary": {
+    "dir_a_vid": 1781,
+    "dir_b_vid": 1780,
+    "step_x": 90.0,
+    "step_y": 64.0
+  }
+}
