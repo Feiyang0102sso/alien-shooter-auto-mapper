@@ -27,7 +27,7 @@ from app.project.data import (
     DECORATION_TYPE_ROOM_STAMP,
 )
 from app.ui.panels.as1_ceiling import AS1CeilingPropertiesWidget
-from app.ui.previews.decoration_assets import get_decoration_stamp_preview_path
+from app.ui.previews.decoration_assets import get_decoration_stamp_thumbnail_path
 from app.ui.previews.wall_assets import get_wall_component_preview_path
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.eraser import EraserPropertiesWidget
@@ -40,6 +40,9 @@ COMPONENT_PREVIEW_WIDTH = 260
 COMPONENT_PREVIEW_HEIGHT = 190
 # Wall nvid text and stamp detail text share one green monospace look.
 COMPONENT_DETAIL_STYLE = "font-family: monospace; font-size: 12px; color: #69f0ae; padding-top: 4px;"
+STAMP_PREVIEW_NOTICE_STYLE = "font-size: 11px; color: #ffb74d; padding-top: 2px;"
+
+
 class InspectorPanel(QWidget):
     """
     First-pass right panel for component selection and VID display.
@@ -139,6 +142,12 @@ class InspectorPanel(QWidget):
         self.preview.setAlignment(Qt.AlignCenter)
         component_layout.addWidget(self.preview)
 
+        self.stamp_preview_notice = QLabel(tr(TextKey.LABEL_STAMP_PREVIEW_NOTICE))
+        self.stamp_preview_notice.setObjectName("stampPreviewNotice")
+        self.stamp_preview_notice.setStyleSheet(STAMP_PREVIEW_NOTICE_STYLE)
+        self.stamp_preview_notice.setWordWrap(True)
+        component_layout.addWidget(self.stamp_preview_notice)
+
         self.nvid_label = QLabel()
         self.nvid_label.setObjectName("nvidLabel")
         self.nvid_label.setStyleSheet(COMPONENT_DETAIL_STYLE)
@@ -209,6 +218,7 @@ class InspectorPanel(QWidget):
         self.nvid_label.setVisible(True)
         self.preview.setVisible(True)
         self.stamp_detail_label.setVisible(False)
+        self.stamp_preview_notice.setVisible(False)
 
         self._reload_drawable_part_choices(wall_type)
 
@@ -221,6 +231,7 @@ class InspectorPanel(QWidget):
         self.nvid_label.setVisible(False)
         self.preview.setVisible(True)
         self.stamp_detail_label.setVisible(False)
+        self.stamp_preview_notice.setVisible(False)
         self._update_decoration_preview(decoration_type)
 
     def set_decoration_stamp_tool(self, profile_id: str, series_name: str) -> None:
@@ -231,7 +242,7 @@ class InspectorPanel(QWidget):
         self.theme_label.setText(series_name)
         self.component_combo.setVisible(True)
         self.nvid_label.setVisible(False)
-        # Stamp previews are looked up per profile id and fall back to a placeholder.
+        # Stamp thumbnails are optional and looked up per profile id.
         self.preview.setVisible(True)
         self.stamp_detail_label.setVisible(True)
 
@@ -459,7 +470,9 @@ class InspectorPanel(QWidget):
             return
 
         variant = self._stamp_variants[index]
-        self._set_preview_image(get_decoration_stamp_preview_path(variant["profile_id"]))
+        preview_path = get_decoration_stamp_thumbnail_path(variant["profile_id"])
+        self._set_preview_image(preview_path)
+        self.stamp_preview_notice.setVisible(preview_path.is_file())
         member_text = tr(
             TextKey.LABEL_STAMP_MEMBER_COUNT,
             member_count=variant["member_count"],

@@ -3,6 +3,7 @@ Decoration stamp shelf panel for choosing an authored room stamp series.
 """
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
@@ -16,10 +17,11 @@ from PySide6.QtWidgets import (
 from app.editor.decoration_stamps import get_decoration_stamp_series_items
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
+from app.ui.previews.decoration_assets import get_decoration_stamp_series_thumbnail_path
 
 
-# Previews are not authored yet, so cards reserve the space and stay empty.
 STAMP_PREVIEW_HEIGHT = 118
+STAMP_PREVIEW_WIDTH = 260
 
 
 class DecorationStampShelfPanel(QWidget):
@@ -75,11 +77,21 @@ class DecorationStampShelfPanel(QWidget):
         card_layout.setContentsMargins(10, 10, 10, 10)
         card_layout.setSpacing(8)
 
-        # Preview art is not authored yet; the placeholder keeps card heights even.
         preview = QLabel()
         preview.setObjectName("themePreview")
         preview.setAlignment(Qt.AlignCenter)
         preview.setFixedHeight(STAMP_PREVIEW_HEIGHT)
+        thumbnail_path = get_decoration_stamp_series_thumbnail_path(series["series_id"])
+        if thumbnail_path.is_file():
+            thumbnail = QPixmap(str(thumbnail_path))
+            preview.setPixmap(
+                thumbnail.scaled(
+                    STAMP_PREVIEW_WIDTH,
+                    STAMP_PREVIEW_HEIGHT,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
+                )
+            )
         card_layout.addWidget(preview)
 
         title = QLabel(series["label"])

@@ -3,8 +3,8 @@ Interactive isometric viewport.
 """
 import math
 
-from PySide6.QtCore import QPointF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPainterPath, QPen, QPolygonF
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPainterPath, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import QWidget
 
 from app.binding import dll_registry
@@ -58,6 +58,7 @@ from app.ui.colors import (
     INCUBATOR_PREVIEW_FILL,
     INCUBATOR_PREVIEW_FILL_ALPHA,
 )
+from app.ui.previews.decoration_assets import get_decoration_stamp_canvas_path
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.drawing_tool import DrawingToolController
 from app.ui.tools.eraser import EraserToolController
@@ -72,6 +73,8 @@ DOOR_STATE_OPEN = 1
 LIGHT_STATE_GREEN = 0
 LIGHT_STATE_RED = 1
 LIGHT_STATE_BROKEN = 2
+STAMP_PREVIEW_OPACITY = 1.0
+STAMP_GHOST_PREVIEW_OPACITY = 0.55
 
 
 class MapViewport(QWidget):
@@ -129,6 +132,7 @@ class MapViewport(QWidget):
         self.decoration_drag_original = None
         self.active_stamp_profile_id = None
         self.stamp_ghost_physical = None
+        self.stamp_preview_pixmaps: dict[str, QPixmap | None] = {}
         self.last_cursor_grid_point = None
         self.is_panning = False
         self.pan_start_position = QPointF(0.0, 0.0)
@@ -670,6 +674,12 @@ class MapViewport(QWidget):
             out_of_bounds = False
             if decoration.decoration_type == DECORATION_TYPE_ROOM_STAMP:
                 out_of_bounds = self._is_stamp_out_of_bounds(decoration)
+                self._draw_stamp_preview_image(
+                    painter,
+                    decoration.profile_id,
+                    corners,
+                    STAMP_PREVIEW_OPACITY,
+                )
 
             self._draw_decoration_rect(
                 painter,
@@ -680,6 +690,46 @@ class MapViewport(QWidget):
             if decoration.decoration_type == DECORATION_TYPE_INCUBATOR_ARRAY:
                 self._draw_incubator_preview_points(painter, decoration)
             index += 1
+
+    def _draw_stamp_preview_image(
+        self,
+        painter: QPainter,
+        profile_id: str,
+        corners: list,
+        opacity: float,
+    ) -> None:
+        """Draw one optional stamp image inside its authored frame."""
+        pixmap = self._get_stamp_preview_pixmap(profile_id)
+        if pixmap is None:
+            return
+
+        screen_polygon = self._physical_polygon_to_screen(corners)
+        target_rect = screen_polygon.boundingRect()
+        clip_path = QPainterPath()
+        clip_path.addPolygon(screen_polygon)
+        clip_path.closeSubpath()
+
+        painter.save()
+        painter.setClipPath(clip_path)
+        painter.setOpacity(opacity)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        painter.drawPixmap(target_rect, pixmap, QRectF(pixmap.rect()))
+        painter.restore()
+
+    def _get_stamp_preview_pixmap(self, profile_id: str) -> QPixmap | None:
+        """Load one optional stamp canvas image once and cache misses too."""
+        if profile_id in self.stamp_preview_pixmaps:
+            return self.stamp_preview_pixmaps[profile_id]
+
+        preview_path = get_decoration_stamp_canvas_path(profile_id)
+        pixmap = None
+        if preview_path.is_file():
+            loaded_pixmap = QPixmap(str(preview_path))
+            if not loaded_pixmap.isNull():
+                pixmap = loaded_pixmap
+
+        self.stamp_preview_pixmaps[profile_id] = pixmap
+        return pixmap
 
     def _draw_decoration_rect(
         self,
@@ -767,6 +817,13 @@ class MapViewport(QWidget):
             self.active_stamp_profile_id,
             self.stamp_ghost_physical.x(),
             self.stamp_ghost_physical.y(),
+        )
+
+        self._draw_stamp_preview_image(
+            painter,
+            self.active_stamp_profile_id,
+            corners,
+            STAMP_GHOST_PREVIEW_OPACITY,
         )
 
         border_color = QColor(DECORATION_STAMP_GHOST_BORDER)

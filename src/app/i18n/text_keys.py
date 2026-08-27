@@ -38,6 +38,7 @@ class TextKey:
     TOOLTIP_DECORATION_SETS_AS2_ONLY = "tooltip.decoration_sets_as2_only"
     LABEL_STAMP_MEMBER_COUNT = "label.stamp_member_count"
     LABEL_STAMP_VARIANT_COUNT = "label.stamp_variant_count"
+    LABEL_STAMP_PREVIEW_NOTICE = "label.stamp_preview_notice"
     STATUS_STAMP_PLACED = "status.stamp_placed"
     STATUS_MAP_TOO_SMALL_FOR_STAMP = "status.map_too_small_for_stamp"
     PANEL_INSPECTOR = "panel.inspector"
