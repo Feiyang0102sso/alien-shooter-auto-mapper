@@ -203,17 +203,45 @@ QPushButton:hover {
     color: #07110d;
 }
 
-#gameFamilyButton,
-#shelfModeButton {
-    min-height: 34px;
+#gameFamilyButton {
+    min-height: 36px;
+    font-size: 14px;
     font-weight: 700;
 }
 
-#gameFamilyButton:checked,
-#shelfModeButton:checked {
+#gameFamilyButton:checked {
     background: #2aa879;
     border-color: #45c797;
     color: #07110d;
+}
+
+#shelfModeButton {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #2f4550;
+    border-radius: 0;
+    color: #9fb4ad;
+    font-size: 12px;
+    font-weight: 600;
+    min-height: 26px;
+    padding: 4px 6px;
+}
+
+#shelfModeButton:hover {
+    background: transparent;
+    border-bottom-color: #45c797;
+    color: #d9e8e2;
+}
+
+#shelfModeButton:checked {
+    background: transparent;
+    border-bottom-color: #45c797;
+    color: #69f0ae;
+}
+
+#shelfModeButton:disabled {
+    border-bottom-color: #263238;
+    color: #55666a;
 }
 
 QComboBox {

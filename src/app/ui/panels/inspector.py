@@ -1,6 +1,8 @@
 """
 Inspector panel for the selected theme and component placeholder data.
 """
+from pathlib import Path
+
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
@@ -25,6 +27,7 @@ from app.project.data import (
     DECORATION_TYPE_ROOM_STAMP,
 )
 from app.ui.panels.as1_ceiling import AS1CeilingPropertiesWidget
+from app.ui.previews.decoration_assets import get_decoration_stamp_preview_path
 from app.ui.previews.wall_assets import get_wall_component_preview_path
 from app.ui.tools.drawing_modes import DrawingMode
 from app.ui.tools.eraser import EraserPropertiesWidget
@@ -35,6 +38,8 @@ COMPONENT_MODE_WALL = "wall"
 COMPONENT_MODE_STAMP = "stamp"
 COMPONENT_PREVIEW_WIDTH = 260
 COMPONENT_PREVIEW_HEIGHT = 190
+# Wall nvid text and stamp detail text share one green monospace look.
+COMPONENT_DETAIL_STYLE = "font-family: monospace; font-size: 12px; color: #69f0ae; padding-top: 4px;"
 class InspectorPanel(QWidget):
     """
     First-pass right panel for component selection and VID display.
@@ -124,6 +129,7 @@ class InspectorPanel(QWidget):
 
         self.stamp_detail_label = QLabel()
         self.stamp_detail_label.setObjectName("cardDetail")
+        self.stamp_detail_label.setStyleSheet(COMPONENT_DETAIL_STYLE)
         self.stamp_detail_label.setWordWrap(True)
         component_layout.addWidget(self.stamp_detail_label)
 
@@ -135,7 +141,7 @@ class InspectorPanel(QWidget):
 
         self.nvid_label = QLabel()
         self.nvid_label.setObjectName("nvidLabel")
-        self.nvid_label.setStyleSheet("font-family: monospace; font-size: 12px; color: #69f0ae; padding-top: 4px;")
+        self.nvid_label.setStyleSheet(COMPONENT_DETAIL_STYLE)
         self.nvid_label.setWordWrap(True)
         component_layout.addWidget(self.nvid_label)
 
@@ -225,8 +231,8 @@ class InspectorPanel(QWidget):
         self.theme_label.setText(series_name)
         self.component_combo.setVisible(True)
         self.nvid_label.setVisible(False)
-        # Stamp previews are not authored yet, so the empty preview box is hidden.
-        self.preview.setVisible(False)
+        # Stamp previews are looked up per profile id and fall back to a placeholder.
+        self.preview.setVisible(True)
         self.stamp_detail_label.setVisible(True)
 
         self._reload_stamp_variant_choices(profile_id)
@@ -445,7 +451,7 @@ class InspectorPanel(QWidget):
 
     def _update_stamp_detail(self, index: int) -> None:
         """
-        Show the description and object count of the selected stamp.
+        Show the preview image and object count of the selected stamp.
         """
         if index < 0:
             return
@@ -453,12 +459,12 @@ class InspectorPanel(QWidget):
             return
 
         variant = self._stamp_variants[index]
+        self._set_preview_image(get_decoration_stamp_preview_path(variant["profile_id"]))
         member_text = tr(
             TextKey.LABEL_STAMP_MEMBER_COUNT,
             member_count=variant["member_count"],
         )
-        detail_lines = [variant["description"], member_text]
-        self.stamp_detail_label.setText("\n".join(detail_lines))
+        self.stamp_detail_label.setText(member_text)
 
     def _find_drawable_wall_type_index(self, wall_type: int) -> int:
         """
@@ -472,13 +478,11 @@ class InspectorPanel(QWidget):
 
         return 0
 
-    def _update_preview(self, wall_type: int, part_id: str) -> None:
+    def _set_preview_image(self, image_path: Path | None) -> None:
         """
-        Update component preview image and nvid labels based on wall type and part ID.
+        Show one preview image, or the placeholder text when the asset is missing.
         """
-        image_path = get_wall_component_preview_path(wall_type, part_id)
-
-        if image_path and image_path.exists():
+        if image_path is not None and image_path.exists():
             pixmap = QPixmap(str(image_path))
             self.preview.setPixmap(
                 pixmap.scaled(
@@ -488,9 +492,17 @@ class InspectorPanel(QWidget):
                     Qt.SmoothTransformation
                 )
             )
-        else:
-            self.preview.clear()
-            self.preview.setText(tr(TextKey.LABEL_PREVIEW_MISSING) if hasattr(TextKey, 'LABEL_PREVIEW_MISSING') else "Preview Missing")
+            return
+
+        self.preview.clear()
+        self.preview.setText(tr(TextKey.LABEL_PREVIEW_MISSING))
+
+    def _update_preview(self, wall_type: int, part_id: str) -> None:
+        """
+        Update component preview image and nvid labels based on wall type and part ID.
+        """
+        image_path = get_wall_component_preview_path(wall_type, part_id)
+        self._set_preview_image(image_path)
 
         nvids = []
         if part_id == "wall_body":
