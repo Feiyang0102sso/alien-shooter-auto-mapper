@@ -111,6 +111,29 @@ inline constexpr VidArmy AS2_VID_2300_ARMY = 2;
 inline constexpr VidArmy AS2_VID_2304_ARMY = 0;
 inline constexpr VidArmy AS2_VID_2357_ARMY = 0;
 
+// Storage room decoration assets
+inline constexpr VidArmy AS2_VID_401_ARMY = 2;
+inline constexpr VidArmy AS2_VID_442_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1220_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1221_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1236_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1269_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1272_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1280_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1282_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1305_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1607_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1638_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1740_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1753_ARMY = 2;
+inline constexpr VidArmy AS2_VID_1754_ARMY = 0;
+inline constexpr VidArmy AS2_VID_1766_ARMY = 0;
+inline constexpr VidArmy AS2_VID_2316_ARMY = 0;
+inline constexpr VidArmy AS2_VID_2317_ARMY = 0;
+inline constexpr VidArmy AS2_VID_2318_ARMY = 0;
+inline constexpr VidArmy AS2_VID_2319_ARMY = 0;
+inline constexpr VidArmy AS2_VID_2527_ARMY = 0;
+
 /**
  * Return the game-defined Army value bound to a registered AS2 asset VID.
  *
@@ -220,6 +243,29 @@ inline VidArmy get_as2_vid_army(int vid) {
         case 2300: return AS2_VID_2300_ARMY;
         case 2304: return AS2_VID_2304_ARMY;
         case 2357: return AS2_VID_2357_ARMY;
+
+        // Storage room decoration assets
+        case 401: return AS2_VID_401_ARMY;
+        case 442: return AS2_VID_442_ARMY;
+        case 1220: return AS2_VID_1220_ARMY;
+        case 1221: return AS2_VID_1221_ARMY;
+        case 1236: return AS2_VID_1236_ARMY;
+        case 1269: return AS2_VID_1269_ARMY;
+        case 1272: return AS2_VID_1272_ARMY;
+        case 1280: return AS2_VID_1280_ARMY;
+        case 1282: return AS2_VID_1282_ARMY;
+        case 1305: return AS2_VID_1305_ARMY;
+        case 1607: return AS2_VID_1607_ARMY;
+        case 1638: return AS2_VID_1638_ARMY;
+        case 1740: return AS2_VID_1740_ARMY;
+        case 1753: return AS2_VID_1753_ARMY;
+        case 1754: return AS2_VID_1754_ARMY;
+        case 1766: return AS2_VID_1766_ARMY;
+        case 2316: return AS2_VID_2316_ARMY;
+        case 2317: return AS2_VID_2317_ARMY;
+        case 2318: return AS2_VID_2318_ARMY;
+        case 2319: return AS2_VID_2319_ARMY;
+        case 2527: return AS2_VID_2527_ARMY;
     }
 
     throw std::invalid_argument("AS2 asset VID has no Army binding");

@@ -96,6 +96,51 @@ DECORATION_STAMP_UI_METADATA = {
         "label_key": TextKey.DECORATION_STAMP_OFFICE09_LABEL,
         "description_key": TextKey.DECORATION_STAMP_OFFICE09_DESCRIPTION,
     },
+    "storage01": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE01_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE01_DESCRIPTION,
+    },
+    "storage02": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE02_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE02_DESCRIPTION,
+    },
+    "storage03": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE03_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE03_DESCRIPTION,
+    },
+    "storage04": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE04_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE04_DESCRIPTION,
+    },
+    "storage05": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE05_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE05_DESCRIPTION,
+    },
+    "storage06": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE06_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE06_DESCRIPTION,
+    },
+    "storage07": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE07_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE07_DESCRIPTION,
+    },
+    "storage08": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE08_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE08_DESCRIPTION,
+    },
+    "storage09": {
+        "series_id": "storage",
+        "label_key": TextKey.DECORATION_STAMP_STORAGE09_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_STORAGE09_DESCRIPTION,
+    },
 }
 
 # Shelf card text authored per series.
@@ -107,6 +152,10 @@ DECORATION_STAMP_SERIES_UI_METADATA = {
     "office": {
         "label_key": TextKey.DECORATION_STAMP_SERIES_OFFICE_LABEL,
         "description_key": TextKey.DECORATION_STAMP_SERIES_OFFICE_DESCRIPTION,
+    },
+    "storage": {
+        "label_key": TextKey.DECORATION_STAMP_SERIES_STORAGE_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_SERIES_STORAGE_DESCRIPTION,
     },
 }
 

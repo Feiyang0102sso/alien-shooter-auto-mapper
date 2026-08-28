@@ -1,7 +1,13 @@
-"""Interactively crop a decoration preview and export a transparent WebP."""
+"""Crop decoration previews and export transparent WebP images.
+
+Two modes share the same cropping and export code: the interactive window
+for hand-marked four-point crops, and --auto for whole folders of
+black-background screenshots.
+"""
 
 from __future__ import annotations
 
+import argparse
 import math
 import re
 import sys
@@ -59,6 +65,9 @@ WEBP_QUALITY = 100
 THUMBNAIL_WIDTH = 300
 THUMBNAIL_HEIGHT = 200
 SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp"}
+MAP_SUFFIX = ".map"
+# 以 00 结尾的截图是系列货架卡封面，不参与和 .map 的配对。
+SERIES_COVER_STEM_SUFFIX = "00"
 
 COLOR_WINDOW = "#0d1114"
 COLOR_PANEL = "#171c20"
@@ -153,27 +162,92 @@ def calculate_crop_rect(image: QImage, points: Sequence[QPointF]) -> QRect:
     return QRect(left, top, right - left + 1, bottom - top + 1)
 
 
-def remove_exact_black(image: QImage) -> QImage:
-    """Return a copy whose exact #000000 pixels are fully transparent."""
+def is_black_pixel(pixel_data, pixel_offset: int) -> bool:
+    """Return whether one RGBA pixel is exact #000000, whatever its alpha."""
+    red = pixel_data[pixel_offset]
+    green = pixel_data[pixel_offset + 1]
+    blue = pixel_data[pixel_offset + 2]
+    return red == 0 and green == 0 and blue == 0
+
+
+def collect_border_seeds(width: int, height: int) -> list[tuple[int, int]]:
+    """Return every border coordinate; the background fill starts from these."""
+    seeds = []
+
+    x = 0
+    while x < width:
+        seeds.append((x, 0))
+        seeds.append((x, height - 1))
+        x += 1
+
+    y = 0
+    while y < height:
+        seeds.append((0, y))
+        seeds.append((width - 1, y))
+        y += 1
+
+    return seeds
+
+
+def remove_background_black(image: QImage) -> QImage:
+    """Return a copy whose border-connected #000000 pixels are transparent.
+
+    Only black that the image border can reach counts as background. Black
+    enclosed by artwork keeps its alpha, so dark textures such as rusty crates
+    do not come out riddled with holes.
+    """
     transparent_image = image.convertToFormat(QImage.Format_RGBA8888)
     pixel_data = transparent_image.bits()
     bytes_per_line = transparent_image.bytesPerLine()
+    width = transparent_image.width()
+    height = transparent_image.height()
 
-    y = 0
-    while y < transparent_image.height():
-        row_offset = y * bytes_per_line
-        x = 0
-        while x < transparent_image.width():
-            pixel_offset = row_offset + x * 4
-            red = pixel_data[pixel_offset]
-            green = pixel_data[pixel_offset + 1]
-            blue = pixel_data[pixel_offset + 2]
+    # 每个像素一个已处理标记，防止同一段背景被反复填。
+    visited = bytearray(width * height)
+    pending_seeds = collect_border_seeds(width, height)
 
-            if red == 0 and green == 0 and blue == 0:
-                pixel_data[pixel_offset + 3] = 0
+    while pending_seeds:
+        seed_x, seed_y = pending_seeds.pop()
+        row_offset = seed_y * bytes_per_line
+
+        if visited[seed_y * width + seed_x]:
+            continue
+        if not is_black_pixel(pixel_data, row_offset + seed_x * 4):
+            continue
+
+        # 先把种子所在的整段连续黑像素左右探到底，再整段处理。
+        left_x = seed_x
+        while left_x > 0 and is_black_pixel(pixel_data, row_offset + (left_x - 1) * 4):
+            left_x -= 1
+
+        right_x = seed_x
+        while right_x < width - 1 and is_black_pixel(pixel_data, row_offset + (right_x + 1) * 4):
+            right_x += 1
+
+        # 上下相邻行各自只在“新的一段黑”开头入栈一次，栈才不会爆。
+        above_span_open = False
+        below_span_open = False
+        above_row_offset = (seed_y - 1) * bytes_per_line
+        below_row_offset = (seed_y + 1) * bytes_per_line
+
+        x = left_x
+        while x <= right_x:
+            visited[seed_y * width + x] = 1
+            pixel_data[row_offset + x * 4 + 3] = 0
+
+            if seed_y > 0:
+                above_is_black = is_black_pixel(pixel_data, above_row_offset + x * 4)
+                if above_is_black and not above_span_open:
+                    pending_seeds.append((x, seed_y - 1))
+                above_span_open = above_is_black
+
+            if seed_y < height - 1:
+                below_is_black = is_black_pixel(pixel_data, below_row_offset + x * 4)
+                if below_is_black and not below_span_open:
+                    pending_seeds.append((x, seed_y + 1))
+                below_span_open = below_is_black
 
             x += 1
-        y += 1
 
     return transparent_image
 
@@ -200,7 +274,7 @@ def build_cropped_image(source_image: QImage, points: Sequence[QPointF]) -> QIma
     painter.drawImage(QPoint(0, 0), source_image, crop_rect)
     painter.end()
 
-    return remove_exact_black(cropped_image)
+    return remove_background_black(cropped_image)
 
 
 def build_default_output_path(source_path: Path) -> Path:
@@ -242,6 +316,155 @@ def save_webp(image: QImage, output_path: Path) -> None:
 
     if not writer.write(image):
         raise RuntimeError(writer.errorString())
+
+
+def save_preview_pair(cropped_image: QImage, output_path: Path) -> Path:
+    """Write one transparent preview plus its thumbnail, and return its path."""
+    thumbnail_image = build_thumbnail(cropped_image)
+    thumbnail_path = build_thumbnail_output_path(output_path)
+
+    save_webp(cropped_image, output_path)
+    save_webp(thumbnail_image, thumbnail_path)
+    return thumbnail_path
+
+
+def calculate_content_bounds(image: QImage) -> QRect:
+    """Return the bounds of every pixel that is not exact #000000."""
+    scanned_image = image.convertToFormat(QImage.Format_RGBA8888)
+    pixel_data = scanned_image.bits()
+    bytes_per_line = scanned_image.bytesPerLine()
+
+    minimum_x = scanned_image.width()
+    minimum_y = scanned_image.height()
+    maximum_x = -1
+    maximum_y = -1
+
+    y = 0
+    while y < scanned_image.height():
+        row_offset = y * bytes_per_line
+        x = 0
+        while x < scanned_image.width():
+            pixel_offset = row_offset + x * 4
+            red = pixel_data[pixel_offset]
+            green = pixel_data[pixel_offset + 1]
+            blue = pixel_data[pixel_offset + 2]
+
+            if red != 0 or green != 0 or blue != 0:
+                minimum_x = min(minimum_x, x)
+                minimum_y = min(minimum_y, y)
+                maximum_x = max(maximum_x, x)
+                maximum_y = max(maximum_y, y)
+
+            x += 1
+        y += 1
+
+    if maximum_x < 0:
+        raise ValueError("Image is fully black, nothing to crop.")
+
+    width = maximum_x - minimum_x + 1
+    height = maximum_y - minimum_y + 1
+    return QRect(minimum_x, minimum_y, width, height)
+
+
+def build_auto_cropped_image(source_image: QImage) -> QImage:
+    """Trim the black border by content bounds and remove pure black."""
+    content_bounds = calculate_content_bounds(source_image)
+    cropped_image = source_image.copy(content_bounds)
+    return remove_background_black(cropped_image)
+
+
+def read_source_image(image_path: Path) -> QImage:
+    """Read one source image, or fail with the reader's own message."""
+    reader = QImageReader(str(image_path))
+    reader.setAutoTransform(True)
+    image = reader.read()
+
+    if image.isNull():
+        raise RuntimeError(f"{image_path.name}: {reader.errorString()}")
+
+    return image
+
+
+def collect_auto_jobs(folder: Path) -> tuple[list[Path], list[tuple[Path, str]]]:
+    """Split one folder into series covers and map-paired room screenshots.
+
+    A screenshot whose stem ends with "00" is the series cover card, so it is
+    never paired with a map. Every other screenshot is matched to one .map in
+    plain name order: first screenshot to first map, and so on.
+    """
+    if not folder.is_dir():
+        raise ValueError(f"--auto expects a folder: {folder}")
+
+    cover_paths = []
+    room_image_paths = []
+    map_paths = []
+
+    for candidate in sorted(folder.iterdir()):
+        if not candidate.is_file():
+            continue
+
+        suffix = candidate.suffix.lower()
+        if suffix in SUPPORTED_IMAGE_SUFFIXES:
+            if candidate.stem.endswith(SERIES_COVER_STEM_SUFFIX):
+                cover_paths.append(candidate)
+            else:
+                room_image_paths.append(candidate)
+        if suffix == MAP_SUFFIX:
+            map_paths.append(candidate)
+
+    if not cover_paths and not room_image_paths:
+        raise ValueError(f"No PNG/BMP screenshot found in: {folder}")
+
+    # 错位命名会直接污染成品目录，数量对不上就停下，不猜。
+    if room_image_paths and len(room_image_paths) != len(map_paths):
+        raise ValueError(
+            f"Room screenshot count {len(room_image_paths)} does not match "
+            f"map count {len(map_paths)} in: {folder}"
+        )
+
+    jobs = []
+    index = 0
+    while index < len(room_image_paths):
+        jobs.append((room_image_paths[index], map_paths[index].stem))
+        index += 1
+
+    return cover_paths, jobs
+
+
+def export_series_cover(cover_path: Path, folder: Path) -> Path:
+    """Write the thumbnail-only card image for one decoration series."""
+    source_image = read_source_image(cover_path)
+    cropped_image = build_auto_cropped_image(source_image)
+
+    thumbnail_path = folder / f"{cover_path.stem}_thumbnail.webp"
+    save_webp(build_thumbnail(cropped_image), thumbnail_path)
+    return thumbnail_path
+
+
+def run_auto_batch(folder: Path) -> int:
+    """Crop every screenshot in one folder and name outputs after its maps."""
+    cover_paths, jobs = collect_auto_jobs(folder)
+    print(f"[INFO] Auto crop folder: {folder}")
+
+    for cover_path in cover_paths:
+        thumbnail_path = export_series_cover(cover_path, folder)
+        print(f"[INFO] {cover_path.name} -> {thumbnail_path.name} (series cover)")
+
+    for image_path, output_stem in jobs:
+        source_image = read_source_image(image_path)
+        cropped_image = build_auto_cropped_image(source_image)
+
+        output_path = folder / f"{output_stem}.webp"
+        thumbnail_path = save_preview_pair(cropped_image, output_path)
+
+        print(
+            f"[INFO] {image_path.name} -> {output_path.name} "
+            f"({cropped_image.width()}x{cropped_image.height()} px) "
+            f"+ {thumbnail_path.name}"
+        )
+
+    print(f"[INFO] Done: {len(jobs)} room preview(s), {len(cover_paths)} series cover(s).")
+    return 0
 
 
 class CropHandle(QGraphicsEllipseItem):
@@ -540,7 +763,7 @@ class DecorationPreviewCropper(QMainWindow):
         layout.addWidget(fit_button)
 
         export_note = QLabel(
-            "原始裁剪图会抠除精确 #000000；300×200 等比例缩略图保留不透明纯黑背景。"
+            "原始裁剪图只抠除与边界连通的纯黑背景，物体内部的黑保留；300×200 等比例缩略图保留不透明纯黑背景。"
         )
         export_note.setWordWrap(True)
         export_note.setObjectName("statusLabel")
@@ -584,16 +807,10 @@ class DecorationPreviewCropper(QMainWindow):
 
     def _load_path(self, image_path: Path) -> None:
         """Read and display one supported source image."""
-        reader = QImageReader(str(image_path))
-        reader.setAutoTransform(True)
-        image = reader.read()
-
-        if image.isNull():
-            QMessageBox.critical(
-                self,
-                "无法打开图片",
-                reader.errorString(),
-            )
+        try:
+            image = read_source_image(image_path)
+        except RuntimeError as error:
+            QMessageBox.critical(self, "无法打开图片", str(error))
             return
 
         self.source_path = image_path.resolve()
@@ -645,12 +862,9 @@ class DecorationPreviewCropper(QMainWindow):
             output_path = output_path.with_suffix(".webp")
 
         cropped_image = build_cropped_image(self.canvas.source_image, points)
-        thumbnail_image = build_thumbnail(cropped_image)
-        thumbnail_path = build_thumbnail_output_path(output_path)
 
         try:
-            save_webp(cropped_image, output_path)
-            save_webp(thumbnail_image, thumbnail_path)
+            thumbnail_path = save_preview_pair(cropped_image, output_path)
         except RuntimeError as error:
             QMessageBox.critical(self, "导出失败", str(error))
             return
@@ -667,22 +881,58 @@ class DecorationPreviewCropper(QMainWindow):
         )
 
 
-def main(arguments: Sequence[str] | None = None) -> int:
-    """Start the interactive cropper."""
-    if arguments is None:
-        arguments = sys.argv
+def parse_arguments(argument_values: Sequence[str]) -> argparse.Namespace:
+    """Read the tool's command line."""
+    parser = argparse.ArgumentParser(
+        description="Crop AS2 decoration previews by hand, or in batch with --auto."
+    )
+    parser.add_argument(
+        "input_path",
+        nargs="?",
+        type=Path,
+        help="PNG/BMP image to open, or the folder to process with --auto",
+    )
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help=(
+            "Crop every PNG/BMP in one folder to its non-black content bounds "
+            "and name the outputs after the alphabetically matching .map files"
+        ),
+    )
+    return parser.parse_args(list(argument_values))
 
-    app = QApplication(list(arguments))
+
+def run_interactive(program_arguments: Sequence[str], initial_path: Path | None) -> int:
+    """Open the hand-marking cropper window."""
+    app = QApplication(list(program_arguments))
     app.setStyleSheet(APPLICATION_STYLE)
-
-    initial_path = None
-    if len(arguments) > 1:
-        initial_path = Path(arguments[1])
 
     window = DecorationPreviewCropper(initial_path)
     window.show()
     return app.exec()
 
 
+def main(arguments: Sequence[str] | None = None) -> int:
+    """Start the cropper in interactive or automatic mode."""
+    if arguments is None:
+        arguments = sys.argv
+
+    parsed_arguments = parse_arguments(arguments[1:])
+
+    if parsed_arguments.auto:
+        if parsed_arguments.input_path is None:
+            raise ValueError("--auto needs a folder path.")
+        return run_auto_batch(parsed_arguments.input_path.resolve())
+
+    return run_interactive(arguments[:1], parsed_arguments.input_path)
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        exit_code = main()
+    except (FileNotFoundError, ValueError, RuntimeError, OSError) as error:
+        print(f"[ERROR] {error}", file=sys.stderr)
+        exit_code = 1
+
+    raise SystemExit(exit_code)

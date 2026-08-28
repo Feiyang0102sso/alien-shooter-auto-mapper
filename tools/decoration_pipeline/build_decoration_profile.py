@@ -13,7 +13,9 @@ from xml.sax.saxutils import escape
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-AS2_TOOLS_DIR = SCRIPT_DIR.parent
+PROJECT_ROOT = SCRIPT_DIR.parents[1]
+# parse_map 住在地图解包工具里，不重复实现，直接把它的目录挂进 sys.path。
+AS2_TOOLS_DIR = PROJECT_ROOT / "_prepare" / "AS2"
 sys.path.insert(0, str(AS2_TOOLS_DIR))
 
 from as2_map_unpack import parse_map  # noqa: E402

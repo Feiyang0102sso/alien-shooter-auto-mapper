@@ -8,7 +8,7 @@ if "%~1"=="" (
 )
 
 set "SCRIPT_DIR=%~dp0"
-set "PYTHON_EXE=%SCRIPT_DIR%..\..\..\.venv\Scripts\python.exe"
+set "PYTHON_EXE=%SCRIPT_DIR%..\..\.venv\Scripts\python.exe"
 set "PYTHON_SCRIPT=%SCRIPT_DIR%build_decoration_profile.py"
 
 if not exist "%PYTHON_EXE%" (
