@@ -97,9 +97,13 @@ def clean_float(value):
 def parse_arguments():
     """读取命令行参数。"""
     parser = argparse.ArgumentParser(
-        description="Build an AS2 decoration stamp profile from a map with reference walls."
+        description="Build AS2 decoration stamp profiles from maps with reference walls."
     )
-    parser.add_argument("map_file", type=Path, help="AS2/AS2R .map source file")
+    parser.add_argument(
+        "input_path",
+        type=Path,
+        help="AS2/AS2R .map source file, or a folder searched recursively for .map files",
+    )
     parser.add_argument("--output", type=Path, help="Output profile JSON path")
     parser.add_argument("--preview", type=Path, help="Output SVG preview path")
     parser.add_argument(
@@ -591,30 +595,31 @@ def write_svg_preview(profile, output_path):
     output_path.write_text("\n".join(svg_lines) + "\n", encoding="utf-8")
 
 
-def main():
-    """命令行入口。"""
-    arguments = parse_arguments()
-    map_path = arguments.map_file.resolve()
+def collect_map_files(input_path):
+    """把输入路径展开成待处理的 .map 文件列表。"""
+    if input_path.is_file():
+        if input_path.suffix.lower() != ".map":
+            raise ValueError(f"Expected a .map file: {input_path}")
+        return [input_path]
 
-    if not map_path.is_file():
-        raise FileNotFoundError(f"Map file not found: {map_path}")
-    if map_path.suffix.lower() != ".map":
-        raise ValueError(f"Expected a .map file: {map_path}")
-    if arguments.line_tolerance < 0.0:
-        raise ValueError("Line tolerance must not be negative.")
+    if not input_path.is_dir():
+        raise FileNotFoundError(f"Input path not found: {input_path}")
 
-    output_path = arguments.output
-    if output_path is None:
-        output_path = map_path.with_suffix(".decoration.json")
-    output_path = output_path.resolve()
+    map_files = []
+    for candidate in sorted(input_path.rglob("*.map")):
+        if candidate.is_file():
+            map_files.append(candidate)
 
-    preview_path = arguments.preview
-    if preview_path is None:
-        preview_path = map_path.with_suffix(".decoration.svg")
-    preview_path = preview_path.resolve()
+    if not map_files:
+        raise FileNotFoundError(f"No .map file found in folder: {input_path}")
 
+    return map_files
+
+
+def build_one_map(map_path, output_path, preview_path, line_tolerance):
+    """处理单个地图文件，写出 profile 与 SVG 预览。"""
     parsed_map = parse_map(map_path)
-    profile = build_profile(map_path, parsed_map, arguments.line_tolerance)
+    profile = build_profile(map_path, parsed_map, line_tolerance)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     preview_path.parent.mkdir(parents=True, exist_ok=True)
@@ -622,10 +627,56 @@ def main():
     output_path.write_text(output_text + "\n", encoding="utf-8")
     write_svg_preview(profile, preview_path)
 
+    print(f"[INFO] Map: {map_path.name}")
     print(f'[INFO] Wall profile: {profile["wall_profile"]}')
     print(f'[INFO] Decoration members: {profile["member_count"]}')
     print(f"[INFO] Profile saved: {output_path}")
     print(f"[INFO] Preview saved: {preview_path}")
+
+
+def main():
+    """命令行入口。"""
+    arguments = parse_arguments()
+    input_path = arguments.input_path.resolve()
+
+    if arguments.line_tolerance < 0.0:
+        raise ValueError("Line tolerance must not be negative.")
+
+    map_files = collect_map_files(input_path)
+
+    if len(map_files) > 1:
+        if arguments.output is not None or arguments.preview is not None:
+            raise ValueError(
+                "--output/--preview only work with a single .map file input."
+            )
+
+    failed_maps = []
+    for map_path in map_files:
+        output_path = arguments.output
+        if output_path is None:
+            output_path = map_path.with_suffix(".decoration.json")
+
+        preview_path = arguments.preview
+        if preview_path is None:
+            preview_path = map_path.with_suffix(".decoration.svg")
+
+        try:
+            build_one_map(
+                map_path,
+                output_path.resolve(),
+                preview_path.resolve(),
+                arguments.line_tolerance,
+            )
+        except (ValueError, OSError) as error:
+            # 批量处理时单个地图失败不该中断其余地图，先记录，最后统一汇总。
+            print(f"[ERROR] {map_path.name}: {error}", file=sys.stderr)
+            failed_maps.append(map_path)
+
+    converted_count = len(map_files) - len(failed_maps)
+    print(f"[INFO] Done: {converted_count}/{len(map_files)} map files converted.")
+
+    if failed_maps:
+        raise ValueError(f"{len(failed_maps)} map file(s) failed.")
 
 
 if __name__ == "__main__":

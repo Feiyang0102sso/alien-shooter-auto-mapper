@@ -26,7 +26,7 @@ TEST(DecorationBuilderTest, RegistersAllDormProfilesFromPreparedDecorationFiles)
     };
     const int expected_member_counts[] = {27, 28, 22, 30, 26, 12, 11, 11};
 
-    EXPECT_EQ(AS2_DECORATION_PROFILE_COUNT, 8);
+    EXPECT_EQ(AS2_DECORATION_PROFILE_COUNT, 17);
     EXPECT_EQ(
         profiles[0]->test_boundary_wall_profile,
         &core::WALL_AS2_SET6_RANDOM
@@ -34,6 +34,29 @@ TEST(DecorationBuilderTest, RegistersAllDormProfilesFromPreparedDecorationFiles)
 
     for (int index = 1; index < 8; ++index) {
         EXPECT_EQ(AS2_DECORATION_PROFILES[index], profiles[index]);
+        EXPECT_EQ(profiles[index]->members.size(), expected_member_counts[index]);
+        EXPECT_EQ(profiles[index]->test_boundary_wall_profile, &core::WALL_AS2_SET1_RANDOM);
+    }
+}
+
+TEST(DecorationBuilderTest, RegistersAllOfficeProfilesFromPreparedDecorationFiles) {
+    const DecorationProfile* profiles[] = {
+        &OFFICE01_DECORATION_PROFILE,
+        &OFFICE02_DECORATION_PROFILE,
+        &OFFICE03_DECORATION_PROFILE,
+        &OFFICE04_DECORATION_PROFILE,
+        &OFFICE05_DECORATION_PROFILE,
+        &OFFICE06_DECORATION_PROFILE,
+        &OFFICE07_DECORATION_PROFILE,
+        &OFFICE08_DECORATION_PROFILE,
+        &OFFICE09_DECORATION_PROFILE,
+    };
+    const int expected_member_counts[] = {77, 20, 33, 9, 53, 19, 67, 78, 21};
+    // The office series is registered right after the eight dorm profiles.
+    const int registry_offset = 8;
+
+    for (int index = 0; index < 9; ++index) {
+        EXPECT_EQ(AS2_DECORATION_PROFILES[registry_offset + index], profiles[index]);
         EXPECT_EQ(profiles[index]->members.size(), expected_member_counts[index]);
         EXPECT_EQ(profiles[index]->test_boundary_wall_profile, &core::WALL_AS2_SET1_RANDOM);
     }

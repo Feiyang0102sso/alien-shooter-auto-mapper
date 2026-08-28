@@ -2,7 +2,7 @@
 setlocal
 
 if "%~1"=="" (
-    echo Drag an AS2 decoration .map file onto this BAT.
+    echo Drag AS2 decoration .map files or folders onto this BAT.
     pause
     exit /b 1
 )
@@ -17,8 +17,15 @@ if not exist "%PYTHON_EXE%" (
     exit /b 1
 )
 
-"%PYTHON_EXE%" "%PYTHON_SCRIPT%" "%~1"
-set "RESULT=%ERRORLEVEL%"
+set "FAILED=0"
 
-if not "%RESULT%"=="0" pause
-exit /b %RESULT%
+:next_input
+if "%~1"=="" goto finished
+"%PYTHON_EXE%" "%PYTHON_SCRIPT%" "%~1"
+if not "%ERRORLEVEL%"=="0" set "FAILED=1"
+shift
+goto next_input
+
+:finished
+if not "%FAILED%"=="0" pause
+exit /b %FAILED%

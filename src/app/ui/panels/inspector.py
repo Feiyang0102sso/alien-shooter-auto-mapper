@@ -470,7 +470,10 @@ class InspectorPanel(QWidget):
             return
 
         variant = self._stamp_variants[index]
-        preview_path = get_decoration_stamp_thumbnail_path(variant["profile_id"])
+        preview_path = get_decoration_stamp_thumbnail_path(
+            variant["series_id"],
+            variant["profile_id"],
+        )
         self._set_preview_image(preview_path)
         self.stamp_preview_notice.setVisible(preview_path.is_file())
         member_text = tr(

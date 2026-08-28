@@ -51,6 +51,51 @@ DECORATION_STAMP_UI_METADATA = {
         "label_key": TextKey.DECORATION_STAMP_DORMS08_LABEL,
         "description_key": TextKey.DECORATION_STAMP_DORMS08_DESCRIPTION,
     },
+    "office01": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE01_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE01_DESCRIPTION,
+    },
+    "office02": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE02_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE02_DESCRIPTION,
+    },
+    "office03": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE03_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE03_DESCRIPTION,
+    },
+    "office04": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE04_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE04_DESCRIPTION,
+    },
+    "office05": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE05_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE05_DESCRIPTION,
+    },
+    "office06": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE06_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE06_DESCRIPTION,
+    },
+    "office07": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE07_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE07_DESCRIPTION,
+    },
+    "office08": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE08_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE08_DESCRIPTION,
+    },
+    "office09": {
+        "series_id": "office",
+        "label_key": TextKey.DECORATION_STAMP_OFFICE09_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_OFFICE09_DESCRIPTION,
+    },
 }
 
 # Shelf card text authored per series.
@@ -58,6 +103,10 @@ DECORATION_STAMP_SERIES_UI_METADATA = {
     "dorms": {
         "label_key": TextKey.DECORATION_STAMP_SERIES_DORMS_LABEL,
         "description_key": TextKey.DECORATION_STAMP_SERIES_DORMS_DESCRIPTION,
+    },
+    "office": {
+        "label_key": TextKey.DECORATION_STAMP_SERIES_OFFICE_LABEL,
+        "description_key": TextKey.DECORATION_STAMP_SERIES_OFFICE_DESCRIPTION,
     },
 }
 
@@ -125,11 +174,18 @@ def get_decoration_stamp_series_items() -> list:
     return series_items
 
 
+def get_decoration_stamp_series_id(profile_id: str) -> str:
+    """
+    Return the series id owning one stamp profile.
+    """
+    return _get_stamp_ui_metadata(profile_id)["series_id"]
+
+
 def get_decoration_stamp_variants(profile_id: str) -> list:
     """
     Return every stamp sharing a series with the given profile, in DLL order.
     """
-    series_id = _get_stamp_ui_metadata(profile_id)["series_id"]
+    series_id = get_decoration_stamp_series_id(profile_id)
 
     variants = []
     for stamp in get_decoration_stamp_items():

@@ -8,7 +8,7 @@ from PySide6.QtGui import QBrush, QColor, QCursor, QPainter, QPainterPath, QPen,
 from PySide6.QtWidgets import QWidget
 
 from app.binding import dll_registry
-from app.editor.decoration_stamps import get_decoration_stamp
+from app.editor.decoration_stamps import get_decoration_stamp, get_decoration_stamp_series_id
 from app.editor.drawable_parts import PART_WALL_BODY
 from app.editor.wall_profiles import find_wall_type_by_steps, get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
@@ -721,7 +721,8 @@ class MapViewport(QWidget):
         if profile_id in self.stamp_preview_pixmaps:
             return self.stamp_preview_pixmaps[profile_id]
 
-        preview_path = get_decoration_stamp_canvas_path(profile_id)
+        series_id = get_decoration_stamp_series_id(profile_id)
+        preview_path = get_decoration_stamp_canvas_path(series_id, profile_id)
         pixmap = None
         if preview_path.is_file():
             loaded_pixmap = QPixmap(str(preview_path))

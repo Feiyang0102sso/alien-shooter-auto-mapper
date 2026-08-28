@@ -88,19 +88,27 @@ TEST(VidArmiesTest, AS2AssetsHaveCompleteUniqueBindings) {
         {1732, AS2_VID_1732_ARMY, 0},
 
         // Decoration assets
+        {407, AS2_VID_407_ARMY, 2},
+        {408, AS2_VID_408_ARMY, 0},
         {409, AS2_VID_409_ARMY, 0},
+        {410, AS2_VID_410_ARMY, 2},
         {412, AS2_VID_412_ARMY, 0},
         {413, AS2_VID_413_ARMY, 0},
+        {428, AS2_VID_428_ARMY, 0},
+        {1227, AS2_VID_1227_ARMY, 2},
         {1270, AS2_VID_1270_ARMY, 2},
+        {1283, AS2_VID_1283_ARMY, 0},
         {1288, AS2_VID_1288_ARMY, 0},
         {1289, AS2_VID_1289_ARMY, 2},
+        {1747, AS2_VID_1747_ARMY, 0},
+        {1759, AS2_VID_1759_ARMY, 2},
         {1764, AS2_VID_1764_ARMY, 0},
         {2300, AS2_VID_2300_ARMY, 2},
         {2304, AS2_VID_2304_ARMY, 0},
         {2357, AS2_VID_2357_ARMY, 0},
     };
 
-    constexpr size_t EXPECTED_BINDING_COUNT = 61;
+    constexpr size_t EXPECTED_BINDING_COUNT = 69;
     size_t binding_count = sizeof(expected_bindings) / sizeof(expected_bindings[0]);
     ASSERT_EQ(binding_count, EXPECTED_BINDING_COUNT);
 
