@@ -25,7 +25,7 @@ class InspectorScrollAreaTest(unittest.TestCase):
         self.window = QMainWindow.__new__(MainWindow)
         QMainWindow.__init__(self.window)
         self.window.left_shelf_tabs = QTabWidget()
-        self.window.theme_shelf = QWidget()
+        self.window.shelf_panel = QWidget()
         self.window.decoration_shelf = QWidget()
         self.window.inspector = QWidget()
         self.window.inspector.setObjectName("inspectorPanel")

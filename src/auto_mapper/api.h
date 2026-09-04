@@ -23,7 +23,8 @@ AUTO_MAPPER_API int get_auto_mapper_api_version();
 enum CMapFormat {
     C_MAP_FORMAT_AS1 = 0,
     C_MAP_FORMAT_AS2 = 1,
-    C_MAP_FORMAT_AS2R = 2
+    C_MAP_FORMAT_AS2R = 2,
+    C_MAP_FORMAT_AS2OE = 3
 };
 
 /**

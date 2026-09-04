@@ -5,6 +5,7 @@ Left shelf container holding the project version, the shelf mode and both shelve
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
+    QComboBox,
     QHBoxLayout,
     QPushButton,
     QStackedWidget,
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
 from app.project.data import (
+    AS2_SERIES_PROJECT_VERSIONS,
     PROJECT_VERSION_AS1,
     PROJECT_VERSION_AS2R,
     is_as2_series_project_version,
@@ -26,13 +28,16 @@ from app.ui.panels.theme_shelf import ThemeShelfPanel
 
 SHELF_MODE_WALLS = 0
 SHELF_MODE_DECORATIONS = 1
+PROJECT_FAMILY_AS1 = "AS1"
+PROJECT_FAMILY_AS2 = "AS2"
 
 
 class LeftShelfPanel(QWidget):
     """
-    Three-level shelf: project version, shelf mode, then the card list.
+    Three-level shelf: project family/format, shelf mode, then the card list.
 
-    The version buttons change the whole project. The mode buttons only swap
+    The family buttons change the whole project. The AS2 format selector only
+    changes the output format. The mode buttons only swap
     which shelf is visible, so the two levels must never be mixed up.
     """
 
@@ -48,6 +53,7 @@ class LeftShelfPanel(QWidget):
         self.theme_shelf = ThemeShelfPanel()
         self.decoration_stamp_shelf = DecorationStampShelfPanel()
         self.current_project_version = self.theme_shelf.get_project_version()
+        self.current_as2_project_version = PROJECT_VERSION_AS2R
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 8, 14, 14)
@@ -64,7 +70,7 @@ class LeftShelfPanel(QWidget):
         self.theme_shelf.wall_set_selected.connect(self.wall_set_selected)
         self.decoration_stamp_shelf.stamp_selected.connect(self.stamp_selected)
 
-        self._sync_version_buttons()
+        self._sync_version_controls()
         self._sync_mode_availability()
 
     def get_project_version(self) -> str:
@@ -76,7 +82,10 @@ class LeftShelfPanel(QWidget):
         validated_version = validate_project_version(project_version)
         self.current_project_version = validated_version
         self.theme_shelf.set_project_version(validated_version)
-        self._sync_version_buttons()
+        if is_as2_series_project_version(validated_version):
+            self.current_as2_project_version = validated_version
+
+        self._sync_version_controls()
         self._sync_mode_availability()
 
     def _build_version_row(self) -> QHBoxLayout:
@@ -89,10 +98,12 @@ class LeftShelfPanel(QWidget):
 
         self.version_button_group = QButtonGroup(self)
         self.version_button_group.setExclusive(True)
-        self.as1_button = self._create_version_button(PROJECT_VERSION_AS1)
-        self.as2r_button = self._create_version_button(PROJECT_VERSION_AS2R)
+        self.as1_button = self._create_family_button(PROJECT_FAMILY_AS1)
+        self.as2_button = self._create_family_button(PROJECT_FAMILY_AS2)
+        self.as2_format_combo = self._create_as2_format_combo()
         row.addWidget(self.as1_button)
-        row.addWidget(self.as2r_button)
+        row.addWidget(self.as2_button)
+        row.addWidget(self.as2_format_combo)
         return row
 
     def _build_mode_row(self) -> QHBoxLayout:
@@ -120,17 +131,28 @@ class LeftShelfPanel(QWidget):
         row.addWidget(self.decoration_mode_button)
         return row
 
-    def _create_version_button(self, project_version: str) -> QPushButton:
+    def _create_family_button(self, project_family: str) -> QPushButton:
         """
-        Create one project version toggle button.
+        Create one project-family toggle button.
         """
-        button = QPushButton(project_version)
+        button = QPushButton(project_family)
         button.setObjectName("gameFamilyButton")
         button.setCheckable(True)
-        button.setProperty("project_version", project_version)
-        button.clicked.connect(self._on_version_button_clicked)
+        button.setProperty("project_family", project_family)
+        button.clicked.connect(self._on_family_button_clicked)
         self.version_button_group.addButton(button)
         return button
+
+    def _create_as2_format_combo(self) -> QComboBox:
+        """Create the compact selector for one exact AS2 output format."""
+        combo = QComboBox()
+        combo.setObjectName("as2FormatCombo")
+
+        for project_version in AS2_SERIES_PROJECT_VERSIONS:
+            combo.addItem(project_version, project_version)
+
+        combo.currentIndexChanged.connect(self._on_as2_format_changed)
+        return combo
 
     def _create_mode_button(self, label: str, shelf_mode: int) -> QPushButton:
         """
@@ -144,15 +166,35 @@ class LeftShelfPanel(QWidget):
         self.mode_button_group.addButton(button)
         return button
 
-    def _on_version_button_clicked(self) -> None:
+    def _on_family_button_clicked(self) -> None:
         """
-        Switch the whole project to another game version.
+        Switch the whole project to another game family.
         """
         sender = self.sender()
         if sender is None:
             return
 
-        project_version = sender.property("project_version")
+        project_family = sender.property("project_family")
+        if not project_family:
+            return
+
+        current_family = self._get_project_family(self.current_project_version)
+        if project_family == current_family:
+            return
+
+        project_version = PROJECT_VERSION_AS1
+        if project_family == PROJECT_FAMILY_AS2:
+            project_version = self.current_as2_project_version
+
+        self.set_project_version(str(project_version))
+        self.project_version_changed.emit(str(project_version))
+
+    def _on_as2_format_changed(self, index: int) -> None:
+        """Change only the AS2 output format without clearing editor content."""
+        if not is_as2_series_project_version(self.current_project_version):
+            return
+
+        project_version = self.as2_format_combo.itemData(index)
         if not project_version:
             return
 
@@ -160,7 +202,6 @@ class LeftShelfPanel(QWidget):
             return
 
         self.set_project_version(str(project_version))
-        self.project_version_changed.emit(str(project_version))
 
     def _on_mode_button_clicked(self) -> None:
         """
@@ -190,16 +231,33 @@ class LeftShelfPanel(QWidget):
         self.shelf_stack.setCurrentIndex(shelf_mode)
         self.shelf_mode_changed.emit(shelf_mode)
 
-    def _sync_version_buttons(self) -> None:
+    def _sync_version_controls(self) -> None:
         """
-        Keep the version buttons checked without triggering selection.
+        Keep the family buttons and AS2 format selector in sync.
         """
         self.as1_button.blockSignals(True)
-        self.as2r_button.blockSignals(True)
+        self.as2_button.blockSignals(True)
+        self.as2_format_combo.blockSignals(True)
+
         self.as1_button.setChecked(self.current_project_version == PROJECT_VERSION_AS1)
-        self.as2r_button.setChecked(self.current_project_version == PROJECT_VERSION_AS2R)
+        self.as2_button.setChecked(
+            is_as2_series_project_version(self.current_project_version)
+        )
+        self.as2_format_combo.setCurrentText(self.current_as2_project_version)
+        self.as2_format_combo.setVisible(
+            is_as2_series_project_version(self.current_project_version)
+        )
+
         self.as1_button.blockSignals(False)
-        self.as2r_button.blockSignals(False)
+        self.as2_button.blockSignals(False)
+        self.as2_format_combo.blockSignals(False)
+
+    def _get_project_family(self, project_version: str) -> str:
+        """Return the compact UI family for one exact project version."""
+        if is_as2_series_project_version(project_version):
+            return PROJECT_FAMILY_AS2
+
+        return PROJECT_FAMILY_AS1
 
     def _sync_mode_availability(self) -> None:
         """

@@ -104,14 +104,15 @@ inline bool write_binary_file(
 inline bool write_payload_to_map_file(
     const std::vector<uint8_t>& payload,
     const std::string& output_path,
-    size_t sprite_count
+    size_t sprite_count,
+    const std::string& resource_kind = "MAP "
 ) {
-    uint32_t final_map_size = static_cast<uint32_t>(4 + payload.size()); // "MAP " + payload
+    uint32_t final_map_size = static_cast<uint32_t>(4 + payload.size());
 
     std::vector<uint8_t> final_data;
     append_string(final_data, "RES ");
     append_uint32(final_data, final_map_size);
-    append_string(final_data, "MAP ");
+    append_string(final_data, resource_kind);
     final_data.insert(final_data.end(), payload.begin(), payload.end());
 
     return write_binary_file(final_data, output_path, sprite_count);

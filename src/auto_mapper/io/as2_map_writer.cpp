@@ -15,6 +15,8 @@ namespace {
 
 constexpr int32_t AS2_MAP_VERSION = 0x13;
 constexpr int32_t AS2R_MAP_VERSION = 0x14;
+const std::string AS2_MAP_RESOURCE_KIND = "MAP ";
+const std::string AS2OE_LEVEL_RESOURCE_KIND = "LVL ";
 
 // Encode VidGamma into the 8-byte AS2 SpriteRecord layout.
 // Binary order: [negB, negG, negR, negA, posB, posG, posR, posA]
@@ -155,13 +157,18 @@ bool write_as2_family_map(
     size_t expected_template_size = templates::AS2_EMPTY_SIZE;
     size_t grph_end = 56;
     int32_t map_version = AS2_MAP_VERSION;
+    std::string resource_kind = AS2_MAP_RESOURCE_KIND;
 
-    if (format == MapFormat::AS2R) {
+    if (format == MapFormat::AS2R || format == MapFormat::AS2OE) {
         template_begin = templates::AS2R_empty;
         template_end = templates::AS2R_empty + templates::AS2R_EMPTY_SIZE;
         expected_template_size = templates::AS2R_EMPTY_SIZE;
         grph_end = 92;
         map_version = AS2R_MAP_VERSION;
+    }
+
+    if (format == MapFormat::AS2OE) {
+        resource_kind = AS2OE_LEVEL_RESOURCE_KIND;
     }
 
     std::vector<uint8_t> template_data(template_begin, template_end);
@@ -202,7 +209,7 @@ bool write_as2_family_map(
     payload.insert(payload.end(), play_section.begin(), play_section.end());
     payload.insert(payload.end(), grou_section.begin(), grou_section.end());
 
-    return write_payload_to_map_file(payload, output_path, sprites.size());
+    return write_payload_to_map_file(payload, output_path, sprites.size(), resource_kind);
 }
 
 } // namespace
@@ -223,6 +230,15 @@ bool write_as2r_map(
     float map_size_y
 ) {
     return write_as2_family_map(sprites, output_path, map_size_x, map_size_y, MapFormat::AS2R);
+}
+
+bool write_as2oe_map(
+    const std::vector<Sprite>& sprites,
+    const std::string& output_path,
+    float map_size_x,
+    float map_size_y
+) {
+    return write_as2_family_map(sprites, output_path, map_size_x, map_size_y, MapFormat::AS2OE);
 }
 
 } // namespace auto_mapper::io::detail

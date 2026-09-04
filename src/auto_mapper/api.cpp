@@ -32,7 +32,7 @@ int __ms_vsnprintf(char* buffer, size_t count, const char* format, va_list argpt
 
 extern "C" {
 
-static constexpr int AUTO_MAPPER_API_VERSION = 8;
+static constexpr int AUTO_MAPPER_API_VERSION = 9;
 
 AUTO_MAPPER_API int get_auto_mapper_api_version() {
     return AUTO_MAPPER_API_VERSION;
@@ -77,6 +77,11 @@ static bool parse_map_format(int map_format, auto_mapper::io::MapFormat& parsed_
 
     if (map_format == C_MAP_FORMAT_AS2R) {
         parsed_format = auto_mapper::io::MapFormat::AS2R;
+        return true;
+    }
+
+    if (map_format == C_MAP_FORMAT_AS2OE) {
+        parsed_format = auto_mapper::io::MapFormat::AS2OE;
         return true;
     }
 

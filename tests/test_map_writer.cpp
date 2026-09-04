@@ -149,6 +149,72 @@ TEST(MapWriterTest, WritesEmptyAS2RMapFromSelectedFormat) {
     EXPECT_EQ(read_magic_at(output, 196), "PLAY");
 }
 
+TEST(MapWriterTest, WritesAS2OEWithLevelResourceKindAndVersionFourteen) {
+    std::string output_file = get_test_output_path("empty_as2oe_writer_output.map");
+
+    std::vector<io::Sprite> sprites;
+    bool success = io::write_map(
+        sprites,
+        output_file,
+        io::MapFormat::AS2OE,
+        640.0f,
+        480.0f
+    );
+
+    ASSERT_TRUE(success);
+
+    std::vector<uint8_t> output = load_binary_file(output_file);
+
+    EXPECT_EQ(output.size(), io::templates::AS2R_EMPTY_SIZE);
+    EXPECT_EQ(read_uint32_at(output, 4), 272u);
+    EXPECT_EQ(read_magic_at(output, 8), "LVL ");
+    EXPECT_EQ(read_uint32_at(output, 136), 0x14u);
+    EXPECT_EQ(read_magic_at(output, 140), "SPR ");
+    EXPECT_EQ(read_magic_at(output, 196), "PLAY");
+}
+
+TEST(MapWriterTest, AS2OEAndAS2ROutputsDifferOnlyByResourceKind) {
+    io::Sprite sprite;
+    sprite.vid = 601;
+    sprite.posX = 300.0f;
+    sprite.posY = 238.0f;
+    sprite.direction = 64;
+    sprite.army = 2;
+
+    std::string as2r_output_file = get_test_output_path("as2r_resource_kind_output.map");
+    std::string as2oe_output_file = get_test_output_path("as2oe_resource_kind_output.map");
+
+    ASSERT_TRUE(io::write_map(
+        {sprite},
+        as2r_output_file,
+        io::MapFormat::AS2R,
+        640.0f,
+        480.0f
+    ));
+    ASSERT_TRUE(io::write_map(
+        {sprite},
+        as2oe_output_file,
+        io::MapFormat::AS2OE,
+        640.0f,
+        480.0f
+    ));
+
+    std::vector<uint8_t> as2r_output = load_binary_file(as2r_output_file);
+    std::vector<uint8_t> as2oe_output = load_binary_file(as2oe_output_file);
+
+    ASSERT_EQ(as2oe_output.size(), as2r_output.size());
+    EXPECT_EQ(read_magic_at(as2r_output, 8), "MAP ");
+    EXPECT_EQ(read_magic_at(as2oe_output, 8), "LVL ");
+
+    for (size_t index = 0; index < as2r_output.size(); ++index) {
+        if (index >= 8 && index < 12) {
+            continue;
+        }
+
+        EXPECT_EQ(as2oe_output[index], as2r_output[index]) << "byte offset " << index;
+    }
+}
+
 TEST(MapWriterTest, WritesAS2SpriteRecordsWithVersionTwoLayout) {
     io::Sprite sprite;
     sprite.vid = 601;

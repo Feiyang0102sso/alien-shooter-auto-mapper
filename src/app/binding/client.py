@@ -27,16 +27,18 @@ from app.project.data import (
     DECORATION_TYPE_ROOM_STAMP,
     PROJECT_VERSION_AS1,
     PROJECT_VERSION_AS2,
+    PROJECT_VERSION_AS2OE,
     PROJECT_VERSION_AS2R,
     ProjectData,
     resolve_as1_ceiling_layer_counts,
 )
 
 
-REQUIRED_API_VERSION = 8
+REQUIRED_API_VERSION = 9
 C_MAP_FORMAT_AS1 = 0
 C_MAP_FORMAT_AS2 = 1
 C_MAP_FORMAT_AS2R = 2
+C_MAP_FORMAT_AS2OE = 3
 
 
 class AutoMapperLibClient:
@@ -482,6 +484,9 @@ class AutoMapperLibClient:
 
         if project_version == PROJECT_VERSION_AS2R:
             return C_MAP_FORMAT_AS2R
+
+        if project_version == PROJECT_VERSION_AS2OE:
+            return C_MAP_FORMAT_AS2OE
 
         raise ValueError(f"Unsupported project version: {project_version}")
 

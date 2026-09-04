@@ -23,4 +23,11 @@ bool write_as2r_map(
     float map_size_y
 );
 
+bool write_as2oe_map(
+    const std::vector<Sprite>& sprites,
+    const std::string& output_path,
+    float map_size_x,
+    float map_size_y
+);
+
 } // namespace auto_mapper::io::detail

@@ -21,7 +21,12 @@ from app.editor.drawable_parts import AS2_SET1_WALL_TYPES, PART_WALL_BODY, get_w
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile, get_wall_profiles
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
-from app.project.data import PROJECT_VERSION_AS1, PROJECT_VERSION_AS2R, validate_project_version
+from app.project.data import (
+    PROJECT_VERSION_AS1,
+    PROJECT_VERSION_AS2R,
+    is_as2_series_project_version,
+    validate_project_version,
+)
 from app.ui.colors import (
     DOOR_AS2_DOT,
     DOOR_AS2_LINE,
@@ -288,7 +293,15 @@ class ThemeShelfPanel(QWidget):
     def set_project_version(self, project_version: str) -> None:
         """Select a project version without emitting a user-change signal."""
         validated_version = validate_project_version(project_version)
+        previous_is_as2_series = is_as2_series_project_version(
+            self.current_project_version
+        )
+        next_is_as2_series = is_as2_series_project_version(validated_version)
         self.current_project_version = validated_version
+
+        if previous_is_as2_series == next_is_as2_series:
+            return
+
         self._populate_wall_cards()
         self._select_first_wall_set()
 
@@ -329,7 +342,10 @@ class ThemeShelfPanel(QWidget):
         if self.current_project_version == PROJECT_VERSION_AS1:
             return wall_type in AS1_WALL_TYPES
 
-        return wall_type in AS2_WALL_TYPES
+        if is_as2_series_project_version(self.current_project_version):
+            return wall_type in AS2_WALL_TYPES
+
+        return False
 
     def _get_project_version_for_wall_type(self, wall_type: int) -> str:
         if wall_type in AS2_WALL_TYPES or wall_type in AS2_SET1_WALL_TYPES:

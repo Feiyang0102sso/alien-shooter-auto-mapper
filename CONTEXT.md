@@ -20,9 +20,16 @@ Alien Shooter 2 legacy map format. Its empty map template uses map version `0x13
 
 Unified name for Alien Shooter 2 Reloaded, Alien Shooter 2 Conscription, and Zombie Shooter 2 compatible map format. Its empty map template uses map version `0x14`.
 
+## AS2OE
+
+AS2OE level format. It shares the AS2R section layout and map version `0x14`,
+but the outer resource kind is `LVL ` instead of `MAP `.
+
 ## AS2 Series
 
-The family of AS2 and AS2R map formats; AS2R is not an alias for the legacy AS2 map format.
+The family of AS2, AS2R, and AS2OE map formats. The editor presents one AS2
+family entry while the project keeps the exact target format. AS2R is not an
+alias for the legacy AS2 map format.
 
 ## Global Door State Override
 

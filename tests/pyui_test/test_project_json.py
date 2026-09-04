@@ -4,6 +4,8 @@ import unittest
 
 from app.project.data import (
     PROJECT_VERSION_AS1,
+    PROJECT_VERSION_AS2,
+    PROJECT_VERSION_AS2OE,
     PROJECT_VERSION_AS2R,
     ProjectData,
     resolve_as1_ceiling_layer_counts,
@@ -86,20 +88,29 @@ class ProjectJsonTest(unittest.TestCase):
                 }
             )
 
-    def test_as2r_ignores_and_omits_global_door_option(self) -> None:
-        """AS2R should neither load nor export the AS1-only option."""
-        imported_project = parse_project_data(
-            {
-                "version": PROJECT_VERSION_AS2R,
-                "is_door_open": True,
-            }
+    def test_as2_series_versions_round_trip_without_as1_only_options(self) -> None:
+        """Every AS2 format should persist exactly and omit AS1-only options."""
+        project_versions = (
+            PROJECT_VERSION_AS2,
+            PROJECT_VERSION_AS2R,
+            PROJECT_VERSION_AS2OE,
         )
-        exported_json = build_project_json_data(imported_project)
 
-        self.assertFalse(imported_project.is_door_open)
-        self.assertNotIn("is_door_open", exported_json)
-        self.assertNotIn("as1_standard_ceiling_layer_count", exported_json)
-        self.assertNotIn("as1_lab_ceiling_layer_count", exported_json)
+        for project_version in project_versions:
+            with self.subTest(project_version=project_version):
+                imported_project = parse_project_data(
+                    {
+                        "version": project_version,
+                        "is_door_open": True,
+                    }
+                )
+                exported_json = build_project_json_data(imported_project)
+
+                self.assertEqual(exported_json["version"], project_version)
+                self.assertFalse(imported_project.is_door_open)
+                self.assertNotIn("is_door_open", exported_json)
+                self.assertNotIn("as1_standard_ceiling_layer_count", exported_json)
+                self.assertNotIn("as1_lab_ceiling_layer_count", exported_json)
 
 
 if __name__ == "__main__":

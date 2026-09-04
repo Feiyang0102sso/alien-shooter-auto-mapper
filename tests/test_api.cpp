@@ -37,8 +37,8 @@ uint32_t read_api_test_uint32(const std::vector<uint8_t>& data, size_t offset) {
 
 } // namespace
 
-TEST(ApiTest, ReportsVersionEight) {
-    EXPECT_EQ(get_auto_mapper_api_version(), 8);
+TEST(ApiTest, ReportsVersionNine) {
+    EXPECT_EQ(get_auto_mapper_api_version(), 9);
 }
 
 TEST(ApiTest, ExposesAS1CeilingLayerConfig) {
@@ -81,6 +81,39 @@ TEST(ApiTest, ExplicitFormatControlsEmptyAS2RProjectOutput) {
 
     std::vector<uint8_t> output = load_api_test_binary(output_file);
     EXPECT_EQ(output.size(), auto_mapper::io::templates::AS2R_EMPTY_SIZE);
+    EXPECT_EQ(read_api_test_uint32(output, 136), 0x14u);
+}
+
+TEST(ApiTest, ExplicitFormatWritesAS2OELevelResource) {
+    std::string output_file = get_test_output_path("empty_as2oe_api_output.map");
+
+    bool success = generate_map_from_segments(
+        output_file.c_str(),
+        C_MAP_FORMAT_AS2OE,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        640.0f,
+        480.0f,
+        13,
+        6,
+        false,
+        false,
+        false
+    );
+
+    ASSERT_TRUE(success);
+
+    std::vector<uint8_t> output = load_api_test_binary(output_file);
+    ASSERT_GE(output.size(), 12u);
+    EXPECT_EQ(std::string(output.begin() + 8, output.begin() + 12), "LVL ");
     EXPECT_EQ(read_api_test_uint32(output, 136), 0x14u);
 }
 

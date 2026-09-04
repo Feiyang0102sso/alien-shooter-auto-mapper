@@ -39,6 +39,10 @@ bool write_map(
         return detail::write_as2r_map(sprites, output_path, map_size_x, map_size_y);
     }
 
+    if (format == MapFormat::AS2OE) {
+        return detail::write_as2oe_map(sprites, output_path, map_size_x, map_size_y);
+    }
+
     Logger::error("Unsupported map format");
     return false;
 }

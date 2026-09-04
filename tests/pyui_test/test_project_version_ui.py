@@ -7,10 +7,13 @@ from PySide6.QtWidgets import QApplication, QCheckBox, QMessageBox
 
 from app.project.data import (
     PROJECT_VERSION_AS1,
+    PROJECT_VERSION_AS2,
+    PROJECT_VERSION_AS2OE,
     PROJECT_VERSION_AS2R,
     supports_ceiling_generation,
 )
 from app.ui.main_window import MainWindow
+from app.ui.panels.left_shelf import LeftShelfPanel
 from app.ui.panels.theme_shelf import ThemeShelfPanel
 
 
@@ -19,8 +22,8 @@ class DoorOptionHarness:
 
     def __init__(self, project_version: str) -> None:
         self.is_door_open_check = QCheckBox()
-        self.theme_shelf = Mock()
-        self.theme_shelf.get_project_version.return_value = project_version
+        self.shelf_panel = Mock()
+        self.shelf_panel.get_project_version.return_value = project_version
         self.viewport = Mock()
         self.status_bar = Mock()
         self.is_door_open_check.clicked.connect(self._on_clicked)
@@ -41,8 +44,8 @@ class CeilingOptionHarness:
 
     def __init__(self, project_version: str) -> None:
         self.ceiling_check = QCheckBox()
-        self.theme_shelf = Mock()
-        self.theme_shelf.get_project_version.return_value = project_version
+        self.shelf_panel = Mock()
+        self.shelf_panel.get_project_version.return_value = project_version
         self.inspector = Mock()
         self.status_bar = Mock()
         self.ceiling_check.clicked.connect(self._on_clicked)
@@ -61,8 +64,8 @@ class CeilingOptionHarness:
 class ProjectVersionUiTest(unittest.TestCase):
     """Verify version selection and version-dependent door controls."""
 
-    def test_theme_shelf_labels_and_selects_as2r(self) -> None:
-        """The visible version button should use the precise AS2R name."""
+    def test_as2_family_uses_one_button_and_defaults_to_as2r(self) -> None:
+        """The compact family control should avoid one button per AS2 format."""
         application = QApplication.instance()
         if application is None:
             application = QApplication([])
@@ -84,14 +87,53 @@ class ProjectVersionUiTest(unittest.TestCase):
         with patch("app.ui.panels.theme_shelf.get_default_wall_type", return_value=0):
             with patch.object(ThemeShelfPanel, "_load_sorted_profiles", return_value=profiles):
                 with patch.object(ThemeShelfPanel, "_add_wall_set_legend"):
-                    panel = ThemeShelfPanel()
+                    panel = LeftShelfPanel()
 
                     panel.project_version_changed.connect(changed_versions.append)
-                    panel.as2r_button.click()
+                    panel.as2_button.click()
 
-                    self.assertEqual(panel.as2r_button.text(), PROJECT_VERSION_AS2R)
+                    self.assertEqual(len(panel.version_button_group.buttons()), 2)
+                    self.assertEqual(panel.as2_button.text(), "AS2")
                     self.assertEqual(panel.get_project_version(), PROJECT_VERSION_AS2R)
                     self.assertEqual(changed_versions, [PROJECT_VERSION_AS2R])
+                    self.assertFalse(panel.as2_format_combo.isHidden())
+
+                    panel.as2_format_combo.setCurrentText(PROJECT_VERSION_AS2OE)
+
+                    self.assertEqual(panel.get_project_version(), PROJECT_VERSION_AS2OE)
+                    self.assertEqual(changed_versions, [PROJECT_VERSION_AS2R])
+
+        panel.close()
+        application.processEvents()
+
+    def test_imported_as2_legacy_project_selects_as2_family_and_exact_format(self) -> None:
+        """Loading a project should restore both the family and exact format."""
+        application = QApplication.instance()
+        if application is None:
+            application = QApplication([])
+
+        profiles = [
+            {
+                "wall_type": 0,
+                "short_label": "AS1 Wall",
+                "description": "AS1 test wall",
+            },
+            {
+                "wall_type": 3,
+                "short_label": "AS2 Wall",
+                "description": "AS2 test wall",
+            },
+        ]
+
+        with patch("app.ui.panels.theme_shelf.get_default_wall_type", return_value=0):
+            with patch.object(ThemeShelfPanel, "_load_sorted_profiles", return_value=profiles):
+                with patch.object(ThemeShelfPanel, "_add_wall_set_legend"):
+                    panel = LeftShelfPanel()
+                    panel.set_project_version(PROJECT_VERSION_AS2)
+
+                    self.assertTrue(panel.as2_button.isChecked())
+                    self.assertEqual(panel.as2_format_combo.currentText(), PROJECT_VERSION_AS2)
+                    self.assertEqual(panel.get_project_version(), PROJECT_VERSION_AS2)
 
         panel.close()
         application.processEvents()
@@ -143,10 +185,12 @@ class ProjectVersionUiTest(unittest.TestCase):
         harness.is_door_open_check.close()
         application.processEvents()
 
-    def test_as1_and_as2r_support_ceiling_generation(self) -> None:
-        """Both supported project formats should allow ceiling generation."""
+    def test_as1_and_all_as2_formats_support_ceiling_generation(self) -> None:
+        """Every selectable project format should allow ceiling generation."""
         self.assertTrue(supports_ceiling_generation(PROJECT_VERSION_AS1))
+        self.assertTrue(supports_ceiling_generation(PROJECT_VERSION_AS2))
         self.assertTrue(supports_ceiling_generation(PROJECT_VERSION_AS2R))
+        self.assertTrue(supports_ceiling_generation(PROJECT_VERSION_AS2OE))
 
     def test_as2r_ceiling_option_is_available(self) -> None:
         """AS2R should preserve the requested ceiling state and accept clicks."""

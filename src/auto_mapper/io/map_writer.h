@@ -16,7 +16,8 @@ namespace auto_mapper::io {
 enum class MapFormat {
     AS1,
     AS2,
-    AS2R
+    AS2R,
+    AS2OE
 };
 
 struct Sprite {
