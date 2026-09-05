@@ -116,6 +116,22 @@ Decoration Stamp relationships:
 
 A group of wall sprites that share the same physical grid step and visual style.
 
+## Editor Set
+
+A selectable card in the editor's active shelf. A Wall Set card is an Editor
+Set in the wall shelf; a Decoration Stamp Series card is an Editor Set in the
+decoration shelf.
+
+## Editor Set Item
+
+One selectable member inside the current Editor Set. A Wall Set Item is a wall
+variant or door choice. A Decoration Set Item is one stamp variant in the
+selected Decoration Stamp Series.
+
+Editor Set selection and Editor Set Item selection are separate editor states.
+Each Editor Set remembers its selected Editor Set Item for the current editor
+session, including while another shelf or Editor Set is active.
+
 ## AS2 Wall Set Asset
 
 Any sprite asset belonging to an AS2 wall set's walls, door assembly, Door Flank Parts, or matching floor.

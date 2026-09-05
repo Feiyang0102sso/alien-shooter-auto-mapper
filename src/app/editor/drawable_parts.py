@@ -7,6 +7,7 @@ from app.editor.wall_profiles import get_drawable_parts as get_dll_drawable_part
 
 PART_WALL_BODY = "wall_body"
 AS2_SET1_WALL_TYPES = {3, 4, 5}
+AS2_SET1_CANONICAL_WALL_TYPE = 3
 
 
 def get_drawable_parts(wall_type: int) -> list:
@@ -52,3 +53,11 @@ def get_wall_set_drawable_parts(wall_type: int) -> list:
         items.append((wall_type, part_id, label))
 
     return items
+
+
+def get_editor_wall_set_type(wall_type: int) -> int:
+    """Return the left-shelf wall set represented by one internal wall type."""
+    if wall_type in AS2_SET1_WALL_TYPES:
+        return AS2_SET1_CANONICAL_WALL_TYPE
+
+    return wall_type

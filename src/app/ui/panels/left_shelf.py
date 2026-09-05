@@ -231,6 +231,20 @@ class LeftShelfPanel(QWidget):
         self.shelf_stack.setCurrentIndex(shelf_mode)
         self.shelf_mode_changed.emit(shelf_mode)
 
+        if shelf_mode == SHELF_MODE_DECORATIONS:
+            self.decoration_stamp_shelf.ensure_selection()
+            return
+
+        self.theme_shelf.activate_selected_wall_set()
+
+    def select_relative_set(self, step: int) -> None:
+        """Select an adjacent card in the shelf currently on screen."""
+        if self.get_shelf_mode() == SHELF_MODE_DECORATIONS:
+            self.decoration_stamp_shelf.select_relative_series(step)
+            return
+
+        self.theme_shelf.select_relative_wall_set(step)
+
     def _sync_version_controls(self) -> None:
         """
         Keep the family buttons and AS2 format selector in sync.

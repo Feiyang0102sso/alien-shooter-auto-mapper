@@ -95,16 +95,20 @@ class ThemeShelfPanel(QWidget):
         self.setObjectName("themeShelfPanel")
         self.selected_wall_type = get_default_wall_type()
         self.current_project_version = self._get_project_version_for_wall_type(self.selected_wall_type)
+        self._selected_wall_type_by_family = {}
+        selection_key = self._get_selection_key(self.current_project_version)
+        self._selected_wall_type_by_family[selection_key] = self.selected_wall_type
+        self._cards_by_wall_type = {}
         self.profiles = self._load_sorted_profiles()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
-        scroll_area = QScrollArea()
-        scroll_area.setObjectName("themeShelfScrollArea")
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setObjectName("themeShelfScrollArea")
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.content = QWidget()
         self.content.setObjectName("themeShelfScrollContent")
@@ -112,8 +116,8 @@ class ThemeShelfPanel(QWidget):
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_layout.setSpacing(12)
         self.content_layout.setSizeConstraint(QLayout.SetMinAndMaxSize)
-        scroll_area.setWidget(self.content)
-        layout.addWidget(scroll_area)
+        self.scroll_area.setWidget(self.content)
+        layout.addWidget(self.scroll_area)
 
         self._populate_wall_cards()
 
@@ -146,6 +150,7 @@ class ThemeShelfPanel(QWidget):
         Rebuild wall set cards for the selected game family.
         """
         self._clear_layout(self.content_layout)
+        self._cards_by_wall_type = {}
 
         for profile in self.profiles:
             wall_type = profile["wall_type"]
@@ -161,10 +166,12 @@ class ThemeShelfPanel(QWidget):
             )
 
         self.content_layout.addStretch(1)
+        self._update_card_selection(False)
 
     def _add_card(self, wall_type: int, title_text: str, detail_text: str, image_path: Path | None) -> None:
         card = QFrame()
         card.setObjectName("themeCard")
+        card.setProperty("selected", False)
         card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(10, 10, 10, 10)
@@ -196,6 +203,7 @@ class ThemeShelfPanel(QWidget):
         card_layout.addWidget(button)
 
         self.content_layout.addWidget(card, 0, Qt.AlignTop)
+        self._cards_by_wall_type[wall_type] = card
 
     def _add_wall_set_legend(self, card_layout: QVBoxLayout, wall_type: int) -> None:
         """
@@ -303,7 +311,7 @@ class ThemeShelfPanel(QWidget):
             return
 
         self._populate_wall_cards()
-        self._select_first_wall_set()
+        self._select_saved_or_first_wall_set()
 
     def get_project_version(self) -> str:
         """Return the currently selected project version."""
@@ -334,9 +342,87 @@ class ThemeShelfPanel(QWidget):
                 self._select_wall_set(wall_type, profile["short_label"])
                 return
 
+    def _select_saved_or_first_wall_set(self) -> None:
+        """Restore the family selection, or select its first wall set."""
+        selection_key = self._get_selection_key(self.current_project_version)
+        saved_wall_type = self._selected_wall_type_by_family.get(selection_key)
+
+        for profile in self.profiles:
+            wall_type = profile["wall_type"]
+            if wall_type != saved_wall_type:
+                continue
+            if not self._profile_belongs_to_current_version(wall_type):
+                continue
+
+            self._select_wall_set(wall_type, profile["short_label"])
+            return
+
+        self._select_first_wall_set()
+
     def _select_wall_set(self, wall_type: int, wall_name: str) -> None:
         self.selected_wall_type = wall_type
+        selection_key = self._get_selection_key(self.current_project_version)
+        self._selected_wall_type_by_family[selection_key] = wall_type
+        self._update_card_selection(True)
         self.wall_set_selected.emit(wall_type, wall_name)
+
+    def activate_selected_wall_set(self) -> None:
+        """Re-emit the remembered wall set when its shelf becomes active."""
+        for profile in self.profiles:
+            wall_type = profile["wall_type"]
+            if wall_type != self.selected_wall_type:
+                continue
+            if not self._profile_belongs_to_current_version(wall_type):
+                continue
+
+            self._select_wall_set(wall_type, profile["short_label"])
+            return
+
+        self._select_saved_or_first_wall_set()
+
+    def select_relative_wall_set(self, step: int) -> None:
+        """Select an adjacent visible wall set without wrapping."""
+        visible_profiles = []
+        for profile in self.profiles:
+            wall_type = profile["wall_type"]
+            if self._profile_belongs_to_current_version(wall_type):
+                visible_profiles.append(profile)
+
+        current_index = -1
+        index = 0
+        for profile in visible_profiles:
+            if profile["wall_type"] == self.selected_wall_type:
+                current_index = index
+                break
+            index += 1
+
+        if current_index < 0:
+            self._select_saved_or_first_wall_set()
+            return
+
+        next_index = current_index + step
+        if next_index < 0:
+            return
+        if next_index >= len(visible_profiles):
+            return
+
+        next_profile = visible_profiles[next_index]
+        self._select_wall_set(next_profile["wall_type"], next_profile["short_label"])
+
+    def _update_card_selection(self, scroll_to_selection: bool) -> None:
+        """Apply card highlighting and keep keyboard selection visible."""
+        selected_card = None
+        for wall_type, card in self._cards_by_wall_type.items():
+            is_selected = wall_type == self.selected_wall_type
+            card.setProperty("selected", is_selected)
+            card.style().unpolish(card)
+            card.style().polish(card)
+            card.update()
+            if is_selected:
+                selected_card = card
+
+        if scroll_to_selection and selected_card is not None:
+            self.scroll_area.ensureWidgetVisible(selected_card)
 
     def _profile_belongs_to_current_version(self, wall_type: int) -> bool:
         if self.current_project_version == PROJECT_VERSION_AS1:
@@ -352,6 +438,13 @@ class ThemeShelfPanel(QWidget):
             return PROJECT_VERSION_AS2R
 
         return PROJECT_VERSION_AS1
+
+    def _get_selection_key(self, project_version: str) -> str:
+        """Return the session-memory bucket shared by one game family."""
+        if is_as2_series_project_version(project_version):
+            return "AS2"
+
+        return "AS1"
 
     def _clear_layout(self, layout: QVBoxLayout) -> None:
         """

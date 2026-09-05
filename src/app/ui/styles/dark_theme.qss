@@ -11,14 +11,16 @@ QToolBar {
     padding: 8px;
 }
 
-#languageToggleButton {
+#languageToggleButton,
+#hotkeyHelpButton {
     background: #223039;
     border: 1px solid #36505d;
     border-radius: 6px;
     padding: 0px;
 }
 
-#languageToggleButton:hover {
+#languageToggleButton:hover,
+#hotkeyHelpButton:hover {
     background: #2a3d47;
     border-color: #4f7fbf;
 }
@@ -140,6 +142,16 @@ QDockWidget::title {
 
 #themeCard:hover {
     border-color: #2aa879;
+}
+
+#mainToolbar QToolButton,
+#mainToolbar QCheckBox {
+    min-height: 40px;
+}
+
+#themeCard[selected="true"] {
+    border: 2px solid #45c797;
+    background: #1d2c31;
 }
 
 #themeShelfScrollArea {

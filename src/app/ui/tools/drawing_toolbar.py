@@ -75,6 +75,10 @@ class DrawingToolbar(QToolBar):
 
         return None
 
+    def get_mode_action(self, mode: DrawingMode):
+        """Return the QAction backing one drawing mode."""
+        return self._actions.get(mode)
+
     def set_mode_visible(self, mode: DrawingMode, visible: bool) -> None:
         """
         Show or hide one tool together with its separator.

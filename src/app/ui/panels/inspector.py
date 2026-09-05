@@ -16,8 +16,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.editor.decoration_stamps import get_decoration_stamp_variants
-from app.editor.drawable_parts import AS2_SET1_WALL_TYPES, get_wall_set_drawable_parts
+from app.editor.decoration_stamps import (
+    get_decoration_stamp_series_id,
+    get_decoration_stamp_variants,
+)
+from app.editor.drawable_parts import (
+    AS2_SET1_WALL_TYPES,
+    get_editor_wall_set_type,
+    get_wall_set_drawable_parts,
+)
 from app.editor.wall_profiles import get_default_wall_type, get_wall_profile
 from app.i18n.locale import tr
 from app.i18n.text_keys import TextKey
@@ -127,6 +134,8 @@ class InspectorPanel(QWidget):
         self._drawable_wall_types = []
         self._stamp_profile_ids = []
         self._stamp_variants = []
+        self._component_index_by_editor_set = {}
+        self._current_editor_set_key = None
         self.component_combo.currentIndexChanged.connect(self._on_component_index_changed)
         component_layout.addWidget(self.component_combo)
 
@@ -212,6 +221,8 @@ class InspectorPanel(QWidget):
         Update active wall set and its drawable part choices.
         """
         self.component_mode = COMPONENT_MODE_WALL
+        editor_wall_set_type = get_editor_wall_set_type(wall_type)
+        self._current_editor_set_key = (COMPONENT_MODE_WALL, editor_wall_set_type)
         self.current_wall_type = wall_type
         self.theme_label.setText(wall_name)
         self.component_combo.setVisible(True)
@@ -239,6 +250,8 @@ class InspectorPanel(QWidget):
         Show the active stamp series and its member choices.
         """
         self.component_mode = COMPONENT_MODE_STAMP
+        series_id = get_decoration_stamp_series_id(profile_id)
+        self._current_editor_set_key = (COMPONENT_MODE_STAMP, series_id)
         self.theme_label.setText(series_name)
         self.component_combo.setVisible(True)
         self.nvid_label.setVisible(False)
@@ -247,6 +260,16 @@ class InspectorPanel(QWidget):
         self.stamp_detail_label.setVisible(True)
 
         self._reload_stamp_variant_choices(profile_id)
+
+    def get_selected_stamp_profile_id(self) -> str | None:
+        """Return the stamp profile currently selected in the component combo."""
+        selected_index = self.component_combo.currentIndex()
+        if selected_index < 0:
+            return None
+        if selected_index >= len(self._stamp_profile_ids):
+            return None
+
+        return self._stamp_profile_ids[selected_index]
 
     def set_map_size(self, map_size_x: float, map_size_y: float) -> None:
         """
@@ -268,6 +291,17 @@ class InspectorPanel(QWidget):
         Return the current eraser size.
         """
         return self.eraser_properties.get_size()
+
+    def select_relative_component(self, step: int) -> None:
+        """Select an adjacent item in the active Editor Set without wrapping."""
+        current_index = self.component_combo.currentIndex()
+        next_index = current_index + step
+        if next_index < 0:
+            return
+        if next_index >= self.component_combo.count():
+            return
+
+        self.component_combo.setCurrentIndex(next_index)
 
     def get_as1_ceiling_layer_counts(self) -> tuple:
         """Return the project-wide Standard and Lab ceiling layer counts."""
@@ -347,6 +381,9 @@ class InspectorPanel(QWidget):
         """
         Route a component combo change to the wall or the stamp handler.
         """
+        if index >= 0 and self._current_editor_set_key is not None:
+            self._component_index_by_editor_set[self._current_editor_set_key] = index
+
         if self.component_mode == COMPONENT_MODE_STAMP:
             self._emit_stamp_variant_changed(index)
             return
@@ -410,14 +447,17 @@ class InspectorPanel(QWidget):
             self.component_combo.addItem(tr(TextKey.DRAWABLE_WALL_BODY))
 
         selected_index = self._find_drawable_wall_type_index(wall_type)
+        remembered_index = self._component_index_by_editor_set.get(
+            self._current_editor_set_key
+        )
+        if remembered_index is not None and remembered_index < len(self._drawable_part_ids):
+            selected_index = remembered_index
         self.component_combo.setCurrentIndex(selected_index)
         self.component_combo.blockSignals(False)
 
         if self._drawable_part_ids:
-            part_id = self._drawable_part_ids[selected_index]
-            selected_wall_type = self._drawable_wall_types[selected_index]
-            self._update_preview(selected_wall_type, part_id)
-            self.drawable_part_changed.emit(part_id)
+            self._component_index_by_editor_set[self._current_editor_set_key] = selected_index
+            self._emit_drawable_part_changed(selected_index)
 
     def _reload_stamp_variant_choices(self, profile_id: str) -> None:
         """
@@ -443,6 +483,16 @@ class InspectorPanel(QWidget):
         self.component_combo.setCurrentIndex(selected_index)
         self.component_combo.blockSignals(False)
 
+        remembered_index = self._component_index_by_editor_set.get(
+            self._current_editor_set_key
+        )
+        if remembered_index is not None and remembered_index < len(self._stamp_profile_ids):
+            selected_index = remembered_index
+            self.component_combo.blockSignals(True)
+            self.component_combo.setCurrentIndex(selected_index)
+            self.component_combo.blockSignals(False)
+
+        self._component_index_by_editor_set[self._current_editor_set_key] = selected_index
         self._update_stamp_detail(selected_index)
 
     def _emit_stamp_variant_changed(self, index: int) -> None:

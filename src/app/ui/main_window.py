@@ -1,6 +1,7 @@
 """
 Main window assembly for the Auto Mapper editor.
 """
+from functools import partial
 from json import JSONDecodeError
 from pathlib import Path
 
@@ -23,6 +24,28 @@ from PySide6.QtWidgets import (
 
 from app.binding.client import AutoMapperLibClient
 from app.config import ROOT_DIR
+from app.hotkeys import HotkeyCheckBox, HotkeyManager
+from app.hotkeys.config import (
+    COMMAND_CEILING,
+    COMMAND_DELETE_DECORATION,
+    COMMAND_DOOR_STATE,
+    COMMAND_ERASER,
+    COMMAND_EXPORT_JSON,
+    COMMAND_FLOOR,
+    COMMAND_GENERATE_MAP,
+    COMMAND_IMPORT_JSON,
+    COMMAND_LANGUAGE,
+    COMMAND_NEW,
+    COMMAND_NEXT_ITEM,
+    COMMAND_NEXT_SET,
+    COMMAND_POLYLINE,
+    COMMAND_PREVIOUS_ITEM,
+    COMMAND_PREVIOUS_SET,
+    COMMAND_RANDOM_DIRECTION,
+    COMMAND_RECTANGLE,
+    COMMAND_SELECT,
+    COMMAND_STRAIGHT_LINE,
+)
 from app.i18n.locale import LOCALE_EN_US, LOCALE_ZH_CN, get_locale, save_locale_preference, tr
 from app.i18n.text_keys import TextKey
 from app.logger import logger
@@ -73,12 +96,14 @@ class MainWindow(QMainWindow):
         self.decoration_shelf = DecorationShelfPanel()
         self.left_shelf_tabs = QTabWidget()
         self.inspector = InspectorPanel(self.as1_ceiling_layer_config)
+        self.hotkey_manager = HotkeyManager(self)
 
         self.setCentralWidget(self.viewport)
         self._build_drawing_toolbar()
         self._build_toolbar()
         self._build_docks()
         self._connect_signals()
+        self._configure_hotkeys()
         self._on_shelf_mode_changed(self.shelf_panel.get_shelf_mode())
         project_version = self.shelf_panel.get_project_version()
         self._sync_ceiling_option(project_version, False)
@@ -118,46 +143,46 @@ class MainWindow(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.addToolBar(Qt.TopToolBarArea, toolbar)
 
-        new_action = QAction(tr(TextKey.ACTION_NEW), self)
-        import_action = QAction(tr(TextKey.ACTION_IMPORT_JSON), self)
-        export_action = QAction(tr(TextKey.ACTION_EXPORT_JSON), self)
-        generate_action = QAction(tr(TextKey.ACTION_GENERATE_MAP), self)
+        self.new_action = QAction(tr(TextKey.ACTION_NEW), self)
+        self.import_action = QAction(tr(TextKey.ACTION_IMPORT_JSON), self)
+        self.export_action = QAction(tr(TextKey.ACTION_EXPORT_JSON), self)
+        self.generate_action = QAction(tr(TextKey.ACTION_GENERATE_MAP), self)
 
-        self.floor_check = QCheckBox(tr(TextKey.CHECK_FLOOR))
+        self.floor_check = HotkeyCheckBox(tr(TextKey.CHECK_FLOOR))
         self.floor_check.setObjectName("floorCheck")
         self.floor_check.setChecked(False)
         self.floor_check.setToolTip(tr(TextKey.TOOLTIP_FLOOR))
 
-        self.ceiling_check = QCheckBox(tr(TextKey.CHECK_CEILING))
+        self.ceiling_check = HotkeyCheckBox(tr(TextKey.CHECK_CEILING))
         self.ceiling_check.setObjectName("ceilingCheck")
         self.ceiling_check.setChecked(False)
         self.ceiling_check.setProperty("unavailable", False)
         self.ceiling_check.setToolTip(tr(TextKey.TOOLTIP_CEILING))
         self.ceiling_check.clicked.connect(self._on_ceiling_changed)
 
-        self.is_door_open_check = QCheckBox(tr(TextKey.CHECK_IS_DOOR_OPEN))
+        self.is_door_open_check = HotkeyCheckBox(tr(TextKey.CHECK_IS_DOOR_OPEN))
         self.is_door_open_check.setObjectName("isDoorOpenCheck")
         self.is_door_open_check.setChecked(False)
         self.is_door_open_check.setProperty("unavailable", False)
         self.is_door_open_check.setToolTip(tr(TextKey.TOOLTIP_IS_DOOR_OPEN))
         self.is_door_open_check.clicked.connect(self._on_is_door_open_changed)
 
-        self.random_direction_check = QCheckBox(tr(TextKey.CHECK_RANDOM_DIRECTION))
+        self.random_direction_check = HotkeyCheckBox(tr(TextKey.CHECK_RANDOM_DIRECTION))
         self.random_direction_check.setObjectName("randomDirectionCheck")
         self.random_direction_check.setChecked(True)
         self.random_direction_check.setToolTip(tr(TextKey.TOOLTIP_RANDOM_DIRECTION))
 
-        new_action.triggered.connect(self._new_project)
-        import_action.triggered.connect(self._import_json)
-        export_action.triggered.connect(self._export_json)
-        generate_action.triggered.connect(self._generate_map)
+        self.new_action.triggered.connect(self._new_project)
+        self.import_action.triggered.connect(self._import_json)
+        self.export_action.triggered.connect(self._export_json)
+        self.generate_action.triggered.connect(self._generate_map)
 
-        toolbar.addAction(new_action)
+        toolbar.addAction(self.new_action)
         toolbar.addSeparator()
-        toolbar.addAction(import_action)
-        toolbar.addAction(export_action)
+        toolbar.addAction(self.import_action)
+        toolbar.addAction(self.export_action)
         toolbar.addSeparator()
-        toolbar.addAction(generate_action)
+        toolbar.addAction(self.generate_action)
         toolbar.addSeparator()
         toolbar.addWidget(self.floor_check)
         toolbar.addWidget(self.ceiling_check)
@@ -167,6 +192,9 @@ class MainWindow(QMainWindow):
         toolbar_spacer = QWidget(self)
         toolbar_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         toolbar.addWidget(toolbar_spacer)
+
+        self.hotkey_button = self.hotkey_manager.create_help_button()
+        toolbar.addWidget(self.hotkey_button)
 
         self.language_button = QPushButton(self)
         self.language_button.setObjectName("languageToggleButton")
@@ -240,6 +268,82 @@ class MainWindow(QMainWindow):
         self.inspector.eraser_size_changed.connect(self._on_eraser_size_changed)
         self.inspector.decoration_spacing_changed.connect(self._on_decoration_spacing_changed)
         self.inspector.decoration_delete_requested.connect(self._on_decoration_delete_requested)
+
+    def _configure_hotkeys(self) -> None:
+        """Connect the centralized hotkey configuration to editor commands."""
+        self.hotkey_manager.bind_action(COMMAND_NEW, self.new_action, True)
+        self.hotkey_manager.bind_action(COMMAND_IMPORT_JSON, self.import_action, True)
+        self.hotkey_manager.bind_action(COMMAND_EXPORT_JSON, self.export_action, True)
+        self.hotkey_manager.bind_action(COMMAND_GENERATE_MAP, self.generate_action, True)
+        self.hotkey_manager.bind_button(COMMAND_FLOOR, self.floor_check, hint_on_new_line=True)
+        self.hotkey_manager.bind_button(COMMAND_CEILING, self.ceiling_check, hint_on_new_line=True)
+        self.hotkey_manager.bind_button(
+            COMMAND_DOOR_STATE,
+            self.is_door_open_check,
+            hint_on_new_line=True,
+        )
+        self.hotkey_manager.bind_button(
+            COMMAND_RANDOM_DIRECTION,
+            self.random_direction_check,
+            hint_on_new_line=True,
+        )
+        self.hotkey_manager.bind_button(
+            COMMAND_LANGUAGE,
+            self.language_button,
+            self.language_button.showMenu,
+        )
+
+        self.hotkey_manager.register_callback(
+            COMMAND_PREVIOUS_SET,
+            partial(self.shelf_panel.select_relative_set, -1),
+        )
+        self.hotkey_manager.register_callback(
+            COMMAND_NEXT_SET,
+            partial(self.shelf_panel.select_relative_set, 1),
+        )
+        self.hotkey_manager.register_callback(
+            COMMAND_PREVIOUS_ITEM,
+            partial(self.inspector.select_relative_component, -1),
+        )
+        self.hotkey_manager.register_callback(
+            COMMAND_NEXT_ITEM,
+            partial(self.inspector.select_relative_component, 1),
+        )
+
+        drawing_mode_commands = (
+            (COMMAND_SELECT, DrawingMode.SELECT),
+            (COMMAND_POLYLINE, DrawingMode.POLYLINE),
+            (COMMAND_STRAIGHT_LINE, DrawingMode.STRAIGHT_LINE),
+            (COMMAND_RECTANGLE, DrawingMode.RECTANGLE),
+            (COMMAND_ERASER, DrawingMode.ERASER),
+        )
+        for command_id, drawing_mode in drawing_mode_commands:
+            action = self.drawing_toolbar.get_mode_action(drawing_mode)
+            self.hotkey_manager.add_text_hint(action, command_id)
+            self.hotkey_manager.register_callback(
+                command_id,
+                partial(self._activate_drawing_mode_from_hotkey, drawing_mode),
+            )
+
+        self.hotkey_manager.add_text_hint(
+            self.inspector.delete_decoration_button,
+            COMMAND_DELETE_DECORATION,
+        )
+        self.hotkey_manager.register_callback(
+            COMMAND_DELETE_DECORATION,
+            self._on_decoration_delete_requested,
+        )
+
+    def _activate_drawing_mode_from_hotkey(self, drawing_mode: DrawingMode) -> None:
+        """Apply a number-key tool while respecting shelf-only tools."""
+        is_decoration_shelf = self.shelf_panel.get_shelf_mode() == SHELF_MODE_DECORATIONS
+        if drawing_mode == DrawingMode.SELECT and not is_decoration_shelf:
+            return
+        if drawing_mode == DrawingMode.ERASER and is_decoration_shelf:
+            return
+
+        self.drawing_toolbar.set_mode(drawing_mode)
+        self._on_drawing_mode_changed(drawing_mode)
 
     def _on_shelf_mode_changed(self, shelf_mode: int) -> None:
         """
@@ -373,10 +477,14 @@ class MainWindow(QMainWindow):
         """
         Arm click-to-place for one authored room stamp.
         """
+        self.inspector.set_decoration_stamp_tool(profile_id, stamp_name)
+        selected_profile_id = self.inspector.get_selected_stamp_profile_id()
+        if selected_profile_id is not None:
+            profile_id = selected_profile_id
+
         self.viewport.set_active_decoration_stamp(profile_id)
         # Placing owns the left button, so no drawing tool stays checked.
         self.drawing_toolbar.clear_mode()
-        self.inspector.set_decoration_stamp_tool(profile_id, stamp_name)
         self.inspector.clear_decoration_selection()
         self.statusBar().showMessage(tr(TextKey.STATUS_DECORATION_TOOL_SELECTED, decoration_name=stamp_name))
         logger.info(f"Stamp tool selected: {profile_id}")
