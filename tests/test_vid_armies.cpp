@@ -126,3 +126,11 @@ TEST(VidArmiesTest, AS2AssetsHaveCompleteUniqueBindings) {
 TEST(VidArmiesTest, UnknownAS2AssetVidThrows) {
     EXPECT_THROW(get_as2_vid_army(999999), std::invalid_argument);
 }
+
+TEST(VidArmiesTest, DecorationArmyConflictsUseGameIniDefaults) {
+    // A few authored maps contain stale per-sprite Army values. The game INI
+    // remains authoritative because Army is globally bound to the VID.
+    EXPECT_EQ(get_as2_vid_army(1221), 2);
+    EXPECT_EQ(get_as2_vid_army(1638), 0);
+    EXPECT_EQ(get_as2_vid_army(1755), 0);
+}

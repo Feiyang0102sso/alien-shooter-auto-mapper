@@ -9,9 +9,23 @@
 
 #pragma once
 
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/canteen_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/computers_as2.h"
 #include "auto_mapper/core/decoration_builder/decoration_profile_as2/dorms_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/garage_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/lab_bioexp_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/lab_computers_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/lab_desks_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/lab_office_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/lab_surgery_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/large_machine_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/machines_as2.h"
 #include "auto_mapper/core/decoration_builder/decoration_profile_as2/office_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/other_rooms_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/sick_bay_as2.h"
 #include "auto_mapper/core/decoration_builder/decoration_profile_as2/storage_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/vehicle_workshop_as2.h"
+#include "auto_mapper/core/decoration_builder/decoration_profile_as2/weapon_workshop_as2.h"
 
 namespace auto_mapper::core::decoration_builder {
 
@@ -46,6 +60,96 @@ static const DecorationProfile* const AS2_DECORATION_PROFILES[] = {
     &STORAGE07_DECORATION_PROFILE,
     &STORAGE08_DECORATION_PROFILE,
     &STORAGE09_DECORATION_PROFILE,
+    &MACHINES_01_DECORATION_PROFILE,
+    &MACHINES_02_DECORATION_PROFILE,
+    &MACHINES_03_DECORATION_PROFILE,
+    &MACHINES_04_DECORATION_PROFILE,
+    &MACHINES_05_DECORATION_PROFILE,
+    &MACHINES_06_DECORATION_PROFILE,
+    &MACHINES_07_DECORATION_PROFILE,
+    &MACHINES_08_DECORATION_PROFILE,
+    &MACHINES_09_DECORATION_PROFILE,
+    &COMP01_DECORATION_PROFILE,
+    &COMP02_DECORATION_PROFILE,
+    &COMP03_DECORATION_PROFILE,
+    &COMP04_DECORATION_PROFILE,
+    &COMP05_DECORATION_PROFILE,
+    &COMP06_DECORATION_PROFILE,
+    &COMP07_DECORATION_PROFILE,
+    &COMP08_DECORATION_PROFILE,
+    &COMP09_DECORATION_PROFILE,
+    &VEHICLE_WORKSHOP01_DECORATION_PROFILE,
+    &VEHICLE_WORKSHOP02_DECORATION_PROFILE,
+    &VEHICLE_WORKSHOP03_DECORATION_PROFILE,
+    &VEHICLE_WORKSHOP04_DECORATION_PROFILE,
+    &VEHICLE_WORKSHOP05_DECORATION_PROFILE,
+    &GARAGE01_DECORATION_PROFILE,
+    &GARAGE02_DECORATION_PROFILE,
+    &GARAGE03_DECORATION_PROFILE,
+    &GARAGE04_DECORATION_PROFILE,
+    &GARAGE05_DECORATION_PROFILE,
+    &GARAGE06_DECORATION_PROFILE,
+    &GARAGE07_DECORATION_PROFILE,
+    &GARAGE08_DECORATION_PROFILE,
+    &GARAGE09_DECORATION_PROFILE,
+    &WEAPON_WORKSHOP01_DECORATION_PROFILE,
+    &WEAPON_WORKSHOP02_DECORATION_PROFILE,
+    &WEAPON_WORKSHOP03_DECORATION_PROFILE,
+    &WEAPON_WORKSHOP04_DECORATION_PROFILE,
+    &WEAPON_WORKSHOP05_DECORATION_PROFILE,
+    &WEAPON_WORKSHOP06_DECORATION_PROFILE,
+    &WEAPON_WORKSHOP07_DECORATION_PROFILE,
+    &WEAPON_WORKSHOP08_DECORATION_PROFILE,
+    &SICK_BAY01_DECORATION_PROFILE,
+    &SICK_BAY02_DECORATION_PROFILE,
+    &SICK_BAY03_DECORATION_PROFILE,
+    &SICK_BAY04_DECORATION_PROFILE,
+    &SICK_BAY05_DECORATION_PROFILE,
+    &CANTEEN01_DECORATION_PROFILE,
+    &CANTEEN02_DECORATION_PROFILE,
+    &CANTEEN03_DECORATION_PROFILE,
+    &CANTEEN04_DECORATION_PROFILE,
+    &LARGE_M01_DECORATION_PROFILE,
+    &LARGE_M02_DECORATION_PROFILE,
+    &LAB_DESKS01_DECORATION_PROFILE,
+    &LAB_DESKS02_DECORATION_PROFILE,
+    &LAB_DESKS03_DECORATION_PROFILE,
+    &LAB_DESKS04_DECORATION_PROFILE,
+    &LAB_DESKS05_DECORATION_PROFILE,
+    &LAB_DESKS06_DECORATION_PROFILE,
+    &LAB_DESKS07_DECORATION_PROFILE,
+    &LAB_DESKS08_DECORATION_PROFILE,
+    &LAB_OFFICE01_DECORATION_PROFILE,
+    &LAB_OFFICE02_DECORATION_PROFILE,
+    &LAB_OFFICE03_DECORATION_PROFILE,
+    &LAB_OFFICE04_DECORATION_PROFILE,
+    &LAB_COMP01_DECORATION_PROFILE,
+    &LAB_COMP02_DECORATION_PROFILE,
+    &LAB_COMP03_DECORATION_PROFILE,
+    &LAB_COMP04_DECORATION_PROFILE,
+    &LAB_BIOEXP01_DECORATION_PROFILE,
+    &LAB_BIOEXP02_DECORATION_PROFILE,
+    &LAB_BIOEXP03_DECORATION_PROFILE,
+    &LAB_BIOEXP04_DECORATION_PROFILE,
+    &LAB_BIOEXP05_DECORATION_PROFILE,
+    &LAB_BIOEXP06_DECORATION_PROFILE,
+    &LAB_BIOEXP07_DECORATION_PROFILE,
+    &LAB_BIOEXP08_DECORATION_PROFILE,
+    &LAB_SURGERY01_DECORATION_PROFILE,
+    &LAB_SURGERY02_DECORATION_PROFILE,
+    &LAB_SURGERY03_DECORATION_PROFILE,
+    &LAB_SURGERY04_DECORATION_PROFILE,
+    &LAB_SURGERY05_DECORATION_PROFILE,
+    &LAB_SURGERY06_DECORATION_PROFILE,
+    &OTHERS01_DECORATION_PROFILE,
+    &OTHERS02_DECORATION_PROFILE,
+    &OTHERS03_DECORATION_PROFILE,
+    &OTHERS04_DECORATION_PROFILE,
+    &OTHERS05_DECORATION_PROFILE,
+    &OTHERS06_DECORATION_PROFILE,
+    &OTHERS07_DECORATION_PROFILE,
+    &OTHERS08_DECORATION_PROFILE,
+    &OTHERS09_DECORATION_PROFILE,
 };
 
 inline constexpr int AS2_DECORATION_PROFILE_COUNT =

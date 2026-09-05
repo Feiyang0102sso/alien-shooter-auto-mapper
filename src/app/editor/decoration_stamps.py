@@ -160,6 +160,180 @@ DECORATION_STAMP_SERIES_UI_METADATA = {
 }
 
 
+# The newer collections are strictly numbered variants, so they share one
+# localized label and description template per series instead of duplicating
+# two text keys for every profile.
+ADDITIONAL_DECORATION_STAMP_SERIES = (
+    {
+        "series_id": "machines",
+        "profile_ids": (
+            "machines_01", "machines_02", "machines_03", "machines_04", "machines_05",
+            "machines_06", "machines_07", "machines_08", "machines_09",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_MACHINES_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_MACHINES_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_MACHINES_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_MACHINES_DESCRIPTION,
+    },
+    {
+        "series_id": "computers",
+        "profile_ids": (
+            "comp01", "comp02", "comp03", "comp04", "comp05",
+            "comp06", "comp07", "comp08", "comp09",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_COMPUTERS_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_COMPUTERS_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_COMPUTERS_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_COMPUTERS_DESCRIPTION,
+    },
+    {
+        "series_id": "vehicle_workshop",
+        "profile_ids": (
+            "vehicle_workshop01", "vehicle_workshop02", "vehicle_workshop03",
+            "vehicle_workshop04", "vehicle_workshop05",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_VEHICLE_WORKSHOP_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_VEHICLE_WORKSHOP_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_VEHICLE_WORKSHOP_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_VEHICLE_WORKSHOP_DESCRIPTION,
+    },
+    {
+        "series_id": "garage",
+        "profile_ids": (
+            "garage01", "garage02", "garage03", "garage04", "garage05",
+            "garage06", "garage07", "garage08", "garage09",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_GARAGE_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_GARAGE_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_GARAGE_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_GARAGE_DESCRIPTION,
+    },
+    {
+        "series_id": "weapon_workshop",
+        "profile_ids": (
+            "weapon_workshop01", "weapon_workshop02", "weapon_workshop03",
+            "weapon_workshop04", "weapon_workshop05", "weapon_workshop06",
+            "weapon_workshop07", "weapon_workshop08",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_WEAPON_WORKSHOP_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_WEAPON_WORKSHOP_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_WEAPON_WORKSHOP_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_WEAPON_WORKSHOP_DESCRIPTION,
+    },
+    {
+        "series_id": "sick_bay",
+        "profile_ids": (
+            "sick_bay01", "sick_bay02", "sick_bay03", "sick_bay04", "sick_bay05",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_SICK_BAY_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_SICK_BAY_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_SICK_BAY_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_SICK_BAY_DESCRIPTION,
+    },
+    {
+        "series_id": "canteen",
+        "profile_ids": ("canteen01", "canteen02", "canteen03", "canteen04"),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_CANTEEN_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_CANTEEN_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_CANTEEN_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_CANTEEN_DESCRIPTION,
+    },
+    {
+        "series_id": "large_machine",
+        "profile_ids": ("large_m01", "large_m02"),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_LARGE_MACHINE_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_LARGE_MACHINE_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_LARGE_MACHINE_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_LARGE_MACHINE_DESCRIPTION,
+    },
+    {
+        "series_id": "lab_desks",
+        "profile_ids": (
+            "lab_desks01", "lab_desks02", "lab_desks03", "lab_desks04",
+            "lab_desks05", "lab_desks06", "lab_desks07", "lab_desks08",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_LAB_DESKS_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_LAB_DESKS_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_LAB_DESKS_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_LAB_DESKS_DESCRIPTION,
+    },
+    {
+        "series_id": "lab_office",
+        "profile_ids": ("lab_office01", "lab_office02", "lab_office03", "lab_office04"),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_LAB_OFFICE_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_LAB_OFFICE_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_LAB_OFFICE_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_LAB_OFFICE_DESCRIPTION,
+    },
+    {
+        "series_id": "lab_computers",
+        "profile_ids": ("lab_comp01", "lab_comp02", "lab_comp03", "lab_comp04"),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_LAB_COMPUTERS_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_LAB_COMPUTERS_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_LAB_COMPUTERS_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_LAB_COMPUTERS_DESCRIPTION,
+    },
+    {
+        "series_id": "lab_bioexp",
+        "profile_ids": (
+            "lab_bioexp01", "lab_bioexp02", "lab_bioexp03", "lab_bioexp04",
+            "lab_bioexp05", "lab_bioexp06", "lab_bioexp07", "lab_bioexp08",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_LAB_BIOEXP_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_LAB_BIOEXP_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_LAB_BIOEXP_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_LAB_BIOEXP_DESCRIPTION,
+    },
+    {
+        "series_id": "lab_surgery",
+        "profile_ids": (
+            "lab_surgery01", "lab_surgery02", "lab_surgery03",
+            "lab_surgery04", "lab_surgery05", "lab_surgery06",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_LAB_SURGERY_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_LAB_SURGERY_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_LAB_SURGERY_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_LAB_SURGERY_DESCRIPTION,
+    },
+    {
+        "series_id": "other_rooms",
+        "profile_ids": (
+            "others01", "others02", "others03", "others04", "others05",
+            "others06", "others07", "others08", "others09",
+        ),
+        "series_label_key": TextKey.DECORATION_STAMP_SERIES_OTHER_ROOMS_LABEL,
+        "series_description_key": TextKey.DECORATION_STAMP_SERIES_OTHER_ROOMS_DESCRIPTION,
+        "profile_label_key": TextKey.DECORATION_STAMP_OTHER_ROOMS_LABEL,
+        "profile_description_key": TextKey.DECORATION_STAMP_OTHER_ROOMS_DESCRIPTION,
+    },
+)
+
+
+def _register_additional_decoration_stamp_series() -> None:
+    """Expand compact numbered-series definitions into the UI registries."""
+    for series in ADDITIONAL_DECORATION_STAMP_SERIES:
+        series_id = series["series_id"]
+        DECORATION_STAMP_SERIES_UI_METADATA[series_id] = {
+            "label_key": series["series_label_key"],
+            "description_key": series["series_description_key"],
+        }
+
+        variant_number = 1
+        for profile_id in series["profile_ids"]:
+            values = {"variant_number": variant_number}
+            DECORATION_STAMP_UI_METADATA[profile_id] = {
+                "series_id": series_id,
+                "label_key": series["profile_label_key"],
+                "label_values": values,
+                "description_key": series["profile_description_key"],
+                "description_values": values,
+            }
+            variant_number += 1
+
+
+_register_additional_decoration_stamp_series()
+
+
 def get_decoration_stamps() -> list:
     """
     Return all decoration stamps in DLL table order.
@@ -184,8 +358,10 @@ def get_decoration_stamp_items() -> list:
         metadata = _get_stamp_ui_metadata(stamp["profile_id"])
         item = dict(stamp)
         item["series_id"] = metadata["series_id"]
-        item["label"] = tr(metadata["label_key"])
-        item["description"] = tr(metadata["description_key"])
+        label_values = metadata.get("label_values", {})
+        description_values = metadata.get("description_values", {})
+        item["label"] = tr(metadata["label_key"], **label_values)
+        item["description"] = tr(metadata["description_key"], **description_values)
         items.append(item)
 
     return items

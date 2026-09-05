@@ -67,7 +67,10 @@ THUMBNAIL_HEIGHT = 200
 SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp"}
 MAP_SUFFIX = ".map"
 # 以 00 结尾的截图是系列货架卡封面，不参与和 .map 的配对。
-SERIES_COVER_STEM_SUFFIX = "00"
+# Windows 复制出的 00 (1).png 也是封面，但带空格的时间戳截图不能误判。
+SERIES_COVER_STEM_PATTERN = re.compile(
+    r"^(?:[A-Za-z0-9_]+00|00(?: \(\d+\))?)$"
+)
 
 COLOR_WINDOW = "#0d1114"
 COLOR_PANEL = "#171c20"
@@ -385,12 +388,27 @@ def read_source_image(image_path: Path) -> QImage:
     return image
 
 
+def is_series_cover_stem(stem: str) -> bool:
+    """Return whether an image stem follows a supported cover naming form."""
+    return SERIES_COVER_STEM_PATTERN.fullmatch(stem) is not None
+
+
+def build_series_cover_output_path(folder: Path) -> Path:
+    """Build the canonical series-card path from a numbered prep folder."""
+    series_id = re.sub(r"^\d+_?", "", folder.name)
+    if not series_id:
+        raise ValueError(f"Cannot derive a decoration series ID from: {folder}")
+
+    return folder / f"{series_id}00_thumbnail.webp"
+
+
 def collect_auto_jobs(folder: Path) -> tuple[list[Path], list[tuple[Path, str]]]:
     """Split one folder into series covers and map-paired room screenshots.
 
-    A screenshot whose stem ends with "00" is the series cover card, so it is
-    never paired with a map. Every other screenshot is matched to one .map in
-    plain name order: first screenshot to first map, and so on.
+    A screenshot named like ``series00``, ``00``, or ``00 (1)`` is the series
+    cover card, so it is never paired with a map. Every other screenshot is
+    matched to one .map in plain name order: first screenshot to first map,
+    and so on.
     """
     if not folder.is_dir():
         raise ValueError(f"--auto expects a folder: {folder}")
@@ -405,7 +423,7 @@ def collect_auto_jobs(folder: Path) -> tuple[list[Path], list[tuple[Path, str]]]
 
         suffix = candidate.suffix.lower()
         if suffix in SUPPORTED_IMAGE_SUFFIXES:
-            if candidate.stem.endswith(SERIES_COVER_STEM_SUFFIX):
+            if is_series_cover_stem(candidate.stem):
                 cover_paths.append(candidate)
             else:
                 room_image_paths.append(candidate)
@@ -436,7 +454,7 @@ def export_series_cover(cover_path: Path, folder: Path) -> Path:
     source_image = read_source_image(cover_path)
     cropped_image = build_auto_cropped_image(source_image)
 
-    thumbnail_path = folder / f"{cover_path.stem}_thumbnail.webp"
+    thumbnail_path = build_series_cover_output_path(folder)
     save_webp(build_thumbnail(cropped_image), thumbnail_path)
     return thumbnail_path
 
