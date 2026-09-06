@@ -7,6 +7,6 @@
 
 namespace auto_mapper {
     // const char * -> auto
-    constexpr auto VERSION = "0.1.0";
+    constexpr auto VERSION = "1.0.0";
     constexpr auto APP_NAME = "Auto Mapper";
 }

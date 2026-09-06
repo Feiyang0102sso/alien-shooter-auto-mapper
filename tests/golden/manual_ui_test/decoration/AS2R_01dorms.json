@@ -1,402 +1,390 @@
 {
   "version": "AS2R",
-  "map_size_x": 7000.0,
-  "map_size_y": 7000.0,
+  "map_size_x": 5000.0,
+  "map_size_y": 5000.0,
   "segments": [
     {
       "start": {
-        "x": -11,
-        "y": 23
+        "x": -7,
+        "y": 11
       },
       "end": {
-        "x": -11,
-        "y": 16
+        "x": 0,
+        "y": 11
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
-        "x": -11,
-        "y": 16
+        "x": 0,
+        "y": 11
       },
       "end": {
-        "x": -4,
-        "y": 16
+        "x": 0,
+        "y": 18
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
-        "x": -4,
-        "y": 16
+        "x": 0,
+        "y": 18
       },
       "end": {
-        "x": -4,
-        "y": 23
+        "x": -7,
+        "y": 18
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
-        "x": -4,
-        "y": 23
+        "x": -7,
+        "y": 18
       },
       "end": {
-        "x": -11,
-        "y": 23
+        "x": -7,
+        "y": 11
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
-        "x": 2,
-        "y": 24
-      },
-      "end": {
-        "x": 2,
-        "y": 17
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 2,
-        "y": 17
+        "x": 3,
+        "y": 4
       },
       "end": {
         "x": 8,
-        "y": 17
+        "y": 4
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
         "x": 8,
-        "y": 17
+        "y": 4
       },
       "end": {
         "x": 8,
-        "y": 25
+        "y": 11
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
         "x": 8,
-        "y": 25
+        "y": 11
       },
       "end": {
-        "x": 2,
-        "y": 25
+        "x": 3,
+        "y": 11
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
-        "x": 2,
-        "y": 25
+        "x": 3,
+        "y": 11
       },
       "end": {
-        "x": 2,
-        "y": 24
+        "x": 3,
+        "y": 4
       },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 15,
-        "y": 25
-      },
-      "end": {
-        "x": 15,
-        "y": 17
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 15,
-        "y": 17
-      },
-      "end": {
-        "x": 22,
-        "y": 17
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 22,
-        "y": 17
-      },
-      "end": {
-        "x": 22,
-        "y": 25
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 22,
-        "y": 25
-      },
-      "end": {
-        "x": 15,
-        "y": 25
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 29,
-        "y": 31
-      },
-      "end": {
-        "x": 29,
-        "y": 26
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 29,
-        "y": 26
-      },
-      "end": {
-        "x": 36,
-        "y": 26
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 36,
-        "y": 26
-      },
-      "end": {
-        "x": 36,
-        "y": 31
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 36,
-        "y": 31
-      },
-      "end": {
-        "x": 29,
-        "y": 31
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 28,
-        "y": 21
-      },
-      "end": {
-        "x": 28,
-        "y": 16
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 28,
-        "y": 16
-      },
-      "end": {
-        "x": 34,
-        "y": 16
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 34,
-        "y": 16
-      },
-      "end": {
-        "x": 34,
-        "y": 21
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 34,
-        "y": 21
-      },
-      "end": {
-        "x": 28,
-        "y": 21
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 15,
-        "y": 37
-      },
-      "end": {
-        "x": 15,
-        "y": 33
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 15,
-        "y": 33
-      },
-      "end": {
-        "x": 21,
-        "y": 33
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 21,
-        "y": 33
-      },
-      "end": {
-        "x": 21,
-        "y": 37
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 21,
-        "y": 37
-      },
-      "end": {
-        "x": 15,
-        "y": 37
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 6,
-        "y": 37
-      },
-      "end": {
-        "x": 6,
-        "y": 33
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 6,
-        "y": 33
-      },
-      "end": {
-        "x": 12,
-        "y": 33
-      },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
         "x": 12,
-        "y": 33
+        "y": -1
+      },
+      "end": {
+        "x": 17,
+        "y": -1
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 17,
+        "y": -1
+      },
+      "end": {
+        "x": 17,
+        "y": 6
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 17,
+        "y": 6
       },
       "end": {
         "x": 12,
-        "y": 37
+        "y": 6
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
         "x": 12,
-        "y": 37
+        "y": 6
       },
       "end": {
-        "x": 6,
-        "y": 37
+        "x": 12,
+        "y": -1
       },
-      "wall_type": 5,
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 20,
+        "y": 19
+      },
+      "end": {
+        "x": 26,
+        "y": 19
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 26,
+        "y": 19
+      },
+      "end": {
+        "x": 26,
+        "y": 22
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 26,
+        "y": 22
+      },
+      "end": {
+        "x": 20,
+        "y": 22
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 20,
+        "y": 22
+      },
+      "end": {
+        "x": 20,
+        "y": 19
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 11,
+        "y": 21
+      },
+      "end": {
+        "x": 16,
+        "y": 21
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 16,
+        "y": 21
+      },
+      "end": {
+        "x": 16,
+        "y": 25
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 16,
+        "y": 25
+      },
+      "end": {
+        "x": 11,
+        "y": 25
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 11,
+        "y": 25
+      },
+      "end": {
+        "x": 11,
+        "y": 21
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 3,
+        "y": 22
+      },
+      "end": {
+        "x": 8,
+        "y": 22
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 8,
+        "y": 22
+      },
+      "end": {
+        "x": 8,
+        "y": 26
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 8,
+        "y": 26
+      },
+      "end": {
+        "x": 3,
+        "y": 26
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 3,
+        "y": 26
+      },
+      "end": {
+        "x": 3,
+        "y": 22
+      },
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
         "x": 10,
-        "y": 45
+        "y": 32
+      },
+      "end": {
+        "x": 15,
+        "y": 32
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 15,
+        "y": 32
+      },
+      "end": {
+        "x": 15,
+        "y": 35
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 15,
+        "y": 35
       },
       "end": {
         "x": 10,
-        "y": 39
+        "y": 35
       },
-      "wall_type": 5,
+      "wall_type": 3,
       "floor_type": 0
     },
     {
       "start": {
         "x": 10,
-        "y": 39
-      },
-      "end": {
-        "x": 16,
-        "y": 39
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 16,
-        "y": 39
-      },
-      "end": {
-        "x": 16,
-        "y": 45
-      },
-      "wall_type": 5,
-      "floor_type": 0
-    },
-    {
-      "start": {
-        "x": 16,
-        "y": 45
+        "y": 35
       },
       "end": {
         "x": 10,
-        "y": 45
+        "y": 32
       },
-      "wall_type": 5,
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 21,
+        "y": 29
+      },
+      "end": {
+        "x": 25,
+        "y": 29
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 25,
+        "y": 29
+      },
+      "end": {
+        "x": 25,
+        "y": 34
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 25,
+        "y": 34
+      },
+      "end": {
+        "x": 21,
+        "y": 34
+      },
+      "wall_type": 3,
+      "floor_type": 0
+    },
+    {
+      "start": {
+        "x": 21,
+        "y": 34
+      },
+      "end": {
+        "x": 21,
+        "y": 29
+      },
+      "wall_type": 3,
       "floor_type": 0
     }
   ],
@@ -406,64 +394,64 @@
       "type": "room_stamp",
       "profile_id": "dorms01",
       "center": {
-        "x": 1057.7127026750811,
-        "y": 846.9771011565607
+        "x": 881.1174123083376,
+        "y": 794.2790380172233
       }
     },
     {
       "type": "room_stamp",
       "profile_id": "dorms02",
       "center": {
-        "x": 2047.9678873913135,
-        "y": 1684.966385712813
+        "x": 2316.390114121683,
+        "y": 914.8575034812169
       }
     },
     {
       "type": "room_stamp",
       "profile_id": "dorms03",
       "center": {
-        "x": 3217.714565082123,
-        "y": 2511.759024377598
+        "x": 3592.188071289101,
+        "y": 1171.5729460819778
       }
     },
     {
       "type": "room_stamp",
       "profile_id": "dorms04",
       "center": {
-        "x": 4612.225338402566,
-        "y": 3185.9002705327034
+        "x": 830.5522493718237,
+        "y": 1953.3881576388403
       }
     },
     {
       "type": "room_stamp",
       "profile_id": "dorms05",
       "center": {
-        "x": 3803.5149522708157,
-        "y": 3887.091918640885
+        "x": 1666.822251783394,
+        "y": 2420.143507822042
       }
     },
     {
       "type": "room_stamp",
       "profile_id": "dorms06",
       "center": {
-        "x": 1147.2446944725468,
-        "y": 2833.447708463693
+        "x": 2682.0151384318574,
+        "y": 2848.00257882331
       }
     },
     {
       "type": "room_stamp",
       "profile_id": "dorms07",
       "center": {
-        "x": 1953.5975890321367,
-        "y": 3406.1684466043976
+        "x": 604.9538301166106,
+        "y": 3026.925463060204
       }
     },
     {
       "type": "room_stamp",
       "profile_id": "dorms08",
       "center": {
-        "x": 832.4959722914596,
-        "y": 3506.9930989858312
+        "x": 1736.8355543108744,
+        "y": 3575.362999525466
       }
     }
   ]

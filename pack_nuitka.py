@@ -94,7 +94,7 @@ def build_nuitka_command(version: str) -> list[str]:
         "--product-name=AutoMapper",
         f"--file-version={version}",
         f"--product-version={version}",
-        "--file-description=Auto Mapper UI",
+        "--file-description=AutoMapper UI",
         "--copyright=Copyright (c) 2026 Feiyang. All rights reserved.",
         f"--output-dir={DIST_DIR}",
         f"--output-filename={APP_OUTPUT_NAME}",
