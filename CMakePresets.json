@@ -2,60 +2,42 @@
   "version": 3,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 20,
+    "minor": 26,
     "patch": 0
   },
   "configurePresets": [
     {
-      "name": "default",
-      "hidden": true,
+      "name": "msvc-release",
+      "displayName": "MSVC Release",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}"
-    },
-    {
-      "name": "debug",
-      "displayName": "Debug build",
-      "inherits": "default",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "release",
-      "displayName": "Release build",
-      "inherits": "default",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "mingw-release",
-      "displayName": "MinGW Release",
-      "generator": "MinGW Makefiles",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "cl",
+        "CMAKE_PREFIX_PATH": "E:/Qt/6.11.1/msvc2022_64"
+      },
+      "vendor": {
+        "jetbrains.com/clion": {
+          "toolchain": "Visual Studio"
+        }
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "debug",
-      "configurePreset": "debug"
-    },
-    {
-      "name": "release",
-      "configurePreset": "release"
-    },
-    {
-      "name": "mingw-release",
-      "configurePreset": "mingw-release"
+      "name": "msvc-release",
+      "configurePreset": "msvc-release"
     }
   ],
   "testPresets": [
     {
-      "name": "default",
-      "configurePreset": "debug",
+      "name": "msvc-release",
+      "configurePreset": "msvc-release",
       "output": {"outputOnFailure": true},
       "execution": {"noTestsAction": "error", "stopOnFailure": true}
     }

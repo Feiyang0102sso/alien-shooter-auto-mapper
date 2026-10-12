@@ -1,1 +1,0 @@
-"""Dockable editor panels."""

@@ -1243,10 +1243,20 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
     };
 
     std::sort(raw_sprites.begin(), raw_sprites.end(), [&](const RawSprite& a, const RawSprite& b) {
+        // Equal-depth points need a shared tie-break before comparing their parts.
+        // Otherwise equivalence is not transitive and std::sort has undefined behavior.
+        int depth_a = a.gx + a.gy;
+        int depth_b = b.gx + b.gy;
+        if (depth_a != depth_b) return depth_a < depth_b;
+        if (a.gx != b.gx) return a.gx < b.gx;
+        if (a.gy != b.gy) return a.gy < b.gy;
         if (a.gx == b.gx && a.gy == b.gy) {
-            return get_sort_vid(a) < get_sort_vid(b);
+            int vid_a = get_sort_vid(a);
+            int vid_b = get_sort_vid(b);
+            if (vid_a != vid_b) return vid_a < vid_b;
         }
-        return (a.gx + a.gy) < (b.gx + b.gy);
+        if (a.wall_type != b.wall_type) return a.wall_type < b.wall_type;
+        return a.kind < b.kind;
     });
     raw_sprites.erase(std::unique(raw_sprites.begin(), raw_sprites.end(), [](const RawSprite& a, const RawSprite& b) {
         return a.gx == b.gx && a.gy == b.gy && a.wall_type == b.wall_type && a.kind == b.kind;

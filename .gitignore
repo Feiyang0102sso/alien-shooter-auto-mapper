@@ -50,7 +50,6 @@ include/
 !*_sample.map
 release/
 dist/
-dist-nuitka/
 
 # --- testing / output ---
 tests/out/

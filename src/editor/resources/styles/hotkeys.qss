@@ -1,0 +1,40 @@
+
+            #hotkeyHelpDialog {
+                background: #121b20;
+                color: #d9e8e2;
+            }
+            #hotkeyPageTitle {
+                color: #f1f6f3;
+                font-size: 20px;
+                font-weight: 700;
+            }
+            #hotkeyCard {
+                background: #182329;
+                border: 1px solid #36505d;
+                border-radius: 8px;
+                min-height: 96px;
+            }
+            #hotkeyCard[reserved="true"] {
+                background: #161d21;
+                border-color: #2b363c;
+            }
+            #hotkeyKeyLabel {
+                background: #24353e;
+                border: 1px solid #4f7fbf;
+                border-radius: 5px;
+                color: #ffffff;
+                font-family: monospace;
+                font-size: 15px;
+                font-weight: 700;
+                padding: 6px 4px;
+            }
+            #hotkeyCommandLabel {
+                color: #b8cbc4;
+                font-size: 11px;
+            }
+            #hotkeyPageIndicator {
+                color: #69f0ae;
+                font-size: 14px;
+                font-weight: 700;
+            }
+            

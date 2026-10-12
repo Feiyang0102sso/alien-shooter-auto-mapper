@@ -1,0 +1,962 @@
+{
+  "shelf_order": {
+    "AS1": [
+      0,
+      2,
+      1
+    ],
+    "AS2": [
+      3,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "walls": [
+    {
+      "id": 0,
+      "preview": "preview/AS1/standard/standard_wall.webp",
+      "parts": [
+        {
+          "wall_type": 0,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS1/standard/standard_wall.webp",
+          "nvid_text": "nvid=601; 602; 604;"
+        },
+        {
+          "wall_type": 0,
+          "id": "active_door",
+          "label_key": "drawable.active_door",
+          "preview": "preview/AS1/standard/standard_wall_door_active.webp",
+          "nvid_text": "nvid=423; 424; 605; 606; 607; 608;"
+        },
+        {
+          "wall_type": 0,
+          "id": "dead_door_closed",
+          "label_key": "drawable.dead_door_closed",
+          "preview": "preview/AS1/standard/standard_wall_door_dead_closed.webp",
+          "nvid_text": "nvid=425; 606; 608; 611; 617;"
+        },
+        {
+          "wall_type": 0,
+          "id": "dead_door_jammed",
+          "label_key": "drawable.dead_door_jammed",
+          "preview": "preview/AS1/standard/standard_wall_door_dead_jammed.webp",
+          "nvid_text": "nvid=425; 606; 608; 611; 617;"
+        },
+        {
+          "wall_type": 0,
+          "id": "dead_door_open",
+          "label_key": "drawable.dead_door_open",
+          "preview": "preview/AS1/standard/standard_wall_door_dead_open.webp",
+          "nvid_text": "nvid=425; 606; 608; 611; 617;"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "preview": "preview/AS1/lab/lab_wall.webp",
+      "parts": [
+        {
+          "wall_type": 1,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS1/lab/lab_wall.webp",
+          "nvid_text": "nvid=651; 650; 652;"
+        },
+        {
+          "wall_type": 1,
+          "id": "lab_laser_closed",
+          "label_key": "drawable.lab_laser_closed",
+          "preview": "preview/AS1/lab/lab_wall_door_laser_on.webp",
+          "nvid_text": "nvid=164; 653;"
+        },
+        {
+          "wall_type": 1,
+          "id": "lab_laser_open",
+          "label_key": "drawable.lab_laser_open",
+          "preview": "preview/AS1/lab/lab_wall_door_laser_off.webp",
+          "nvid_text": "nvid=653;"
+        },
+        {
+          "wall_type": 1,
+          "id": "lab_decoration_door",
+          "label_key": "drawable.lab_decoration_door",
+          "preview": "preview/AS1/lab/lab_wall_door_decoration.webp",
+          "nvid_text": "nvid=654;"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "preview": "preview/AS1/standard_dark/standard_wall_dark.webp",
+      "parts": [
+        {
+          "wall_type": 2,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS1/standard_dark/standard_wall_dark.webp",
+          "nvid_text": "nvid=620; 621; 622;"
+        },
+        {
+          "wall_type": 2,
+          "id": "active_door",
+          "label_key": "drawable.active_door",
+          "preview": "preview/AS1/standard_dark/standard_wall_dark_door_active.webp",
+          "nvid_text": "nvid=423; 424; 605; 607; 623; 624;"
+        },
+        {
+          "wall_type": 2,
+          "id": "dead_door_closed",
+          "label_key": "drawable.dead_door_closed",
+          "preview": "preview/AS1/standard_dark/standard_wall_dark_door_dead_closed.webp",
+          "nvid_text": "nvid=425; 611; 617; 623; 624;"
+        },
+        {
+          "wall_type": 2,
+          "id": "dead_door_jammed",
+          "label_key": "drawable.dead_door_jammed",
+          "preview": "preview/AS1/standard_dark/standard_wall_dark_door_dead_jammed.webp",
+          "nvid_text": "nvid=425; 611; 617; 623; 624;"
+        },
+        {
+          "wall_type": 2,
+          "id": "dead_door_open",
+          "label_key": "drawable.dead_door_open",
+          "preview": "preview/AS1/standard_dark/standard_wall_dark_door_dead_open.webp",
+          "nvid_text": "nvid=425; 611; 617; 623; 624;"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "preview": "preview/AS2/wall_set1/wall_set1_1.webp",
+      "parts": [
+        {
+          "wall_type": 3,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_1",
+          "preview": "preview/AS2/wall_set1/wall_set1_1.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 4,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_2",
+          "preview": "preview/AS2/wall_set1/wall_set1_2.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 5,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_3",
+          "preview": "preview/AS2/wall_set1/wall_set1_3.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 3,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set1/wall_set1_door_close.webp",
+          "nvid_text": "nvid=1779; 1788; 1777; 1778; 1785; 1786;"
+        },
+        {
+          "wall_type": 3,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set1/wall_set1_door_open.webp",
+          "nvid_text": "nvid=1779; 1788; 1777; 1778; 1785; 1786;"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "preview": "preview/AS2/wall_set1/wall_set1_2.webp",
+      "parts": [
+        {
+          "wall_type": 3,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_1",
+          "preview": "preview/AS2/wall_set1/wall_set1_1.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 4,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_2",
+          "preview": "preview/AS2/wall_set1/wall_set1_2.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 5,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_3",
+          "preview": "preview/AS2/wall_set1/wall_set1_3.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 4,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set1/wall_set1_door_close.webp",
+          "nvid_text": "nvid=1779; 1788; 1777; 1778; 1785; 1786;"
+        },
+        {
+          "wall_type": 4,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set1/wall_set1_door_open.webp",
+          "nvid_text": "nvid=1779; 1788; 1777; 1778; 1785; 1786;"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "preview": "preview/AS2/wall_set1/wall_set1_3.webp",
+      "parts": [
+        {
+          "wall_type": 3,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_1",
+          "preview": "preview/AS2/wall_set1/wall_set1_1.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 4,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_2",
+          "preview": "preview/AS2/wall_set1/wall_set1_2.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 5,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body_3",
+          "preview": "preview/AS2/wall_set1/wall_set1_3.webp",
+          "nvid_text": "nvid=1781; 1780; 1782;"
+        },
+        {
+          "wall_type": 5,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set1/wall_set1_door_close.webp",
+          "nvid_text": "nvid=1779; 1788; 1777; 1778; 1785; 1786;"
+        },
+        {
+          "wall_type": 5,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set1/wall_set1_door_open.webp",
+          "nvid_text": "nvid=1779; 1788; 1777; 1778; 1785; 1786;"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "preview": "preview/AS2/wall_set2/wall_set2.webp",
+      "parts": [
+        {
+          "wall_type": 6,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS2/wall_set2/wall_set2.webp",
+          "nvid_text": "nvid=1701; 1700; 1702;"
+        },
+        {
+          "wall_type": 6,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set2/wall_set2_door_close.webp",
+          "nvid_text": "nvid=1703; 1785; 1786;"
+        },
+        {
+          "wall_type": 6,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set2/wall_set2_door_open.webp",
+          "nvid_text": "nvid=1703; 1785; 1786;"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "preview": "preview/AS2/wall_set3/wall_set3.webp",
+      "parts": [
+        {
+          "wall_type": 7,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS2/wall_set3/wall_set3.webp",
+          "nvid_text": "nvid=1100; 1101; 1102;"
+        },
+        {
+          "wall_type": 7,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set3/wall_set3_door_close.webp",
+          "nvid_text": "nvid=1103; 1785; 1786;"
+        },
+        {
+          "wall_type": 7,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set3/wall_set3_door_open.webp",
+          "nvid_text": "nvid=1103; 1785; 1786;"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "preview": "preview/AS2/wall_set4/wall_set4.webp",
+      "parts": [
+        {
+          "wall_type": 8,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS2/wall_set4/wall_set4.webp",
+          "nvid_text": "nvid=1131; 1130; 1132;"
+        },
+        {
+          "wall_type": 8,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set4/wall_set4_door_close.webp",
+          "nvid_text": "nvid=1103; 1785; 1786;"
+        },
+        {
+          "wall_type": 8,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set4/wall_set4_door_open.webp",
+          "nvid_text": "nvid=1103; 1785; 1786;"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "preview": "preview/AS2/wall_set5/wall_set5.webp",
+      "parts": [
+        {
+          "wall_type": 9,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS2/wall_set5/wall_set5.webp",
+          "nvid_text": "nvid=2501; 2500; 2502;"
+        },
+        {
+          "wall_type": 9,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set5/wall_set5_door_close.webp",
+          "nvid_text": "nvid=2504; 2506; 2505;"
+        },
+        {
+          "wall_type": 9,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set5/wall_set5_door_open.webp",
+          "nvid_text": "nvid=2504; 2506; 2505;"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "preview": "preview/AS2/wall_set6/wall_set6.webp",
+      "parts": [
+        {
+          "wall_type": 10,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS2/wall_set6/wall_set6.webp",
+          "nvid_text": "nvid=2601; 2600; 2602;"
+        },
+        {
+          "wall_type": 10,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set6/wall_set6_door_close.webp",
+          "nvid_text": "nvid=2604; 2605; 2606;"
+        },
+        {
+          "wall_type": 10,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set6/wall_set6_door_open.webp",
+          "nvid_text": "nvid=2604; 2605; 2606;"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "preview": "preview/AS2/wall_set7/wall_set7.webp",
+      "parts": [
+        {
+          "wall_type": 11,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS2/wall_set7/wall_set7.webp",
+          "nvid_text": "nvid=2621; 2620; 2622;"
+        },
+        {
+          "wall_type": 11,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set7/wall_set7_door_close.webp",
+          "nvid_text": "nvid=2624; 2645;"
+        },
+        {
+          "wall_type": 11,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set7/wall_set7_door_open.webp",
+          "nvid_text": "nvid=2624; 2645;"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "preview": "preview/AS2/wall_set8/wall_set8.webp",
+      "parts": [
+        {
+          "wall_type": 12,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS2/wall_set8/wall_set8.webp",
+          "nvid_text": "nvid=2641; 2640; 2642;"
+        },
+        {
+          "wall_type": 12,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set8/wall_set8_door_close.webp",
+          "nvid_text": "nvid=2644; 2645;"
+        },
+        {
+          "wall_type": 12,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set8/wall_set8_door_open.webp",
+          "nvid_text": "nvid=2644; 2645;"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "preview": "preview/AS2/wall_set9/wall_set9.webp",
+      "parts": [
+        {
+          "wall_type": 13,
+          "id": "wall_body",
+          "label_key": "drawable.wall_body",
+          "preview": "preview/AS2/wall_set9/wall_set9.webp",
+          "nvid_text": "nvid=1721; 1720; 0;"
+        },
+        {
+          "wall_type": 13,
+          "id": "as2_door_closed",
+          "label_key": "drawable.as2_door_closed",
+          "preview": "preview/AS2/wall_set9/wall_set9_door_close.webp",
+          "nvid_text": "nvid=1731; 1732;"
+        },
+        {
+          "wall_type": 13,
+          "id": "as2_door_open",
+          "label_key": "drawable.as2_door_open",
+          "preview": "preview/AS2/wall_set9/wall_set9_door_open.webp",
+          "nvid_text": "nvid=1731; 1732;"
+        }
+      ]
+    }
+  ],
+  "series": [
+    "dorms",
+    "office",
+    "storage",
+    "machines",
+    "computers",
+    "vehicle_workshop",
+    "garage",
+    "weapon_workshop",
+    "sick_bay",
+    "canteen",
+    "large_machine",
+    "lab_desks",
+    "lab_office",
+    "lab_computers",
+    "lab_bioexp",
+    "lab_surgery",
+    "other_rooms"
+  ],
+  "stamps": [
+    {
+      "id": "dorms01",
+      "series": "dorms"
+    },
+    {
+      "id": "dorms02",
+      "series": "dorms"
+    },
+    {
+      "id": "dorms03",
+      "series": "dorms"
+    },
+    {
+      "id": "dorms04",
+      "series": "dorms"
+    },
+    {
+      "id": "dorms05",
+      "series": "dorms"
+    },
+    {
+      "id": "dorms06",
+      "series": "dorms"
+    },
+    {
+      "id": "dorms07",
+      "series": "dorms"
+    },
+    {
+      "id": "dorms08",
+      "series": "dorms"
+    },
+    {
+      "id": "office01",
+      "series": "office"
+    },
+    {
+      "id": "office02",
+      "series": "office"
+    },
+    {
+      "id": "office03",
+      "series": "office"
+    },
+    {
+      "id": "office04",
+      "series": "office"
+    },
+    {
+      "id": "office05",
+      "series": "office"
+    },
+    {
+      "id": "office06",
+      "series": "office"
+    },
+    {
+      "id": "office07",
+      "series": "office"
+    },
+    {
+      "id": "office08",
+      "series": "office"
+    },
+    {
+      "id": "office09",
+      "series": "office"
+    },
+    {
+      "id": "storage01",
+      "series": "storage"
+    },
+    {
+      "id": "storage02",
+      "series": "storage"
+    },
+    {
+      "id": "storage03",
+      "series": "storage"
+    },
+    {
+      "id": "storage04",
+      "series": "storage"
+    },
+    {
+      "id": "storage05",
+      "series": "storage"
+    },
+    {
+      "id": "storage06",
+      "series": "storage"
+    },
+    {
+      "id": "storage07",
+      "series": "storage"
+    },
+    {
+      "id": "storage08",
+      "series": "storage"
+    },
+    {
+      "id": "storage09",
+      "series": "storage"
+    },
+    {
+      "id": "machines_01",
+      "series": "machines"
+    },
+    {
+      "id": "machines_02",
+      "series": "machines"
+    },
+    {
+      "id": "machines_03",
+      "series": "machines"
+    },
+    {
+      "id": "machines_04",
+      "series": "machines"
+    },
+    {
+      "id": "machines_05",
+      "series": "machines"
+    },
+    {
+      "id": "machines_06",
+      "series": "machines"
+    },
+    {
+      "id": "machines_07",
+      "series": "machines"
+    },
+    {
+      "id": "machines_08",
+      "series": "machines"
+    },
+    {
+      "id": "machines_09",
+      "series": "machines"
+    },
+    {
+      "id": "comp01",
+      "series": "computers"
+    },
+    {
+      "id": "comp02",
+      "series": "computers"
+    },
+    {
+      "id": "comp03",
+      "series": "computers"
+    },
+    {
+      "id": "comp04",
+      "series": "computers"
+    },
+    {
+      "id": "comp05",
+      "series": "computers"
+    },
+    {
+      "id": "comp06",
+      "series": "computers"
+    },
+    {
+      "id": "comp07",
+      "series": "computers"
+    },
+    {
+      "id": "comp08",
+      "series": "computers"
+    },
+    {
+      "id": "comp09",
+      "series": "computers"
+    },
+    {
+      "id": "vehicle_workshop01",
+      "series": "vehicle_workshop"
+    },
+    {
+      "id": "vehicle_workshop02",
+      "series": "vehicle_workshop"
+    },
+    {
+      "id": "vehicle_workshop03",
+      "series": "vehicle_workshop"
+    },
+    {
+      "id": "vehicle_workshop04",
+      "series": "vehicle_workshop"
+    },
+    {
+      "id": "vehicle_workshop05",
+      "series": "vehicle_workshop"
+    },
+    {
+      "id": "garage01",
+      "series": "garage"
+    },
+    {
+      "id": "garage02",
+      "series": "garage"
+    },
+    {
+      "id": "garage03",
+      "series": "garage"
+    },
+    {
+      "id": "garage04",
+      "series": "garage"
+    },
+    {
+      "id": "garage05",
+      "series": "garage"
+    },
+    {
+      "id": "garage06",
+      "series": "garage"
+    },
+    {
+      "id": "garage07",
+      "series": "garage"
+    },
+    {
+      "id": "garage08",
+      "series": "garage"
+    },
+    {
+      "id": "garage09",
+      "series": "garage"
+    },
+    {
+      "id": "weapon_workshop01",
+      "series": "weapon_workshop"
+    },
+    {
+      "id": "weapon_workshop02",
+      "series": "weapon_workshop"
+    },
+    {
+      "id": "weapon_workshop03",
+      "series": "weapon_workshop"
+    },
+    {
+      "id": "weapon_workshop04",
+      "series": "weapon_workshop"
+    },
+    {
+      "id": "weapon_workshop05",
+      "series": "weapon_workshop"
+    },
+    {
+      "id": "weapon_workshop06",
+      "series": "weapon_workshop"
+    },
+    {
+      "id": "weapon_workshop07",
+      "series": "weapon_workshop"
+    },
+    {
+      "id": "weapon_workshop08",
+      "series": "weapon_workshop"
+    },
+    {
+      "id": "sick_bay01",
+      "series": "sick_bay"
+    },
+    {
+      "id": "sick_bay02",
+      "series": "sick_bay"
+    },
+    {
+      "id": "sick_bay03",
+      "series": "sick_bay"
+    },
+    {
+      "id": "sick_bay04",
+      "series": "sick_bay"
+    },
+    {
+      "id": "sick_bay05",
+      "series": "sick_bay"
+    },
+    {
+      "id": "canteen01",
+      "series": "canteen"
+    },
+    {
+      "id": "canteen02",
+      "series": "canteen"
+    },
+    {
+      "id": "canteen03",
+      "series": "canteen"
+    },
+    {
+      "id": "canteen04",
+      "series": "canteen"
+    },
+    {
+      "id": "large_m01",
+      "series": "large_machine"
+    },
+    {
+      "id": "large_m02",
+      "series": "large_machine"
+    },
+    {
+      "id": "lab_desks01",
+      "series": "lab_desks"
+    },
+    {
+      "id": "lab_desks02",
+      "series": "lab_desks"
+    },
+    {
+      "id": "lab_desks03",
+      "series": "lab_desks"
+    },
+    {
+      "id": "lab_desks04",
+      "series": "lab_desks"
+    },
+    {
+      "id": "lab_desks05",
+      "series": "lab_desks"
+    },
+    {
+      "id": "lab_desks06",
+      "series": "lab_desks"
+    },
+    {
+      "id": "lab_desks07",
+      "series": "lab_desks"
+    },
+    {
+      "id": "lab_desks08",
+      "series": "lab_desks"
+    },
+    {
+      "id": "lab_office01",
+      "series": "lab_office"
+    },
+    {
+      "id": "lab_office02",
+      "series": "lab_office"
+    },
+    {
+      "id": "lab_office03",
+      "series": "lab_office"
+    },
+    {
+      "id": "lab_office04",
+      "series": "lab_office"
+    },
+    {
+      "id": "lab_comp01",
+      "series": "lab_computers"
+    },
+    {
+      "id": "lab_comp02",
+      "series": "lab_computers"
+    },
+    {
+      "id": "lab_comp03",
+      "series": "lab_computers"
+    },
+    {
+      "id": "lab_comp04",
+      "series": "lab_computers"
+    },
+    {
+      "id": "lab_bioexp01",
+      "series": "lab_bioexp"
+    },
+    {
+      "id": "lab_bioexp02",
+      "series": "lab_bioexp"
+    },
+    {
+      "id": "lab_bioexp03",
+      "series": "lab_bioexp"
+    },
+    {
+      "id": "lab_bioexp04",
+      "series": "lab_bioexp"
+    },
+    {
+      "id": "lab_bioexp05",
+      "series": "lab_bioexp"
+    },
+    {
+      "id": "lab_bioexp06",
+      "series": "lab_bioexp"
+    },
+    {
+      "id": "lab_bioexp07",
+      "series": "lab_bioexp"
+    },
+    {
+      "id": "lab_bioexp08",
+      "series": "lab_bioexp"
+    },
+    {
+      "id": "lab_surgery01",
+      "series": "lab_surgery"
+    },
+    {
+      "id": "lab_surgery02",
+      "series": "lab_surgery"
+    },
+    {
+      "id": "lab_surgery03",
+      "series": "lab_surgery"
+    },
+    {
+      "id": "lab_surgery04",
+      "series": "lab_surgery"
+    },
+    {
+      "id": "lab_surgery05",
+      "series": "lab_surgery"
+    },
+    {
+      "id": "lab_surgery06",
+      "series": "lab_surgery"
+    },
+    {
+      "id": "others01",
+      "series": "other_rooms"
+    },
+    {
+      "id": "others02",
+      "series": "other_rooms"
+    },
+    {
+      "id": "others03",
+      "series": "other_rooms"
+    },
+    {
+      "id": "others04",
+      "series": "other_rooms"
+    },
+    {
+      "id": "others05",
+      "series": "other_rooms"
+    },
+    {
+      "id": "others06",
+      "series": "other_rooms"
+    },
+    {
+      "id": "others07",
+      "series": "other_rooms"
+    },
+    {
+      "id": "others08",
+      "series": "other_rooms"
+    },
+    {
+      "id": "others09",
+      "series": "other_rooms"
+    }
+  ]
+}

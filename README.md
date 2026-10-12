@@ -45,6 +45,8 @@ Auto Mapper currently cannot edit an existing map. The recommended workflow is:
 
 ### Changelog
 
+- **v1.1.0 (2026-10-12):**
+  - Rewrote the UI in C++ / Qt.
 - **v1.0（2026-09-06）:**
   - Added the ceiling generation algorithm.
   - Added decoration presets.
@@ -88,6 +90,8 @@ Auto Mapper 是一款 Alien Shooter 地图自动铺设工具。他旨在帮助�
 
 ### 更新日志
 
+- **v1.1.0（2026-10-12）：**
+  - 用 C++ / Qt 重写界面。
 - **v1.0 （2026-09-06）：**
   - 新增天花板算法。
   - 新增装饰预设。

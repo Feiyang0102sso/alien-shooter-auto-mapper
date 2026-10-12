@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -89,7 +90,8 @@ inline bool write_binary_file(
     const std::string& output_path,
     size_t sprite_count
 ) {
-    std::ofstream out_file(output_path, std::ios::binary);
+    // Callers pass UTF-8 paths; Windows streams need a native filesystem path.
+    std::ofstream out_file(std::filesystem::u8path(output_path), std::ios::binary);
     if (!out_file) {
         Logger::error("Failed to open output file: {}", output_path);
         return false;

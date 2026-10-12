@@ -42,6 +42,10 @@ namespace auto_mapper {
     }
 
     void Logger::log(const Level level, const std::source_location& loc, const std::string& msg) {
+        write(level, loc.file_name(), static_cast<int>(loc.line()), msg);
+    }
+
+    void Logger::write(const Level level, const char* file, const int line, const std::string& msg) {
         spdlog::level::level_enum mapped_level;
         switch (level) {
             case Level::DEBUG:   mapped_level = spdlog::level::debug; break;
@@ -52,7 +56,7 @@ namespace auto_mapper {
         }
 
         // Forward to spdlog, preserving source location
-        const spdlog::source_loc source{loc.file_name(), static_cast<int>(loc.line()), loc.function_name()};
+        const spdlog::source_loc source{file, line, ""};
         if (const auto logger = spdlog::default_logger()) {
             logger->log(source, mapped_level, msg);
         }

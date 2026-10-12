@@ -31,7 +31,7 @@ namespace auto_mapper::core::decoration_builder {
 
 /**
  * Registry of every authored AS2 decoration profile.
- * The C API enumerates this table, so new profiles only need to be listed here.
+ * decoration_registry.cpp enumerates this table, so new profiles only need to be listed here.
  */
 static const DecorationProfile* const AS2_DECORATION_PROFILES[] = {
     &DORMS01_DECORATION_PROFILE,

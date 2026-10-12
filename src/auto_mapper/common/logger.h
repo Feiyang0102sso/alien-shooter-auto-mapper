@@ -27,7 +27,16 @@ namespace auto_mapper {
     */
     class Logger {
     public:
+        enum class Level { DEBUG, INFO, WARNING, ERROR };
+
         static void init();
+
+        /**
+        * @brief Write a message whose source location is known only at runtime,
+        *        e.g. Qt messages forwarded by the editor.
+        */
+        static void write(Level level, const char* file, int line, const std::string& msg);
+
         template<typename... Args>
         static void debug(LogFormat<std::type_identity_t<Args>...> format, Args&&... args) {
             log(Level::DEBUG, format.loc, std::format(format.fmt, std::forward<Args>(args)...));
@@ -49,7 +58,6 @@ namespace auto_mapper {
         }
 
     private:
-        enum class Level { DEBUG, INFO, WARNING, ERROR };
         static void log(Level level, const std::source_location& loc, const std::string& msg);
     };
 

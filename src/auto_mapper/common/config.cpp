@@ -26,7 +26,8 @@ namespace auto_mapper {
 
     void Config::init_env() {
         root_dir = get_app_root();
-        log_file_path = root_dir / "AutoMapper_dll.log";
+        // Core and editor messages share one log file beside AutoMapper.exe.
+        log_file_path = root_dir / "AutoMapper.log";
 
         // Initialize logger file stream now that log_file_path is configured
         Logger::init();

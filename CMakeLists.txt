@@ -1,10 +1,22 @@
-cmake_minimum_required(VERSION 3.20)
-project(auto_mapper VERSION 1.0.0 LANGUAGES CXX)
+# copy_directory_if_different needs CMake 3.26.
+cmake_minimum_required(VERSION 3.26)
+# The application version lives only in src/editor/editor.rc.
+project(auto_mapper LANGUAGES CXX)
 
 # C++20
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Only the MSVC Release toolchain is supported.
+if(NOT MSVC)
+    message(FATAL_ERROR "AutoMapper builds with MSVC only.")
+endif()
+# Keep UTF-8 source text and the CRT consistent across the editor and tests.
+add_compile_options(/utf-8)
+set(gtest_force_shared_crt ON CACHE BOOL "Use the shared MSVC runtime" FORCE)
+# Bundled fmt 9 uses stdext iterators removed by recent MSVC releases.
+set(SPDLOG_USE_STD_FORMAT ON CACHE BOOL "Use C++20 formatting with MSVC" FORCE)
 
 
 # set src as root, so, #include "auto_mapper/common/logger.h"
@@ -23,78 +35,17 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog googletest)
 
+# Qt SDK location comes from CMAKE_PREFIX_PATH in CMakePresets.json.
+find_package(Qt6 6.11.1 REQUIRED COMPONENTS Widgets Concurrent Test)
+# Qt bin folder: windeployqt for the editor, DLL search path for the UI tests.
+get_target_property(QT_QMAKE_EXECUTABLE Qt6::qmake IMPORTED_LOCATION)
+get_filename_component(QT_BIN_DIR "${QT_QMAKE_EXECUTABLE}" DIRECTORY)
+
 enable_testing()
 
-# common/
-set(COMMON_SOURCES
-    src/auto_mapper/common/config.cpp
-    src/auto_mapper/common/logger.cpp
-)
-
-# static libs
-add_library(auto_mapper_common STATIC ${COMMON_SOURCES})
-target_link_libraries(auto_mapper_common PUBLIC spdlog::spdlog)
-
-# io/
-set(IO_SOURCES
-    src/auto_mapper/io/as1_map_writer.cpp
-    src/auto_mapper/io/as2_map_writer.cpp
-    src/auto_mapper/io/map_writer.cpp
-)
-add_library(auto_mapper_io STATIC ${IO_SOURCES})
-target_link_libraries(auto_mapper_io PUBLIC auto_mapper_common)
-
-# core/
-set(CORE_SOURCES
-    src/auto_mapper/core/geometry.cpp
-    src/auto_mapper/core/wall_builder/wall_builder.cpp
-    src/auto_mapper/core/door_builder/door_builder.cpp
-    src/auto_mapper/core/decoration_builder/decoration_builder.cpp
-    src/auto_mapper/core/randomizer.cpp
-    src/auto_mapper/core/indoor_decorations/array_layout.cpp
-    src/auto_mapper/core/indoor_decorations/desk_builder.cpp
-    src/auto_mapper/core/indoor_decorations/incubator_builder.cpp
-)
-add_library(auto_mapper_core STATIC ${CORE_SOURCES})
-target_link_libraries(auto_mapper_core PUBLIC auto_mapper_common auto_mapper_io)
-
-if(WIN32)
-    configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/auto_mapper/version.rc.in
-        ${CMAKE_CURRENT_BINARY_DIR}/version.rc
-        @ONLY
-    )
-    set(RESOURCE_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
-endif()
-
-# main shared library (DLL)
-add_library(auto_mapper SHARED src/auto_mapper/api.cpp ${RESOURCE_SOURCES})
-target_compile_definitions(auto_mapper PRIVATE AUTO_MAPPER_EXPORTS)
-target_link_libraries(auto_mapper PRIVATE auto_mapper_core auto_mapper_io auto_mapper_common)
-if(MINGW)
-    target_link_options(auto_mapper PRIVATE -static -static-libgcc -static-libstdc++)
-endif()
-
-add_custom_command(TARGET auto_mapper POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:auto_mapper>
-        $<TARGET_FILE_DIR:auto_mapper>/AutoMapper.dll
-    COMMENT "Copying build output to AutoMapper.dll"
-)
-
-
-# tests
-file(GLOB TEST_SOURCES CONFIGURE_DEPENDS "tests/test_*.cpp")
-
-add_executable(auto_mapper_tests ${TEST_SOURCES})
-target_link_libraries(auto_mapper_tests PRIVATE
-    auto_mapper
-    auto_mapper_core 
-    auto_mapper_io 
-    auto_mapper_common 
-    GTest::gtest_main
-)
-
-add_dependencies(auto_mapper_tests auto_mapper) # build dll every time when running test
-
-add_test(NAME AllTests COMMAND auto_mapper_tests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+# Core algorithms            ->  auto_mapper_core (static)
+add_subdirectory(src/auto_mapper)
+# Qt editor                  ->  AutoMapper.exe
+add_subdirectory(src/editor)
+# Core tests, editor tests and the golden candidate exporter
+add_subdirectory(tests)

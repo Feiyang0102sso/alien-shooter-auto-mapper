@@ -33,7 +33,7 @@ struct IncubatorOptions {
     float pos_z = 0.0f;
     bool with_big_computer = false;
     bool use_fixed_computer_direction = false;
-    uint32_t computer_direction = INCUBATOR_BIG_COMPUTER_DIRECTIONS[0];
+    uint32_t computer_direction = static_cast<uint32_t>(INCUBATOR_BIG_COMPUTER_DIRECTIONS[0]);
     float computer_offset_x = 28.0f;
     float computer_offset_y = -7.0f;
 };

@@ -7,10 +7,28 @@
 #include <cmath>
 #include <set>
 #include <utility>
+#include <algorithm>
 
 using namespace auto_mapper;
 using namespace auto_mapper::core;
 using namespace auto_mapper::test;
+
+TEST(WallBuilderTest, EqualDepthOrderingDoesNotDependOnSegmentInsertionOrder) {
+    auto scene = load_test_scene(resolve_test_path("tests/golden/wall_builder.gold.json"));
+    WallBuilder builder(scene.map_size_x, scene.map_size_y);
+    auto expected = builder.build(scene.segments, false, false);
+    std::reverse(scene.segments.begin(), scene.segments.end());
+    auto actual = builder.build(scene.segments, false, false);
+    ASSERT_EQ(actual.size(), expected.size());
+    for (size_t index = 0; index < actual.size(); ++index) {
+        SCOPED_TRACE(index);
+        EXPECT_EQ(actual[index].vid, expected[index].vid);
+        EXPECT_EQ(actual[index].posX, expected[index].posX);
+        EXPECT_EQ(actual[index].posY, expected[index].posY);
+        EXPECT_EQ(actual[index].posZ, expected[index].posZ);
+        EXPECT_EQ(actual[index].direction, expected[index].direction);
+    }
+}
 
 
 /**

@@ -38,6 +38,15 @@ inline constexpr int SUPPORTED_WALL_TYPES[] = {
 inline constexpr int SUPPORTED_WALL_TYPE_COUNT =
     static_cast<int>(sizeof(SUPPORTED_WALL_TYPES) / sizeof(SUPPORTED_WALL_TYPES[0]));
 
+inline constexpr bool is_supported_wall_type(int wall_type) {
+    for (int supported : SUPPORTED_WALL_TYPES) {
+        if (supported == wall_type) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // A straight line segment drawn by the user, each segment carries its own wall type.
 struct Segment {
     GridPoint start;
