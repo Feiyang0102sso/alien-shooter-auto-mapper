@@ -6,6 +6,8 @@
 #include <QWidget>
 
 class QFrame;
+class QImage;
+class QLabel;
 class QScrollArea;
 class QVBoxLayout;
 
@@ -25,6 +27,8 @@ struct ShelfCard {
     // Extra detail line (stamp series variant count); empty for wall sets.
     QString detail;
     QList<LegendRow> legend;
+    // Decoration Stamp Series: keep a preview box for a rendered stamp, filled by setCardPreview().
+    bool spritePreview = false;
 };
 
 // Legend symbol for one drawable part: a plain wall line, or a door line with its status dot.
@@ -40,6 +44,8 @@ class ThemeShelfPanel : public QWidget {
     int currentRow() const;
     int count() const;
     void setCurrentRow(int row, bool reveal = true);
+    // Fill a `spritePreview` card's box: the rendered stamp, or a "not configured" box without a game folder.
+    void setCardPreview(int row, bool spritesReady, const QImage &image);
 
   signals:
     void currentRowChanged(int row);
@@ -50,6 +56,8 @@ class ThemeShelfPanel : public QWidget {
     QWidget *content_ = nullptr;
     QVBoxLayout *layout_ = nullptr;
     QList<QFrame *> cards_;
+    // Preview box of each card, nullptr for cards without one.
+    QList<QLabel *> previews_;
     int current_ = -1;
 };
 

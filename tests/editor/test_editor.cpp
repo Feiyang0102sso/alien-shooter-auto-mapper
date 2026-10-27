@@ -203,6 +203,21 @@ class EditorTest : public QObject {
         inspector.showStamp(23, true, composed);
         QCOMPARE(preview->property("notConfigured").toBool(), false);
         QVERIFY(!preview->pixmap().isNull());
+
+        // Stamp series card: same black "not configured" box above the title, then the scaled first stamp.
+        ThemeShelfPanel shelf(locale);
+        ShelfCard stampCard;
+        stampCard.spritePreview = true;
+        stampCard.title = "01dorm";
+        shelf.setCards({stampCard}, true);
+        auto *cardPreview = shelf.findChild<QLabel *>("themePreview");
+        QVERIFY(cardPreview != nullptr);
+        shelf.setCardPreview(0, false, QImage());
+        QCOMPARE(cardPreview->property("notConfigured").toBool(), true);
+        QCOMPARE(cardPreview->text(), locale.tr(TextKey::LABEL_PREVIEW_NOT_CONFIGURED));
+        shelf.setCardPreview(0, true, composed);
+        QCOMPARE(cardPreview->property("notConfigured").toBool(), false);
+        QVERIFY(!cardPreview->pixmap().isNull());
     }
     void resourcesAndCoreMetadata() {
         Locale locale(LOCALE_ZH_CN);

@@ -455,6 +455,7 @@ void MainWindow::rebuildShelf() {
     if (decorationShelf_) {
         visibleSeries_ = catalog.stampSeries();
         leftShelf_->showStampSeries(visibleSeries_);
+        refreshStampSeriesPreviews();
         index = std::clamp(selectedStampSeries_, 0, std::max(0, int(visibleSeries_.size()) - 1));
     } else {
         visibleWallSets_ = catalog.wallSetOrder(project.isAS1());
@@ -473,6 +474,18 @@ void MainWindow::rebuildShelf() {
     }
     chooseSet(index);
     syncMode();
+}
+
+void MainWindow::refreshStampSeriesPreviews() {
+    if (!decorationShelf_)
+        return;
+    bool spritesReady = viewport->hasGameFolder();
+    for (int row = 0; row < visibleSeries_.size(); ++row) {
+        QImage preview;
+        if (spritesReady)
+            preview = viewport->renderStampPreview(catalog.seriesVariants(visibleSeries_[row]).first());
+        leftShelf_->shelf()->setCardPreview(row, spritesReady, preview);
+    }
 }
 
 void MainWindow::chooseSet(int index) {
@@ -694,6 +707,7 @@ void MainWindow::chooseGameFolder(GameFamily family) {
     }
     spritePreview_->setGameFolder(family, path);
     inspector_->setSpritePreviewReady(viewport->hasGameFolder());
+    refreshStampSeriesPreviews();
     // Redraw the inspector preview of the stamp on show with the new sprites.
     int shownStamp = inspector_->componentIndex();
     if (decorationShelf_ && shownStamp >= 0 && shownStamp < visibleStamps_.size())

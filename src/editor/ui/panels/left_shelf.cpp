@@ -109,8 +109,9 @@ void LeftShelfPanel::showWallSets(const QList<int> &setIds) {
 void LeftShelfPanel::showStampSeries(const QStringList &seriesIds) {
     QList<ShelfCard> cards;
     for (const QString &seriesId : seriesIds) {
-        // Stamp cards are text only: the library maps carry no preview images.
+        // The library maps carry no preview images: MainWindow renders each series' first stamp into the box.
         ShelfCard card;
+        card.spritePreview = true;
         card.title = catalog_.seriesLabel(seriesId);
         int variantCount = catalog_.seriesVariants(seriesId).size();
         card.detail = catalog_.locale.tr(TextKey::LABEL_STAMP_VARIANT_COUNT,

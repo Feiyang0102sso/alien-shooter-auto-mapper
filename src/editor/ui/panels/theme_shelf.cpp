@@ -4,6 +4,7 @@
 #include "editor/ui/colors.h"
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QLabel>
 #include <QPainter>
 #include <QPushButton>
@@ -48,6 +49,11 @@ bool doorLegendStyle(const QString &partId, DoorLegendStyle &style) {
     else
         return false;
     return true;
+}
+
+// Every card preview is scaled the same way, so stamp previews match the Wall Set cards.
+QPixmap scaledPreview(const QPixmap &pixmap) {
+    return pixmap.scaled(CARD_PREVIEW_WIDTH, CARD_PREVIEW_HEIGHT, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
 
 QLabel *textLabel(const QString &text, const QString &name) {
@@ -119,6 +125,7 @@ void ThemeShelfPanel::setCards(const QList<ShelfCard> &cards, bool compact) {
         delete item;
     }
     cards_.clear();
+    previews_.clear();
     current_ = -1;
 
     for (const auto &data : cards) {
@@ -132,22 +139,23 @@ void ThemeShelfPanel::setCards(const QList<ShelfCard> &cards, bool compact) {
         cardLayout->setContentsMargins(10, 10, 10, 10);
         cardLayout->setSpacing(8);
 
-        // Cards without a preview path (Decoration Stamp Series) show text only.
-        if (!data.previewPath.isEmpty()) {
-            auto *preview = new QLabel;
+        // Wall Set cards load a preview image; Decoration Stamp Series cards get an empty box filled by setCardPreview().
+        QLabel *preview = nullptr;
+        if (!data.previewPath.isEmpty() || data.spritePreview) {
+            preview = new QLabel;
             preview->setObjectName("themePreview");
             preview->setAlignment(Qt::AlignCenter);
             preview->setFixedHeight(CARD_PREVIEW_HEIGHT);
+            cardLayout->addWidget(preview);
+        }
+        if (!data.previewPath.isEmpty()) {
             QPixmap pixmap(data.previewPath);
             if (pixmap.isNull()) {
                 qWarning() << "Missing shelf preview:" << data.previewPath;
                 preview->setText(locale_.tr(TextKey::LABEL_PREVIEW_MISSING));
             } else {
-                QPixmap scaled = pixmap.scaled(CARD_PREVIEW_WIDTH, CARD_PREVIEW_HEIGHT, Qt::KeepAspectRatio,
-                                               Qt::SmoothTransformation);
-                preview->setPixmap(scaled);
+                preview->setPixmap(scaledPreview(pixmap));
             }
-            cardLayout->addWidget(preview);
         }
         cardLayout->addWidget(textLabel(data.title, "cardTitle"));
         if (!data.description.isEmpty())
@@ -189,8 +197,29 @@ void ThemeShelfPanel::setCards(const QList<ShelfCard> &cards, bool compact) {
             card->ensurePolished();
         }
         cards_.append(card);
+        previews_.append(preview);
     }
     layout_->addStretch(1);
+}
+
+void ThemeShelfPanel::setCardPreview(int row, bool spritesReady, const QImage &image) {
+    if (row < 0 || row >= previews_.size() || previews_[row] == nullptr)
+        return;
+    QLabel *preview = previews_[row];
+    preview->clear();
+    // QSS turns the box black with red text while no game folder is configured, as in the inspector.
+    preview->setProperty("notConfigured", !spritesReady);
+    preview->style()->unpolish(preview);
+    preview->style()->polish(preview);
+    if (!spritesReady) {
+        preview->setText(locale_.tr(TextKey::LABEL_PREVIEW_NOT_CONFIGURED));
+        return;
+    }
+    if (image.isNull()) {
+        preview->setText(locale_.tr(TextKey::LABEL_PREVIEW_MISSING));
+        return;
+    }
+    preview->setPixmap(scaledPreview(QPixmap::fromImage(image)));
 }
 
 int ThemeShelfPanel::currentRow() const {

@@ -65,6 +65,8 @@ class MainWindow : public QMainWindow {
 
     // Keep panels in step with project and canvas state.
     void rebuildShelf();
+    // Render each Decoration Stamp Series card's preview from the series' first stamp.
+    void refreshStampSeriesPreviews();
     void syncControls();
     void syncSelection();
     void syncMode();

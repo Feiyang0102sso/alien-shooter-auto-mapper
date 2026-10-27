@@ -46,13 +46,16 @@ qt_add_executable(auto_mapper_editor WIN32 main.cpp editor.rc)
 set_target_properties(auto_mapper_editor PROPERTIES OUTPUT_NAME AutoMapper RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 target_link_libraries(auto_mapper_editor PRIVATE auto_mapper_editor_ui)
 # Keep build/<preset>/assets/preview and assets/decoration_maps in sync so the exe runs straight from the build directory.
-add_custom_command(TARGET auto_mapper_editor POST_BUILD
+# A custom target runs on every build, so a newly added library map is copied even when the exe does not relink.
+# Files deleted from assets/ are not removed from the build directory.
+add_custom_target(auto_mapper_editor_assets
     COMMAND "${CMAKE_COMMAND}" -E copy_directory_if_different
         "${CMAKE_SOURCE_DIR}/assets/preview" "$<TARGET_FILE_DIR:auto_mapper_editor>/assets/preview"
     COMMAND "${CMAKE_COMMAND}" -E copy_directory_if_different
         "${CMAKE_SOURCE_DIR}/assets/decoration_maps" "$<TARGET_FILE_DIR:auto_mapper_editor>/assets/decoration_maps"
     COMMENT "Syncing preview images and decoration library maps into the build directory"
 )
+add_dependencies(auto_mapper_editor auto_mapper_editor_assets)
 
 # Copy the Qt DLLs and plugins next to the exe so it runs straight from the build directory.
 set(QT_WINDEPLOYQT "${QT_BIN_DIR}/windeployqt.exe")
