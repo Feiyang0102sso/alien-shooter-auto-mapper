@@ -26,7 +26,8 @@ set(CORE_SOURCES
     core/wall_builder/wall_builder.cpp
     core/door_builder/door_builder.cpp
     core/decoration_builder/decoration_builder.cpp
-    core/decoration_builder/decoration_registry.cpp
+    core/decoration_builder/decoration_library.cpp
+    core/decoration_builder/placeholder_vids.cpp
     core/randomizer.cpp
     core/indoor_decorations/array_layout.cpp
     core/indoor_decorations/desk_builder.cpp

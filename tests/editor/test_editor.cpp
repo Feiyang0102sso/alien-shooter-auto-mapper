@@ -1,9 +1,10 @@
 // Native interaction and project compatibility regression tests.
-#include "auto_mapper/core/decoration_builder/decoration_registry.h"
 #include "editor/config.h"
 #include "editor/hotkeys/hotkey_config.h"
 #include "editor/i18n/text_keys.h"
 #include "editor/ui/main_window.h"
+#include "editor/ui/panels/inspector.h"
+#include "editor/ui/panels/sprite_preview_dialog.h"
 #include "editor/ui/panels/theme_shelf.h"
 #include "editor/ui/tools/eraser/eraser_geometry.h"
 #include <QtTest>
@@ -82,6 +83,11 @@ class EditorTest : public QObject {
         project.version = "AS2R";
         project.width = 3000;
         project.height = 3000;
+        // One placed stamp so the capture shows its frame and member placeholders.
+        Decoration placed;
+        placed.profileId = "01dorm:3";
+        placed.origin = {1500, 1500};
+        project.decorations.push_back(placed);
         window.replaceProject(project);
         window.chooseShelf(true);
         QCOMPARE(window.findChild<QComboBox *>("as2FormatCombo")->currentText(), QString("AS2R"));
@@ -103,6 +109,17 @@ class EditorTest : public QObject {
             QFile stampGeometryFile(capture + "/native-stamps-layout.json");
             QVERIFY(stampGeometryFile.open(QIODevice::WriteOnly));
             stampGeometryFile.write(QJsonDocument(stampGeometry).toJson());
+            // 1:1 close-up of the placed stamp: sprites when AutoMapper.cfg names a game folder, else crosses.
+            window.viewport->zoom = 1.0;
+            window.viewport->pan = QPointF(window.viewport->rect().center()) - placed.origin;
+            window.viewport->update();
+            QTest::qWait(100);
+            QVERIFY(window.viewport->grab().save(capture + "/native-stamps-zoom.png"));
+            window.findChild<QPushButton *>("spritePreviewButton")->click();
+            auto *spritePreview = window.findChild<QDialog *>("spritePreviewDialog");
+            QTest::qWait(100);
+            QVERIFY(spritePreview->grab().save(capture + "/native-sprite-preview.png"));
+            spritePreview->close();
             QTimer::singleShot(250, [&] {
                 auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
                 if (!dialog)
@@ -125,7 +142,7 @@ class EditorTest : public QObject {
             project.standardLayers = 17;
             project.labLayers = 8;
             Decoration stamp;
-            stamp.profileId = "dorms01";
+            stamp.profileId = "01dorm:1";
             stamp.origin = {430, 290};
             project.decorations.push_back(stamp);
             auto json = project.toJson();
@@ -139,22 +156,74 @@ class EditorTest : public QObject {
         QVERIFY_EXCEPTION_THROWN(Project::fromJson({{"as1_standard_ceiling_layer_count", 51}}),
                                  std::runtime_error);
     }
+    void spritePreviewDialogOptions() {
+        Locale locale(LOCALE_EN_US);
+        SpritePreviewDialog dialog(locale);
+        auto *opacity = dialog.findChild<QSlider *>("stampSpriteOpacitySlider");
+        auto *opacityValue = dialog.findChild<QLabel *>("stampSpriteOpacityValue");
+        // Out-of-range opacity snaps to the limits instead of being rejected.
+        dialog.setOptions(false, false, 150);
+        QCOMPARE(opacity->value(), STAMP_SPRITE_OPACITY_MAX);
+        dialog.setOptions(false, false, 1);
+        QCOMPARE(opacity->value(), STAMP_SPRITE_OPACITY_MIN);
+        QCOMPARE(opacityValue->text(), QString("10%"));
+        QSignalSpy frameSpy(&dialog, &SpritePreviewDialog::alwaysShowFrameChanged);
+        QSignalSpy opacitySpy(&dialog, &SpritePreviewDialog::spriteOpacityChanged);
+        QSignalSpy commitSpy(&dialog, &SpritePreviewDialog::spriteOpacityCommitted);
+        QSignalSpy folderSpy(&dialog, &SpritePreviewDialog::chooseGameFolderRequested);
+        dialog.findChild<QCheckBox *>("stampAlwaysShowFrameCheck")->click();
+        opacity->setValue(60);
+        QCOMPARE(frameSpy.count(), 1);
+        QCOMPARE(frameSpy.first().first().toBool(), true);
+        QCOMPARE(opacitySpy.last().first().toInt(), 60);
+        // Not dragging, so the value is committed right away.
+        QCOMPARE(commitSpy.last().first().toInt(), 60);
+        QCOMPARE(opacityValue->text(), QString("60%"));
+        dialog.findChild<QPushButton *>("chooseAs1GameFolderButton")->click();
+        QCOMPARE(folderSpy.count(), 1);
+        QCOMPARE(folderSpy.first().first().value<GameFamily>(), GameFamily::AS1);
+
+        // Stamp notice: red "not configured" until a game folder loads, then green "ready".
+        InspectorPanel inspector(locale);
+        auto *notice = inspector.findChild<QLabel *>("stampPreviewNotice");
+        QCOMPARE(notice->property("ready").toBool(), false);
+        QCOMPARE(notice->text(), locale.tr(TextKey::LABEL_STAMP_PREVIEW_UNSET));
+        inspector.setSpritePreviewReady(true);
+        QCOMPARE(notice->property("ready").toBool(), true);
+        QCOMPARE(notice->text(), locale.tr(TextKey::LABEL_STAMP_PREVIEW_READY));
+
+        // Stamp preview box: black "not configured" without a game folder, the composed image with one.
+        auto *preview = inspector.findChild<QLabel *>("componentPreview");
+        inspector.showStamp(23, false, QImage());
+        QVERIFY(preview->isVisibleTo(&inspector));
+        QCOMPARE(preview->property("notConfigured").toBool(), true);
+        QCOMPARE(preview->text(), locale.tr(TextKey::LABEL_PREVIEW_NOT_CONFIGURED));
+        QImage composed(40, 20, QImage::Format_ARGB32_Premultiplied);
+        composed.fill(Qt::red);
+        inspector.showStamp(23, true, composed);
+        QCOMPARE(preview->property("notConfigured").toBool(), false);
+        QVERIFY(!preview->pixmap().isNull());
+    }
     void resourcesAndCoreMetadata() {
         Locale locale(LOCALE_ZH_CN);
         Catalog catalog(locale);
         QCOMPARE(catalog.wallTypes().size(), auto_mapper::core::SUPPORTED_WALL_TYPE_COUNT);
-        QCOMPARE(catalog.stamps.size(), qsizetype(auto_mapper::core::decoration_builder::as2_decoration_profiles().size()));
         QVERIFY(locale.tr(TextKey::ACTION_NEW) != TextKey::ACTION_NEW);
+        // Stamps are registered from the regions of assets/decoration_maps/AS2/*.map beside the exe.
+        QVERIFY(catalog.stampSeries().contains("01dorm"));
         for (const auto &seriesId : catalog.stampSeries()) {
             auto variants = catalog.seriesVariants(seriesId);
             QVERIFY2(!variants.isEmpty(), qPrintable(seriesId));
-            QVERIFY2(!QPixmap(catalog.seriesImage(seriesId)).isNull(), qPrintable(seriesId));
             for (const auto &id : variants) {
-                QVERIFY2(catalog.stamps.contains(id), qPrintable(id));
-                QVERIFY2(!QPixmap(catalog.stampImage(id)).isNull(), qPrintable(id));
-                QVERIFY2(!QPixmap(catalog.stampImage(id, true)).isNull(), qPrintable(id));
+                const auto *stamp = catalog.stamp(id);
+                QVERIFY2(stamp != nullptr, qPrintable(id));
+                QVERIFY2(!stamp->members.empty(), qPrintable(id));
+                QCOMPARE(catalog.stampFrameSize(id), QSizeF(stamp->width, stamp->height));
             }
         }
+        QCOMPARE(catalog.seriesVariants("01dorm").first(), QString("01dorm:1"));
+        QCOMPARE(catalog.stampLabel("01dorm:3"), QString("01dorm 区域 3"));
+        QVERIFY(catalog.stamp("dorms01") == nullptr);
         for (bool as1 : {true, false}) {
             for (int setId : catalog.wallSetOrder(as1)) {
                 WallSet wall = catalog.wallSet(setId);
@@ -189,11 +258,6 @@ class EditorTest : public QObject {
                     for (const auto &part : catalog.wallSet(setId).parts)
                         QVERIFY2(locale->contains(part.labelKey), qPrintable(part.labelKey));
                 }
-            }
-            for (const auto &seriesId : catalog.stampSeries()) {
-                QVERIFY(locale->contains("decoration.stamp.series." + seriesId + ".label"));
-                for (const auto &id : catalog.seriesVariants(seriesId))
-                    QVERIFY2(locale->contains("decoration.stamp." + id + ".label"), qPrintable(id));
             }
             for (const auto &binding : hotkeys::hotkeyBindings()) {
                 QString key = hotkeys::hotkeyTextKey(binding.commandId);
@@ -271,7 +335,7 @@ class EditorTest : public QObject {
         canvas.show();
         canvas.fitMap();
         QPoint location(450, 350);
-        canvas.armStamp("dorms01");
+        canvas.armStamp("01dorm:1");
         QTest::mouseClick(&canvas, Qt::LeftButton, {}, location);
         QTest::mouseClick(&canvas, Qt::LeftButton, {}, location);
         QCOMPARE(project.decorations.size(), size_t(2));
@@ -290,7 +354,7 @@ class EditorTest : public QObject {
         QVERIFY(QLineF(original, project.decorations.back().origin).length() > 1);
         canvas.deleteSelection();
         QCOMPARE(project.decorations.size(), size_t(1));
-        canvas.armStamp("dorms01");
+        canvas.armStamp("01dorm:1");
         canvas.setMode(DrawingMode::Polyline);
         QVERIFY(!canvas.isPlacing());
         QCOMPARE(canvas.part, QString("wall_body"));

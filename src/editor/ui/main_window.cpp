@@ -5,11 +5,14 @@
 #include "editor/i18n/text_keys.h"
 #include "editor/ui/panels/inspector.h"
 #include "editor/ui/panels/left_shelf.h"
+#include "editor/ui/panels/sprite_preview_dialog.h"
 #include "editor/ui/tools/drawing_toolbar.h"
 #include "editor/ui/widget_helpers.h"
+#include "game_assets/vid/vid_library.h"
 #include <QtConcurrent>
 #include <QtWidgets>
 #include <algorithm>
+#include <filesystem>
 #include <stdexcept>
 
 namespace editor {
@@ -68,6 +71,8 @@ MainWindow::MainWindow(const QString &localeName, QWidget *parent)
     connect(drawingToolbar_, &DrawingToolbar::modeTriggered, this, &MainWindow::activateMode);
     buildCommandToolbar();
     buildDocks();
+    // The saved game folder was opened while the toolbar was built, before the inspector existed.
+    inspector_->setSpritePreviewReady(viewport->hasGameFolder());
     connectViewport();
     configureHotkeys();
 
@@ -157,6 +162,59 @@ void MainWindow::buildCommandToolbar() {
     auto *spacer = new QWidget;
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     toolbar->addWidget(spacer);
+
+    // Sprite preview window: game folder plus the decoration display options, all kept in AutoMapper.cfg.
+    spritePreviewButton_ = new QPushButton(locale.tr(TextKey::ACTION_SPRITE_PREVIEW));
+    spritePreviewButton_->setObjectName("spritePreviewButton");
+    spritePreviewButton_->setToolTip(locale.tr(TextKey::TOOLTIP_SPRITE_PREVIEW));
+    spritePreviewButton_->setFixedSize(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT);
+    toolbar->addWidget(spritePreviewButton_);
+    connect(spritePreviewButton_, &QPushButton::clicked, this, &MainWindow::showSpritePreview);
+
+    viewport->stampCrossesWithSprites = loadStampCrossesWithSprites();
+    viewport->stampAlwaysShowFrame = loadStampAlwaysShowFrame();
+    viewport->stampSpriteOpacity = loadStampSpriteOpacity();
+    spritePreview_ = new SpritePreviewDialog(locale, this);
+    spritePreview_->setOptions(viewport->stampCrossesWithSprites, viewport->stampAlwaysShowFrame,
+                               viewport->stampSpriteOpacity);
+    connect(spritePreview_, &SpritePreviewDialog::chooseGameFolderRequested, this, &MainWindow::chooseGameFolder);
+    connect(spritePreview_, &SpritePreviewDialog::crossesWithSpritesChanged, this, [this](bool checked) {
+        viewport->stampCrossesWithSprites = checked;
+        viewport->update();
+        try {
+            saveStampCrossesWithSprites(checked);
+        } catch (const std::exception &error) {
+            errorDialog(locale.tr(TextKey::DIALOG_ERROR), QString::fromUtf8(error.what()));
+        }
+    });
+    connect(spritePreview_, &SpritePreviewDialog::alwaysShowFrameChanged, this, [this](bool checked) {
+        viewport->stampAlwaysShowFrame = checked;
+        viewport->update();
+        try {
+            saveStampAlwaysShowFrame(checked);
+        } catch (const std::exception &error) {
+            errorDialog(locale.tr(TextKey::DIALOG_ERROR), QString::fromUtf8(error.what()));
+        }
+    });
+    connect(spritePreview_, &SpritePreviewDialog::spriteOpacityChanged, this, [this](int percent) {
+        viewport->stampSpriteOpacity = percent;
+        viewport->update();
+    });
+    // Dragging previews every value; the cfg is written once the value settles.
+    connect(spritePreview_, &SpritePreviewDialog::spriteOpacityCommitted, this, [this](int percent) {
+        try {
+            saveStampSpriteOpacity(percent);
+        } catch (const std::exception &error) {
+            errorDialog(locale.tr(TextKey::DIALOG_ERROR), QString::fromUtf8(error.what()));
+        }
+    });
+
+    // A saved folder that no longer works only logs a warning; stamps fall back to green crosses.
+    QString gamePath = loadGamePath(GameFamily::AS2);
+    if (!gamePath.isEmpty())
+        viewport->openGameFolder(gamePath);
+    spritePreview_->setGameFolder(GameFamily::AS2, gamePath);
+    spritePreview_->setGameFolder(GameFamily::AS1, loadGamePath(GameFamily::AS1));
 
     auto *help = new QPushButton(locale.tr(hotkeys::hotkeyTextKey("button")) + "\n" +
                                  hotkeys::hotkeyHint(hotkeys::COMMAND_HOTKEY_HELP));
@@ -452,6 +510,11 @@ void MainWindow::chooseSet(int index) {
         showStatus(locale.tr(TextKey::STATUS_WALL_SET_SELECTED, {{"wall_name", title}}));
 }
 
+void MainWindow::showStampDetails(const QString &stampId) {
+    int memberCount = static_cast<int>(catalog.stamp(stampId)->members.size());
+    inspector_->showStamp(memberCount, viewport->hasGameFolder(), viewport->renderStampPreview(stampId));
+}
+
 void MainWindow::chooseItem(int index) {
     if (decorationShelf_) {
         if (index < 0 || index >= visibleStamps_.size())
@@ -459,8 +522,7 @@ void MainWindow::chooseItem(int index) {
         itemMemory_[currentSetKey_] = index;
         QString stampId = visibleStamps_[index];
         viewport->armStamp(stampId);
-        int memberCount = static_cast<int>(catalog.stamps.value(stampId)->members.size());
-        inspector_->showStamp(catalog.stampImage(stampId, true), memberCount);
+        showStampDetails(stampId);
         qInfo() << "Stamp tool selected:" << stampId;
         showStatus(locale.tr(TextKey::STATUS_DECORATION_TOOL_SELECTED, {{"decoration_name", catalog.stampLabel(stampId)}}));
         return;
@@ -604,6 +666,54 @@ void MainWindow::selectVersion(const QString &version) {
     qInfo() << "Project family changed:" << version;
 }
 
+void MainWindow::chooseGameFolder(GameFamily family) {
+    QString current = loadGamePath(family);
+    QString path = QFileDialog::getExistingDirectory(this, locale.tr(TextKey::DIALOG_GAME_FOLDER), current);
+    if (path.isEmpty())
+        return;
+    bool opened = false;
+    if (family == GameFamily::AS2) {
+        opened = viewport->openGameFolder(path);
+    } else {
+        // Nothing renders AS1 sprites yet; reading objects.res still rejects a wrong folder.
+        auto_mapper::game_assets::VidLibrary probe;
+        opened = probe.open(std::filesystem::path(path.toStdU16String()), GameFamily::AS1);
+    }
+    if (!opened) {
+        errorDialog(locale.tr(TextKey::DIALOG_GAME_FOLDER),
+                    locale.tr(TextKey::MESSAGE_GAME_FOLDER_INVALID, {{"path", QDir::toNativeSeparators(path)}}));
+        // Keep showing the AS2 folder that worked before.
+        if (family == GameFamily::AS2 && !current.isEmpty())
+            viewport->openGameFolder(current);
+        return;
+    }
+    try {
+        saveGamePath(family, path);
+    } catch (const std::exception &error) {
+        errorDialog(locale.tr(TextKey::DIALOG_ERROR), QString::fromUtf8(error.what()));
+    }
+    spritePreview_->setGameFolder(family, path);
+    inspector_->setSpritePreviewReady(viewport->hasGameFolder());
+    // Redraw the inspector preview of the stamp on show with the new sprites.
+    int shownStamp = inspector_->componentIndex();
+    if (decorationShelf_ && shownStamp >= 0 && shownStamp < visibleStamps_.size())
+        showStampDetails(visibleStamps_[shownStamp]);
+    showStatus(locale.tr(TextKey::STATUS_GAME_FOLDER_OPENED, {{"path", QDir::toNativeSeparators(path)}}),
+               STATUS_SHORT_MS);
+}
+
+void MainWindow::showSpritePreview() {
+    if (!spritePreview_->isVisible()) {
+        // Open under the toolbar button with right edges aligned, like a drop-down.
+        spritePreview_->adjustSize();
+        QPoint corner = spritePreviewButton_->mapToGlobal(QPoint(spritePreviewButton_->width(), spritePreviewButton_->height()));
+        spritePreview_->move(corner.x() - spritePreview_->width(), corner.y() + 6);
+    }
+    spritePreview_->show();
+    spritePreview_->raise();
+    spritePreview_->activateWindow();
+}
+
 void MainWindow::errorDialog(const QString &title, const QString &message) {
     qWarning() << message;
     QMessageBox::critical(this, title, message);
@@ -612,6 +722,11 @@ void MainWindow::errorDialog(const QString &title, const QString &message) {
 bool MainWindow::openProject(const QString &path) {
     try {
         Project loaded = Project::load(path);
+        // Stamps come from the decoration library maps; ids it does not know are not supported.
+        for (const auto &decoration : loaded.decorations) {
+            if (decoration.type == DECORATION_TYPE_ROOM_STAMP && catalog.stamp(decoration.profileId) == nullptr)
+                throw std::runtime_error(("Unknown decoration stamp: " + decoration.profileId).toStdString());
+        }
         replaceProject(loaded);
         projectPath_ = path;
         showStatus(locale.tr(TextKey::STATUS_IMPORTED_PROJECT,
@@ -685,10 +800,11 @@ bool MainWindow::exportMap(const QString &path) {
     setCursor(Qt::WaitCursor);
     showStatus(locale.tr(TextKey::STATUS_GENERATING_MAP));
     qInfo() << "Generating map:" << path << "floor" << floor << "ceiling" << ceiling << "random" << random;
-    exportWatcher_.setFuture(QtConcurrent::run([snapshot, path, floor, ceiling, random] {
+    const auto *library = &catalog.decorationLibrary();
+    exportWatcher_.setFuture(QtConcurrent::run([snapshot, path, floor, ceiling, random, library] {
         ExportResult result;
         try {
-            result.success = snapshot.generate(path, floor, ceiling, random);
+            result.success = snapshot.generate(path, floor, ceiling, random, library);
         } catch (const std::exception &error) {
             result.engineError = QString::fromUtf8(error.what());
         }

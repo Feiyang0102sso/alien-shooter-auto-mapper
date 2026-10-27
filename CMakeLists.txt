@@ -45,6 +45,8 @@ enable_testing()
 
 # Core algorithms            ->  auto_mapper_core (static)
 add_subdirectory(src/auto_mapper)
+# Game data readers (objects.res, Vid/*.vid) for the decoration sprite preview
+add_subdirectory(src/game_assets)
 # Qt editor                  ->  AutoMapper.exe
 add_subdirectory(src/editor)
 # Core tests, editor tests and the golden candidate exporter

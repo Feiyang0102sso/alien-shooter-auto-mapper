@@ -7,9 +7,8 @@
 #pragma once
 #include "editor/catalog/catalog.h"
 #include "editor/project/project.h"
+#include "editor/ui/canvas/stamp_sprites.h"
 #include "editor/ui/tools/drawing_modes.h"
-#include <QHash>
-#include <QPixmap>
 #include <QWidget>
 #include <optional>
 
@@ -28,6 +27,11 @@ class Viewport : public QWidget {
     int eraserSize = 1;
     double zoom = 1;
     QPointF pan;
+    // Sprite preview options from AutoMapper.cfg (see config.h).
+    bool stampCrossesWithSprites = false;
+    bool stampAlwaysShowFrame = false;
+    // Percent, already clamped to the config.h limits; the placing ghost multiplies its own opacity on top.
+    int stampSpriteOpacity = 100;
 
     bool isPlacing() const;
     bool isEditing() const;
@@ -48,6 +52,11 @@ class Viewport : public QWidget {
     QPoint snapToGrid(const QPointF &screen) const;
     QPolygonF decorationFrame(const Decoration &decoration) const;
     bool outsideMap(const Decoration &decoration) const;
+    // AS2 game folder for the stamp sprite preview; false keeps the green crosses.
+    bool openGameFolder(const QString &gameRoot);
+    bool hasGameFolder() const;
+    // Whole stamp drawn from game sprites for the inspector; null without a game folder.
+    QImage renderStampPreview(const QString &stampId);
 
   signals:
     void projectChanged();
@@ -90,8 +99,7 @@ class Viewport : public QWidget {
     // "move" or one of the array edges "left" / "right" / "top" / "bottom"; empty when idle.
     QString dragMode_;
     Decoration dragOriginal_;
-    // Stamp canvas images by path; misses are cached as null pixmaps.
-    QHash<QString, QPixmap> images_;
+    StampSprites stampSprites_;
 
     QRectF bounds(int type) const;
     bool nearBounds(const QPointF &point) const;
@@ -111,7 +119,9 @@ class Viewport : public QWidget {
     QPolygonF toScreen(const QPolygonF &mapPolygon) const;
     void drawGrid(QPainter &painter);
     void drawDecoration(QPainter &painter, const Decoration &decoration, bool selected);
-    void drawStampImage(QPainter &painter, const QString &stampId, const QPolygonF &screenPolygon, double opacity);
+    // Stamp members placed around `center` (Map Coordinates): game sprites when a game folder is open,
+    // green crosses for members without a decoded frame (or for every member with stampCrossesWithSprites).
+    void drawStampMembers(QPainter &painter, const QString &stampId, const QPointF &center, double opacity);
     void drawIncubatorUnits(QPainter &painter, const Decoration &decoration);
     void drawStampGhost(QPainter &painter, const QPointF &center);
     void drawArrayPreview(QPainter &painter, const Decoration &preview);

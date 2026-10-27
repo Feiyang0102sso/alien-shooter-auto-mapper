@@ -63,7 +63,9 @@ struct Project {
     // An empty project in the given version, sized with that version's default map size.
     static Project createEmpty(const QString &version);
     void save(const QString &path) const;
-    bool generate(const QString &path, bool floor, bool ceiling, bool random) const;
+    // `decorationLibrary` resolves room stamp ids; it may be null when the project has no stamps.
+    bool generate(const QString &path, bool floor, bool ceiling, bool random,
+                  const auto_mapper::core::decoration_builder::DecorationLibrary *decorationLibrary = nullptr) const;
 };
 
 double defaultMapSize(const QString &version);

@@ -1,380 +1,161 @@
 #include <gtest/gtest.h>
 
 #include "auto_mapper/core/decoration_builder/decoration_builder.h"
-#include "auto_mapper/core/decoration_builder/decoration_profiles_as2.h"
-#include "auto_mapper/core/vid_properties/vid_armies_as2.h"
-#include "auto_mapper/core/wall_builder/wall_profiles_as2.h"
-#include "auto_mapper/io/map_writer.h"
+#include "auto_mapper/core/decoration_builder/decoration_library.h"
+#include "auto_mapper/core/decoration_builder/placeholder_vids.h"
 #include "utils/test_utils.h"
 
+#include <filesystem>
 #include <vector>
 
 using namespace auto_mapper;
 using namespace auto_mapper::core::decoration_builder;
 using namespace auto_mapper::test;
 
-TEST(DecorationBuilderTest, RegistersAllDormProfilesFromPreparedDecorationFiles) {
-    const DecorationProfile* profiles[] = {
-        &DORMS01_DECORATION_PROFILE,
-        &DORMS02_DECORATION_PROFILE,
-        &DORMS03_DECORATION_PROFILE,
-        &DORMS04_DECORATION_PROFILE,
-        &DORMS05_DECORATION_PROFILE,
-        &DORMS06_DECORATION_PROFILE,
-        &DORMS07_DECORATION_PROFILE,
-        &DORMS08_DECORATION_PROFILE,
-    };
-    const int expected_member_counts[] = {27, 28, 22, 30, 26, 12, 11, 11};
+namespace {
 
-    EXPECT_EQ(AS2_DECORATION_PROFILE_COUNT, 116);
-    EXPECT_EQ(
-        profiles[0]->test_boundary_wall_profile,
-        &core::WALL_AS2_SET6_RANDOM
-    );
+// Frozen copy of assets/decoration_maps/AS2/01dorm.map: 11 regions, 419 member sprites.
+const char* LIBRARY_FIXTURE = "tests/golden/decoration/01dorm_library.map";
 
-    for (int index = 1; index < 8; ++index) {
-        EXPECT_EQ(AS2_DECORATION_PROFILES[index], profiles[index]);
-        EXPECT_EQ(profiles[index]->members.size(), expected_member_counts[index]);
-        EXPECT_EQ(profiles[index]->test_boundary_wall_profile, &core::WALL_AS2_SET1_RANDOM);
-    }
+DecorationLibrary load_fixture_library() {
+    DecorationLibrary library;
+    EXPECT_TRUE(library.load_map(resolve_test_path(LIBRARY_FIXTURE)));
+    return library;
 }
 
-TEST(DecorationBuilderTest, RegistersAllOfficeProfilesFromPreparedDecorationFiles) {
-    const DecorationProfile* profiles[] = {
-        &OFFICE01_DECORATION_PROFILE,
-        &OFFICE02_DECORATION_PROFILE,
-        &OFFICE03_DECORATION_PROFILE,
-        &OFFICE04_DECORATION_PROFILE,
-        &OFFICE05_DECORATION_PROFILE,
-        &OFFICE06_DECORATION_PROFILE,
-        &OFFICE07_DECORATION_PROFILE,
-        &OFFICE08_DECORATION_PROFILE,
-        &OFFICE09_DECORATION_PROFILE,
-    };
-    const int expected_member_counts[] = {77, 20, 33, 9, 53, 19, 67, 78, 21};
-    // The office series is registered right after the eight dorm profiles.
-    const int registry_offset = 8;
+} // namespace
 
-    for (int index = 0; index < 9; ++index) {
-        EXPECT_EQ(AS2_DECORATION_PROFILES[registry_offset + index], profiles[index]);
-        EXPECT_EQ(profiles[index]->members.size(), expected_member_counts[index]);
-        EXPECT_EQ(profiles[index]->test_boundary_wall_profile, &core::WALL_AS2_SET1_RANDOM);
+TEST(DecorationLibraryTest, RegistersEveryRegionInSprOrder) {
+    DecorationLibrary library = load_fixture_library();
+
+    const int expected_member_counts[] = {23, 32, 103, 110, 23, 25, 42, 10, 11, 12, 28};
+    ASSERT_EQ(library.stamps().size(), 11u);
+    ASSERT_EQ(library.series().size(), 1u);
+    EXPECT_EQ(library.series()[0], "01dorm_library");
+
+    int total_members = 0;
+    for (std::size_t index = 0; index < library.stamps().size(); ++index) {
+        const DecorationStamp& stamp = library.stamps()[index];
+        EXPECT_EQ(stamp.id, "01dorm_library:" + std::to_string(index + 1));
+        EXPECT_EQ(stamp.series_id, "01dorm_library");
+        EXPECT_EQ(stamp.members.size(), expected_member_counts[index]) << stamp.id;
+        total_members += static_cast<int>(stamp.members.size());
     }
+    EXPECT_EQ(total_members, 419);
 }
 
-TEST(DecorationBuilderTest, RegistersAllStorageProfilesFromPreparedDecorationFiles) {
-    const DecorationProfile* profiles[] = {
-        &STORAGE01_DECORATION_PROFILE,
-        &STORAGE02_DECORATION_PROFILE,
-        &STORAGE03_DECORATION_PROFILE,
-        &STORAGE04_DECORATION_PROFILE,
-        &STORAGE05_DECORATION_PROFILE,
-        &STORAGE06_DECORATION_PROFILE,
-        &STORAGE07_DECORATION_PROFILE,
-        &STORAGE08_DECORATION_PROFILE,
-        &STORAGE09_DECORATION_PROFILE,
-    };
-    const int expected_member_counts[] = {33, 14, 8, 12, 66, 18, 20, 17, 14};
-    // Unlike the other series, the storage rooms were authored against
-    // several different wall sets.
-    const core::WallProfile* expected_wall_profiles[] = {
-        &core::WALL_AS2_SET1_RANDOM,
-        &core::WALL_AS2_SET1_RANDOM,
-        &core::WALL_AS2_SET1_RANDOM,
-        &core::WALL_AS2_SET4_RANDOM,
-        &core::WALL_AS2_SET5_RANDOM,
-        &core::WALL_AS2_SET5_RANDOM,
-        &core::WALL_AS2_SET8_RANDOM,
-        &core::WALL_AS2_SET6_RANDOM,
-        &core::WALL_AS2_SET5_RANDOM,
-    };
-    // The storage series is registered after the dorm and office profiles.
-    const int registry_offset = 17;
+TEST(DecorationLibraryTest, ReadsRegionSizeAndMemberFields) {
+    DecorationLibrary library = load_fixture_library();
 
-    for (int index = 0; index < 9; ++index) {
-        EXPECT_EQ(AS2_DECORATION_PROFILES[registry_offset + index], profiles[index]);
-        EXPECT_EQ(profiles[index]->members.size(), expected_member_counts[index]);
-        EXPECT_EQ(profiles[index]->test_boundary_wall_profile, expected_wall_profiles[index]);
-    }
+    // Region 1: center (3411, 3320), 652 x 452; first member is VID 1763 at (3618.09, 3416.06).
+    const DecorationStamp* first = library.find("01dorm_library:1");
+    ASSERT_NE(first, nullptr);
+    EXPECT_FLOAT_EQ(first->width, 652.0f);
+    EXPECT_FLOAT_EQ(first->height, 452.0f);
+    const DecorationMember& member = first->members.front();
+    EXPECT_EQ(member.vid, 1763);
+    EXPECT_FLOAT_EQ(member.offset_x, 207.093017578125f);
+    EXPECT_FLOAT_EQ(member.offset_y, 96.0625f);
+    EXPECT_FLOAT_EQ(member.pos_z, 0.0f);
+    EXPECT_EQ(member.direction, 83u);
+    EXPECT_EQ(member.army, 0);
+
+    const DecorationStamp* second = library.find("01dorm_library:2");
+    ASSERT_NE(second, nullptr);
+    EXPECT_FLOAT_EQ(second->width, 490.0f);
+    EXPECT_FLOAT_EQ(second->height, 475.0f);
+
+    EXPECT_EQ(library.find("01dorm_library:12"), nullptr);
+    EXPECT_EQ(library.find("no_such_stamp"), nullptr);
 }
 
-TEST(DecorationBuilderTest, RegistersAllAdditionalProfilesFromPreparedDecorationFiles) {
-    const DecorationProfile* profiles[] = {
-        &MACHINES_01_DECORATION_PROFILE,
-        &MACHINES_02_DECORATION_PROFILE,
-        &MACHINES_03_DECORATION_PROFILE,
-        &MACHINES_04_DECORATION_PROFILE,
-        &MACHINES_05_DECORATION_PROFILE,
-        &MACHINES_06_DECORATION_PROFILE,
-        &MACHINES_07_DECORATION_PROFILE,
-        &MACHINES_08_DECORATION_PROFILE,
-        &MACHINES_09_DECORATION_PROFILE,
-        &COMP01_DECORATION_PROFILE,
-        &COMP02_DECORATION_PROFILE,
-        &COMP03_DECORATION_PROFILE,
-        &COMP04_DECORATION_PROFILE,
-        &COMP05_DECORATION_PROFILE,
-        &COMP06_DECORATION_PROFILE,
-        &COMP07_DECORATION_PROFILE,
-        &COMP08_DECORATION_PROFILE,
-        &COMP09_DECORATION_PROFILE,
-        &VEHICLE_WORKSHOP01_DECORATION_PROFILE,
-        &VEHICLE_WORKSHOP02_DECORATION_PROFILE,
-        &VEHICLE_WORKSHOP03_DECORATION_PROFILE,
-        &VEHICLE_WORKSHOP04_DECORATION_PROFILE,
-        &VEHICLE_WORKSHOP05_DECORATION_PROFILE,
-        &GARAGE01_DECORATION_PROFILE,
-        &GARAGE02_DECORATION_PROFILE,
-        &GARAGE03_DECORATION_PROFILE,
-        &GARAGE04_DECORATION_PROFILE,
-        &GARAGE05_DECORATION_PROFILE,
-        &GARAGE06_DECORATION_PROFILE,
-        &GARAGE07_DECORATION_PROFILE,
-        &GARAGE08_DECORATION_PROFILE,
-        &GARAGE09_DECORATION_PROFILE,
-        &WEAPON_WORKSHOP01_DECORATION_PROFILE,
-        &WEAPON_WORKSHOP02_DECORATION_PROFILE,
-        &WEAPON_WORKSHOP03_DECORATION_PROFILE,
-        &WEAPON_WORKSHOP04_DECORATION_PROFILE,
-        &WEAPON_WORKSHOP05_DECORATION_PROFILE,
-        &WEAPON_WORKSHOP06_DECORATION_PROFILE,
-        &WEAPON_WORKSHOP07_DECORATION_PROFILE,
-        &WEAPON_WORKSHOP08_DECORATION_PROFILE,
-        &SICK_BAY01_DECORATION_PROFILE,
-        &SICK_BAY02_DECORATION_PROFILE,
-        &SICK_BAY03_DECORATION_PROFILE,
-        &SICK_BAY04_DECORATION_PROFILE,
-        &SICK_BAY05_DECORATION_PROFILE,
-        &CANTEEN01_DECORATION_PROFILE,
-        &CANTEEN02_DECORATION_PROFILE,
-        &CANTEEN03_DECORATION_PROFILE,
-        &CANTEEN04_DECORATION_PROFILE,
-        &LARGE_M01_DECORATION_PROFILE,
-        &LARGE_M02_DECORATION_PROFILE,
-        &LAB_DESKS01_DECORATION_PROFILE,
-        &LAB_DESKS02_DECORATION_PROFILE,
-        &LAB_DESKS03_DECORATION_PROFILE,
-        &LAB_DESKS04_DECORATION_PROFILE,
-        &LAB_DESKS05_DECORATION_PROFILE,
-        &LAB_DESKS06_DECORATION_PROFILE,
-        &LAB_DESKS07_DECORATION_PROFILE,
-        &LAB_DESKS08_DECORATION_PROFILE,
-        &LAB_OFFICE01_DECORATION_PROFILE,
-        &LAB_OFFICE02_DECORATION_PROFILE,
-        &LAB_OFFICE03_DECORATION_PROFILE,
-        &LAB_OFFICE04_DECORATION_PROFILE,
-        &LAB_COMP01_DECORATION_PROFILE,
-        &LAB_COMP02_DECORATION_PROFILE,
-        &LAB_COMP03_DECORATION_PROFILE,
-        &LAB_COMP04_DECORATION_PROFILE,
-        &LAB_BIOEXP01_DECORATION_PROFILE,
-        &LAB_BIOEXP02_DECORATION_PROFILE,
-        &LAB_BIOEXP03_DECORATION_PROFILE,
-        &LAB_BIOEXP04_DECORATION_PROFILE,
-        &LAB_BIOEXP05_DECORATION_PROFILE,
-        &LAB_BIOEXP06_DECORATION_PROFILE,
-        &LAB_BIOEXP07_DECORATION_PROFILE,
-        &LAB_BIOEXP08_DECORATION_PROFILE,
-        &LAB_SURGERY01_DECORATION_PROFILE,
-        &LAB_SURGERY02_DECORATION_PROFILE,
-        &LAB_SURGERY03_DECORATION_PROFILE,
-        &LAB_SURGERY04_DECORATION_PROFILE,
-        &LAB_SURGERY05_DECORATION_PROFILE,
-        &LAB_SURGERY06_DECORATION_PROFILE,
-        &OTHERS01_DECORATION_PROFILE,
-        &OTHERS02_DECORATION_PROFILE,
-        &OTHERS03_DECORATION_PROFILE,
-        &OTHERS04_DECORATION_PROFILE,
-        &OTHERS05_DECORATION_PROFILE,
-        &OTHERS06_DECORATION_PROFILE,
-        &OTHERS07_DECORATION_PROFILE,
-        &OTHERS08_DECORATION_PROFILE,
-        &OTHERS09_DECORATION_PROFILE,
-    };
-    const int expected_member_counts[] = {
-        4, 7, 12, 20, 19, 10, 11, 14, 6, 64, 21, 32, 11, 59, 13, 28, 6, 10, 82, 90, 52, 58, 52, 8,
-        3, 36, 14, 40, 42, 7, 2, 8, 14, 13, 41, 42, 14, 14, 30, 28, 13, 11, 25, 5, 22, 37, 27, 45,
-        19, 3, 8, 25, 14, 5, 10, 13, 34, 25, 36, 21, 28, 23, 30, 15, 13, 17, 19, 14, 8, 10, 15, 9,
-        17, 5, 22, 7, 14, 8, 19, 15, 6, 18, 8, 16, 19, 7, 16, 25, 27, 10,
-    };
-    const int registry_offset = 26;
+TEST(DecorationLibraryTest, DecodesSpriteGamma) {
+    DecorationLibrary library = load_fixture_library();
 
-    EXPECT_EQ(AS2_DECORATION_PROFILE_COUNT, 116);
-    EXPECT_EQ(sizeof(profiles) / sizeof(profiles[0]), 90u);
-
-    for (int index = 0; index < 90; ++index) {
-        EXPECT_EQ(AS2_DECORATION_PROFILES[registry_offset + index], profiles[index]);
-        EXPECT_EQ(profiles[index]->members.size(), expected_member_counts[index]);
-    }
-}
-
-TEST(DecorationBuilderTest, EveryRegisteredMemberVidHasAnArmyBinding) {
-    // get_as2_vid_army throws on an unregistered VID, so a profile added
-    // without its Army bindings would only blow up at build time.
-    for (int index = 0; index < AS2_DECORATION_PROFILE_COUNT; ++index) {
-        const DecorationProfile* profile = AS2_DECORATION_PROFILES[index];
-        for (const DecorationMemberProfile& member : profile->members) {
-            EXPECT_NO_THROW(core::get_as2_vid_army(member.vid))
-                << "profile " << profile->id << " vid " << member.vid;
+    // Region 4 has VID 1232 brightened by bytes [0,0,0,0, 0x19,0x14,0x14,0] (B, G, R, A).
+    bool found_bright = false;
+    for (const DecorationMember& member : library.find("01dorm_library:4")->members) {
+        if (member.vid == 1232) {
+            EXPECT_EQ(member.gamma.b, 25);
+            EXPECT_EQ(member.gamma.g, 20);
+            EXPECT_EQ(member.gamma.r, 20);
+            EXPECT_EQ(member.gamma.a, 0);
+            found_bright = true;
         }
     }
-}
+    EXPECT_TRUE(found_bright);
 
-TEST(DecorationBuilderTest, Dorms01ProfileKeepsImportedFrameAndMembers) {
-    EXPECT_EQ(DORMS01_DECORATION_PROFILE.id, "dorms01");
-    ASSERT_EQ(DORMS01_DECORATION_PROFILE.members.size(), 27u);
-    EXPECT_EQ(
-        DORMS01_DECORATION_PROFILE.test_boundary_wall_profile,
-        &core::WALL_AS2_SET6_RANDOM
-    );
-
-    const DecorationFrameProfile& frame = DORMS01_DECORATION_PROFILE.frame;
-    EXPECT_FLOAT_EQ(frame.corner_offsets[0].x, 0.0f);
-    EXPECT_FLOAT_EQ(frame.corner_offsets[0].y, -448.0f);
-    EXPECT_FLOAT_EQ(frame.corner_offsets[1].x, -630.0f);
-    EXPECT_FLOAT_EQ(frame.corner_offsets[1].y, 0.0f);
-    EXPECT_FLOAT_EQ(frame.corner_offsets[2].x, 0.0f);
-    EXPECT_FLOAT_EQ(frame.corner_offsets[2].y, 448.0f);
-    EXPECT_FLOAT_EQ(frame.corner_offsets[3].x, 630.0f);
-    EXPECT_FLOAT_EQ(frame.corner_offsets[3].y, 0.0f);
-    EXPECT_FLOAT_EQ(
-        frame.default_placeholder_width,
-        DEFAULT_DECORATION_PLACEHOLDER_WIDTH
-    );
-    EXPECT_FLOAT_EQ(
-        frame.default_placeholder_height,
-        DEFAULT_DECORATION_PLACEHOLDER_HEIGHT
-    );
-}
-
-TEST(DecorationBuilderTest, BoundaryIsDisabledByDefaultAndAvailableForManualTests) {
-    DecorationPlacement placement = {
-        .center_x = 1000.0f,
-        .center_y = 1000.0f,
-    };
-
-    DecorationBuilder builder;
-    std::vector<io::Sprite> default_sprites = builder.build(
-        DORMS01_DECORATION_PROFILE,
-        placement
-    );
-
-    DecorationBuildOptions test_options = {
-        .keep_boundary = true,
-    };
-    std::vector<io::Sprite> test_sprites = builder.build(
-        DORMS01_DECORATION_PROFILE,
-        placement,
-        test_options
-    );
-
-    EXPECT_EQ(default_sprites.size(), 27u);
-    ASSERT_EQ(test_sprites.size(), 55u);
-    EXPECT_EQ(test_sprites[27].vid, 2601);
-    EXPECT_EQ(test_sprites[54].vid, 2600);
-
-    for (std::size_t index = 27; index < test_sprites.size(); ++index) {
-        EXPECT_TRUE(test_sprites[index].vid == 2600 || test_sprites[index].vid == 2601);
+    // Region 7 has VID 409 darkened by bytes [0x64,0x64,0x64,0, 0,0,0,0].
+    bool found_dark = false;
+    for (const DecorationMember& member : library.find("01dorm_library:7")->members) {
+        if (member.vid == 409 && member.gamma.r != 0) {
+            EXPECT_EQ(member.gamma.b, -100);
+            EXPECT_EQ(member.gamma.g, -100);
+            EXPECT_EQ(member.gamma.r, -100);
+            found_dark = true;
+        }
     }
+    EXPECT_TRUE(found_dark);
+}
+
+TEST(DecorationLibraryTest, LoadDirectoryReadsEveryMapFile) {
+    std::filesystem::path fixture_directory = std::filesystem::path(resolve_test_path(LIBRARY_FIXTURE)).parent_path();
+
+    DecorationLibrary library;
+    EXPECT_EQ(library.load_directory(fixture_directory), 11);
+    EXPECT_EQ(library.load_directory(fixture_directory / "missing"), 0);
 }
 
 TEST(DecorationBuilderTest, BuildTranslatesEveryMemberAndPreservesSpriteValues) {
-    DecorationPlacement placement = {
-        .center_x = 1000.0f,
-        .center_y = 2000.0f,
-    };
+    DecorationStamp stamp;
+    stamp.id = "test:1";
+    DecorationMember member;
+    member.vid = 1288;
+    member.offset_x = -40.5f;
+    member.offset_y = 263.0f;
+    member.pos_z = 13.0f;
+    member.direction = 64;
+    member.army = 2;
+    member.gamma.r = -30;
+    member.scale.x = 0.5f;
+    stamp.members.push_back(member);
 
-    DecorationBuilder builder;
-    std::vector<io::Sprite> sprites = builder.build(
-        DORMS01_DECORATION_PROFILE,
-        placement
-    );
+    std::vector<io::Sprite> sprites = build_stamp(stamp, 1000.0f, 2000.0f);
 
-    ASSERT_EQ(sprites.size(), DORMS01_DECORATION_PROFILE.members.size());
-
-    // Members carry the authored member nudge on top of the placement.
-    DecorationPoint shift = resolve_member_shift(DORMS01_DECORATION_PROFILE.member_nudge);
-
-    for (std::size_t index = 0; index < sprites.size(); ++index) {
-        const DecorationMemberProfile& member = DORMS01_DECORATION_PROFILE.members[index];
-        const io::Sprite& sprite = sprites[index];
-
-        EXPECT_EQ(sprite.vid, member.vid);
-        EXPECT_FLOAT_EQ(sprite.posX, placement.center_x + member.offset_x + shift.x);
-        EXPECT_FLOAT_EQ(sprite.posY, placement.center_y + member.offset_y + shift.y);
-        EXPECT_FLOAT_EQ(sprite.posZ, member.pos_z);
-        EXPECT_EQ(sprite.direction, member.direction);
-        EXPECT_EQ(sprite.army, core::get_as2_vid_army(member.vid));
-        EXPECT_EQ(sprite.gamma.r, member.gamma.r);
-        EXPECT_EQ(sprite.gamma.g, member.gamma.g);
-        EXPECT_EQ(sprite.gamma.b, member.gamma.b);
-        EXPECT_EQ(sprite.gamma.a, member.gamma.a);
-        EXPECT_FLOAT_EQ(sprite.scale.x, member.scale.x);
-        EXPECT_FLOAT_EQ(sprite.scale.y, member.scale.y);
-        EXPECT_FLOAT_EQ(sprite.scale.z, member.scale.z);
-    }
+    ASSERT_EQ(sprites.size(), 1u);
+    EXPECT_EQ(sprites[0].vid, 1288);
+    EXPECT_FLOAT_EQ(sprites[0].posX, 959.5f);
+    EXPECT_FLOAT_EQ(sprites[0].posY, 2263.0f);
+    EXPECT_FLOAT_EQ(sprites[0].posZ, 13.0f);
+    EXPECT_EQ(sprites[0].direction, 64u);
+    EXPECT_EQ(sprites[0].army, 2);
+    EXPECT_EQ(sprites[0].gamma.r, -30);
+    EXPECT_FLOAT_EQ(sprites[0].scale.x, 0.5f);
 }
 
-TEST(DecorationBuilderTest, Dorms01BuildReconstructsImportedSourceCoordinates) {
-    DecorationPlacement source_placement = {
-        .center_x = 594.8363734654017f,
-        .center_y = 760.5689697265625f,
-    };
+TEST(DecorationBuilderTest, PlacingAtTheRegionCenterRestoresLibraryCoordinates) {
+    DecorationLibrary library = load_fixture_library();
 
-    DecorationBuilder builder;
-    std::vector<io::Sprite> sprites = builder.build(
-        DORMS01_DECORATION_PROFILE,
-        source_placement
-    );
+    std::vector<io::Sprite> sprites = build_stamp(*library.find("01dorm_library:1"), 3411.0f, 3320.0f);
 
-    ASSERT_EQ(sprites.size(), 27u);
-
-    // Hard-coded values are the imported source coordinates. The member nudge
-    // is the author's deliberate offset from them.
-    DecorationPoint shift = resolve_member_shift(DORMS01_DECORATION_PROFILE.member_nudge);
-
-    EXPECT_FLOAT_EQ(sprites[0].posX, 659.0863647460938f + shift.x);
-    EXPECT_FLOAT_EQ(sprites[0].posY, 868.5689697265625f + shift.y);
-    EXPECT_EQ(sprites[0].vid, 2357);
-    EXPECT_EQ(sprites[0].direction, 70u);
-    EXPECT_EQ(sprites[0].army, 0);
-
-    EXPECT_EQ(sprites[3].vid, 1288);
-    EXPECT_FLOAT_EQ(sprites[3].posZ, 13.0f);
-
-    EXPECT_EQ(sprites[26].vid, 1270);
-    EXPECT_FLOAT_EQ(sprites[26].posX, 616.0863647460938f + shift.x);
-    EXPECT_FLOAT_EQ(sprites[26].posY, 647.5689697265625f + shift.y);
-    EXPECT_EQ(sprites[26].direction, 128u);
-    EXPECT_EQ(sprites[26].army, 2);
+    ASSERT_EQ(sprites.size(), 23u);
+    EXPECT_FLOAT_EQ(sprites[0].posX, 3618.093017578125f);
+    EXPECT_FLOAT_EQ(sprites[0].posY, 3416.0625f);
 }
 
-TEST(DecorationBuilderTest, WritesDorms01BoundaryManualTestMap) {
-    DecorationPlacement source_placement = {
-        .center_x = 594.8363734654017f,
-        .center_y = 760.5689697265625f,
-    };
-    DecorationBuildOptions test_options = {
-        .keep_boundary = true,
-    };
+TEST(DecorationBuilderTest, FlatAndClutterVidsHaveNoPlaceholder) {
+    EXPECT_FALSE(draws_placeholder(120));  // blood
+    EXPECT_FALSE(draws_placeholder(135));  // shadow
+    EXPECT_FALSE(draws_placeholder(1783)); // office floor tile
+    EXPECT_FALSE(draws_placeholder(1765)); // books
+    EXPECT_TRUE(draws_placeholder(413));   // cabinet
+    EXPECT_TRUE(draws_placeholder(2300));  // bedroom interior
+}
 
-    DecorationBuilder builder;
-    std::vector<io::Sprite> sprites = builder.build(
-        DORMS01_DECORATION_PROFILE,
-        source_placement,
-        test_options
-    );
-
-    std::string output_path = get_test_output_path(
-        "AS2/decorations/dorms01_boundary_manual_test.map"
-    );
-    bool success = io::write_map(
-        sprites,
-        output_path,
-        io::MapFormat::AS2R,
-        1500.0f,
-        1500.0f
-    );
-
-    ASSERT_TRUE(success);
+TEST(DecorationBuilderTest, OnlyFlatVidsLieOnTheGround) {
+    EXPECT_TRUE(lies_on_ground(120));   // blood
+    EXPECT_TRUE(lies_on_ground(135));   // shadow
+    EXPECT_TRUE(lies_on_ground(1783));  // office floor tile
+    EXPECT_FALSE(lies_on_ground(1765)); // books stand on furniture
+    EXPECT_FALSE(lies_on_ground(413));  // cabinet
 }

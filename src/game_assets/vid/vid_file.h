@@ -32,6 +32,12 @@ struct VidImage {
 };
 
 /**
+ * Apply an OBJ or map sprite gamma in place (engine BlendGammaColor).
+ * Transparent pixels are left untouched.
+ */
+void apply_gamma(VidImage &image, const ColorGamma &gamma);
+
+/**
  * Hide what a sunk sprite pushes below the ground, e.g. a jammed or open AS1 door panel (posZ < 0).
  * The engine hides those pixels with its z-buffer; the preview cuts every column `sink` pixels above
  * the lowest opaque pixel the frame has there, which is where the sprite meets the ground at posZ = 0.

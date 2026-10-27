@@ -12,6 +12,7 @@ QToolBar {
 }
 
 #languageToggleButton,
+#spritePreviewButton,
 #hotkeyHelpButton {
     background: #223039;
     border: 1px solid #36505d;
@@ -20,6 +21,7 @@ QToolBar {
 }
 
 #languageToggleButton:hover,
+#spritePreviewButton:hover,
 #hotkeyHelpButton:hover {
     background: #2a3d47;
     border-color: #4f7fbf;
@@ -213,8 +215,12 @@ QDockWidget::title {
 
 #inspectorPanel QLabel#stampPreviewNotice {
     font-size: 11px;
-    color: #ffb74d;
+    color: #ff6b6b;
     padding-top: 2px;
+}
+
+#inspectorPanel QLabel#stampPreviewNotice[ready="true"] {
+    color: #69f0ae;
 }
 
 QPushButton {
@@ -410,6 +416,13 @@ QGroupBox::title {
     qproperty-alignment: AlignCenter;
 }
 
+/* Stamp preview without a game folder: black box, red "not configured". */
+#componentPreview[notConfigured="true"] {
+    background: #000000;
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
 QStatusBar {
     background: #172126;
     color: #9fb4ad;
@@ -442,4 +455,38 @@ QScrollBar::sub-page:vertical {
 
 #inspectorPanel QLabel {
     color: #d9e8e2;
+}
+
+/* Sprite preview window: option rows are checkable cards. */
+#spritePreviewDialog {
+    background: #172126;
+}
+
+#spritePreviewDialog QLabel {
+    color: #d9e8e2;
+}
+
+#spritePreviewSectionLabel {
+    color: #f1f6f3;
+    font-weight: 600;
+}
+
+#gameFolderPathLabel {
+    color: #9fb7ae;
+}
+
+#spritePreviewDialog QCheckBox {
+    background: #182329;
+    border: 1px solid #2d414c;
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+
+#spritePreviewDialog QCheckBox:hover {
+    border-color: #4f7fbf;
+}
+
+#spritePreviewDialog QCheckBox:checked {
+    background: #1d2c31;
+    border-color: #45c797;
 }

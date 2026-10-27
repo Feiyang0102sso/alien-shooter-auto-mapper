@@ -1,6 +1,7 @@
 // Main editor window: owns the project, wires panels, canvas and hotkeys to editor commands.
 #pragma once
 #include "editor/catalog/catalog.h"
+#include "editor/config.h"
 #include "editor/hotkeys/hotkey_manager.h"
 #include "editor/i18n/locale.h"
 #include "editor/project/project.h"
@@ -17,6 +18,7 @@ namespace editor {
 class DrawingToolbar;
 class InspectorPanel;
 class LeftShelfPanel;
+class SpritePreviewDialog;
 
 // Result of one background map generation, translated on the UI thread.
 struct ExportResult {
@@ -44,6 +46,8 @@ class MainWindow : public QMainWindow {
     void chooseShelf(bool decorations);
     void chooseSet(int index);
     void chooseItem(int index);
+    // Inspector member count, sprite preview image and game folder notice of one stamp.
+    void showStampDetails(const QString &stampId);
     void activateMode(DrawingMode mode);
     void showHotkeys();
     bool isDirty() const;
@@ -75,6 +79,10 @@ class MainWindow : public QMainWindow {
     bool saveDialog();
     void exportDialog();
     void chooseLanguage(const QString &localeName);
+    // Pick the AS2 game folder for the decoration sprite preview and remember it in AutoMapper.cfg.
+    void chooseGameFolder(GameFamily family);
+    // Open the sprite preview window under its toolbar button.
+    void showSpritePreview();
     void toggleDoorsOpen(bool checked);
     void applyMapSize(double width, double height);
     void deleteSelectedDecoration();
@@ -89,6 +97,8 @@ class MainWindow : public QMainWindow {
     QCheckBox *doors_ = nullptr;
     QCheckBox *random_ = nullptr;
     QPushButton *languageButton_ = nullptr;
+    QPushButton *spritePreviewButton_ = nullptr;
+    SpritePreviewDialog *spritePreview_ = nullptr;
     QFutureWatcher<ExportResult> exportWatcher_;
 
     bool dirty_ = false;

@@ -1,11 +1,12 @@
 #include "editor/catalog/catalog.h"
-#include "auto_mapper/core/decoration_builder/decoration_registry.h"
+#include "editor/i18n/text_keys.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <filesystem>
 #include <stdexcept>
 
 namespace editor {
@@ -15,6 +16,8 @@ constexpr const char *CATALOG_RESOURCE = ":/catalog.json";
 // Folder beside AutoMapper.exe that holds preview images.
 constexpr const char *ASSET_FOLDER = "assets";
 constexpr const char *PREVIEW_FOLDER = "preview";
+// Library maps whose regions become Decoration Stamps, relative to the asset folder.
+constexpr const char *DECORATION_MAP_FOLDER = "decoration_maps/AS2";
 // Keys of catalog.json "shelf_order": one wall shelf per game family.
 constexpr const char *SHELF_ORDER_AS1 = "AS1";
 constexpr const char *SHELF_ORDER_AS2 = "AS2";
@@ -63,21 +66,11 @@ Catalog::Catalog(const Locale &locale) : locale(locale) {
         wallSets_.append(wall);
     }
 
-    for (const auto &seriesValue : data.value("series").toArray())
-        series_.append(seriesValue.toString());
-    for (const auto &stampValue : data.value("stamps").toArray()) {
-        QJsonObject stampObject = stampValue.toObject();
-        QString id = stampObject.value("id").toString();
-        stampSeries_[id] = stampObject.value("series").toString();
-        stampOrder_.append(id);
-    }
-
-    for (const auto *profile : auto_mapper::core::decoration_builder::as2_decoration_profiles()) {
-        QString id = QString::fromUtf8(profile->id.data(), static_cast<qsizetype>(profile->id.size()));
-        stamps[id] = profile;
-    }
-    qDebug() << "Catalog loaded:" << wallSets_.size() << "wall sets," << series_.size() << "stamp series,"
-             << auto_mapper::core::SUPPORTED_WALL_TYPE_COUNT << "wall profiles," << stamps.size() << "stamp profiles";
+    QString decorationMaps = assetDir_.filePath(DECORATION_MAP_FOLDER);
+    decorationLibrary_.load_directory(std::filesystem::path(decorationMaps.toStdU16String()));
+    qDebug() << "Catalog loaded:" << wallSets_.size() << "wall sets," << decorationLibrary_.series().size()
+             << "stamp series," << auto_mapper::core::SUPPORTED_WALL_TYPE_COUNT << "wall profiles,"
+             << decorationLibrary_.stamps().size() << "stamps";
 }
 
 QList<int> Catalog::wallTypes() const {
@@ -134,57 +127,53 @@ QString Catalog::partLabel(const WallPart &part) const {
 }
 
 QStringList Catalog::stampSeries() const {
-    return series_;
+    QStringList result;
+    for (const std::string &seriesId : decorationLibrary_.series())
+        result.append(QString::fromStdString(seriesId));
+    return result;
 }
 
 QStringList Catalog::seriesVariants(const QString &seriesId) const {
     QStringList result;
-    for (const auto &id : stampOrder_) {
-        if (stampSeries_.value(id) == seriesId)
-            result.append(id);
+    std::string series = seriesId.toStdString();
+    for (const auto &stamp : decorationLibrary_.stamps()) {
+        if (stamp.series_id == series)
+            result.append(QString::fromStdString(stamp.id));
     }
     return result;
 }
 
 QString Catalog::seriesLabel(const QString &seriesId) const {
-    return locale.tr("decoration.stamp.series." + seriesId + ".label");
-}
-
-QString Catalog::seriesDescription(const QString &seriesId) const {
-    return locale.tr("decoration.stamp.series." + seriesId + ".description");
+    return seriesId;
 }
 
 QString Catalog::stampLabel(const QString &stampId) const {
-    return locale.tr("decoration.stamp." + stampId + ".label");
+    // Stamp ids are "<series>:<region number>".
+    QString series = stampId.section(':', 0, 0);
+    QString number = stampId.section(':', 1, 1);
+    return locale.tr(TextKey::LABEL_STAMP_REGION, {{"series", series}, {"number", number}});
 }
 
-QString Catalog::stampSeriesOf(const QString &stampId) const {
-    return stampSeries_.value(stampId);
+const auto_mapper::core::decoration_builder::DecorationStamp *Catalog::stamp(const QString &stampId) const {
+    return decorationLibrary_.find(stampId.toStdString());
+}
+
+const auto_mapper::core::decoration_builder::DecorationLibrary &Catalog::decorationLibrary() const {
+    return decorationLibrary_;
 }
 
 QString Catalog::imagePath(const QString &relativePath) const {
     return assetDir_.filePath(relativePath);
 }
 
-QString Catalog::seriesImage(const QString &seriesId) const {
-    return imagePath(QString(PREVIEW_FOLDER) + "/AS2/decoration/" + seriesId + "/" + seriesId + "00_thumbnail.webp");
-}
-
-QString Catalog::stampImage(const QString &stampId, bool thumbnail) const {
-    QString suffix = ".webp";
-    if (thumbnail)
-        suffix = "_thumbnail.webp";
-    QString series = stampSeriesOf(stampId);
-    return imagePath(QString(PREVIEW_FOLDER) + "/AS2/decoration/" + series + "/" + stampId + suffix);
-}
-
 QPolygonF Catalog::stampFrame(const QString &stampId, const QPointF &origin) const {
     QPolygonF result;
-    if (!stamps.contains(stampId))
+    const auto *found = stamp(stampId);
+    if (found == nullptr)
         return result;
-    // Corner order: top, left, bottom, right, relative to the stamp center.
-    for (const auto &corner : stamps.value(stampId)->frame.corner_offsets)
-        result.append(origin + QPointF(corner.x, corner.y));
+    // The region is an axis-aligned Map Coordinate rectangle around its center.
+    QRectF rect(origin.x() - found->width / 2.0, origin.y() - found->height / 2.0, found->width, found->height);
+    result << rect.topLeft() << rect.topRight() << rect.bottomRight() << rect.bottomLeft();
     return result;
 }
 

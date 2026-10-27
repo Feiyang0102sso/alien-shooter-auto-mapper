@@ -1,8 +1,9 @@
 // Editor catalog: wall sets, drawable parts and decoration stamps shown on the shelves.
-// Geometry comes from the core profiles; resources/catalog.json only holds language-neutral
-// editor metadata, and every visible label is looked up through Locale by id.
+// Wall geometry comes from the core profiles and resources/catalog.json holds language-neutral
+// wall metadata; decoration stamps are registered at startup from the regions of the library
+// maps in <exe dir>/assets/decoration_maps/AS2.
 #pragma once
-#include "auto_mapper/core/decoration_builder/decoration_profile_types.h"
+#include "auto_mapper/core/decoration_builder/decoration_library.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "editor/i18n/locale.h"
 #include <QDir>
@@ -36,8 +37,6 @@ class Catalog {
     explicit Catalog(const Locale &locale);
 
     const Locale &locale;
-    // Core decoration stamp profiles by stamp id (owned by the core registry).
-    QHash<QString, const auto_mapper::core::decoration_builder::DecorationProfile *> stamps;
 
     // Every wall type the core supports, and its geometry profile (step, offsets, grid divisor).
     QList<int> wallTypes() const;
@@ -53,20 +52,20 @@ class Catalog {
     QString wallDescription(int id) const;
     QString partLabel(const WallPart &part) const;
 
-    // Decoration Stamp Series ids in shelf order.
+    // Decoration Stamp Series ids (library map file stems) in shelf order.
     QStringList stampSeries() const;
-    // Stamp ids belonging to one series, in authored order; the first one is the default.
+    // Stamp ids belonging to one series, in region order; the first one is the default.
     QStringList seriesVariants(const QString &seriesId) const;
+    // Series cards show the library map file name as is.
     QString seriesLabel(const QString &seriesId) const;
-    QString seriesDescription(const QString &seriesId) const;
     QString stampLabel(const QString &stampId) const;
-    QString stampSeriesOf(const QString &stampId) const;
+    // Null for ids the library does not know (for example stamps of an older project).
+    const auto_mapper::core::decoration_builder::DecorationStamp *stamp(const QString &stampId) const;
+    const auto_mapper::core::decoration_builder::DecorationLibrary &decorationLibrary() const;
 
     // Preview images live beside the exe in assets/, not inside Qt resources.
     QString imagePath(const QString &relativePath) const;
-    QString seriesImage(const QString &seriesId) const;
-    QString stampImage(const QString &stampId, bool thumbnail = false) const;
-    // Decoration Stamp Frame in Map Coordinates for one stamp centered at `origin`.
+    // Decoration Stamp Frame (the library region rectangle) in Map Coordinates, centered at `origin`.
     QPolygonF stampFrame(const QString &stampId, const QPointF &origin) const;
     QSizeF stampFrameSize(const QString &stampId) const;
 
@@ -74,10 +73,7 @@ class Catalog {
     QDir assetDir_;
     QHash<bool, QList<int>> wallSetOrder_;
     QList<WallSet> wallSets_;
-    QStringList series_;
-    // Stamp id -> series id, plus the authored stamp order.
-    QHash<QString, QString> stampSeries_;
-    QStringList stampOrder_;
+    auto_mapper::core::decoration_builder::DecorationLibrary decorationLibrary_;
 };
 
 } // namespace editor

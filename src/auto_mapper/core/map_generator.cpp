@@ -6,7 +6,6 @@
 #include "auto_mapper/core/map_generator.h"
 #include "auto_mapper/common/logger.h"
 #include "auto_mapper/core/decoration_builder/decoration_builder.h"
-#include "auto_mapper/core/decoration_builder/decoration_registry.h"
 #include <algorithm>
 
 namespace auto_mapper::core {
@@ -114,23 +113,19 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
         decoration_sprites.insert(decoration_sprites.end(), array_sprites.begin(), array_sprites.end());
     }
 
-    // 3b. Build authored decoration stamps
-    decoration_builder::DecorationBuilder stamp_builder;
-
+    // 3b. Build decoration stamps registered from library map regions
     for (const StampPlacement& stamp : request.stamps) {
-        const decoration_builder::DecorationProfile* profile =
-            decoration_builder::find_as2_decoration_profile(stamp.profile_id);
+        const decoration_builder::DecorationStamp* found = nullptr;
+        if (request.decoration_library != nullptr) {
+            found = request.decoration_library->find(stamp.stamp_id);
+        }
 
-        if (profile == nullptr) {
-            Logger::error("Unknown decoration stamp profile: {}", stamp.profile_id);
+        if (found == nullptr) {
+            Logger::error("Unknown decoration stamp: {}", stamp.stamp_id);
             continue;
         }
 
-        decoration_builder::DecorationPlacement placement;
-        placement.center_x = stamp.center_x;
-        placement.center_y = stamp.center_y;
-
-        std::vector<io::Sprite> stamp_sprites = stamp_builder.build(*profile, placement);
+        std::vector<io::Sprite> stamp_sprites = decoration_builder::build_stamp(*found, stamp.center_x, stamp.center_y);
         decoration_sprites.insert(decoration_sprites.end(), stamp_sprites.begin(), stamp_sprites.end());
     }
 

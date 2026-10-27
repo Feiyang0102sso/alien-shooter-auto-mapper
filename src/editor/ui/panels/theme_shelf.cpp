@@ -132,22 +132,26 @@ void ThemeShelfPanel::setCards(const QList<ShelfCard> &cards, bool compact) {
         cardLayout->setContentsMargins(10, 10, 10, 10);
         cardLayout->setSpacing(8);
 
-        auto *preview = new QLabel;
-        preview->setObjectName("themePreview");
-        preview->setAlignment(Qt::AlignCenter);
-        preview->setFixedHeight(CARD_PREVIEW_HEIGHT);
-        QPixmap pixmap(data.previewPath);
-        if (pixmap.isNull()) {
-            qWarning() << "Missing shelf preview:" << data.previewPath;
-            preview->setText(locale_.tr(TextKey::LABEL_PREVIEW_MISSING));
-        } else {
-            QPixmap scaled = pixmap.scaled(CARD_PREVIEW_WIDTH, CARD_PREVIEW_HEIGHT, Qt::KeepAspectRatio,
-                                           Qt::SmoothTransformation);
-            preview->setPixmap(scaled);
+        // Cards without a preview path (Decoration Stamp Series) show text only.
+        if (!data.previewPath.isEmpty()) {
+            auto *preview = new QLabel;
+            preview->setObjectName("themePreview");
+            preview->setAlignment(Qt::AlignCenter);
+            preview->setFixedHeight(CARD_PREVIEW_HEIGHT);
+            QPixmap pixmap(data.previewPath);
+            if (pixmap.isNull()) {
+                qWarning() << "Missing shelf preview:" << data.previewPath;
+                preview->setText(locale_.tr(TextKey::LABEL_PREVIEW_MISSING));
+            } else {
+                QPixmap scaled = pixmap.scaled(CARD_PREVIEW_WIDTH, CARD_PREVIEW_HEIGHT, Qt::KeepAspectRatio,
+                                               Qt::SmoothTransformation);
+                preview->setPixmap(scaled);
+            }
+            cardLayout->addWidget(preview);
         }
-        cardLayout->addWidget(preview);
         cardLayout->addWidget(textLabel(data.title, "cardTitle"));
-        cardLayout->addWidget(textLabel(data.description, "cardDetail"));
+        if (!data.description.isEmpty())
+            cardLayout->addWidget(textLabel(data.description, "cardDetail"));
         if (!data.detail.isEmpty())
             cardLayout->addWidget(textLabel(data.detail, "cardDetail"));
 

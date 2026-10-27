@@ -1,6 +1,5 @@
 # Read-only access to installed game data (objects.res, Vid/*.vid): RES container, OBJ table, single-frame
-# AS1 / AS2 vid decoding. Parked code: not added by the root CMakeLists.txt and not used by AutoMapper.exe.
-# To build it again: add_subdirectory(src/game_assets) after src/auto_mapper (it needs auto_mapper_common).
+# AS1 / AS2 vid decoding. The editor uses it only to preview decoration stamp members.
 add_library(auto_mapper_game_assets STATIC
     game_family.h
     res/byte_reader.h

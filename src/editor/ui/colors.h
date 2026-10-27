@@ -73,6 +73,7 @@ inline constexpr const char *DECORATION_AREA_SELECTED_BORDER = "#f0ad4e"; // Hig
 inline constexpr const char *DECORATION_AREA_PREVIEW_BORDER = "#f0ad4e";  // Dashed border while drawing a new decoration.
 inline constexpr const char *DECORATION_STAMP_GHOST_BORDER = "#45c797";   // Dashed ghost frame following the cursor.
 inline constexpr const char *DECORATION_STAMP_OUT_OF_BOUNDS = "#e05252";  // Frame border when a stamp sticks out of the map.
+inline constexpr const char *DECORATION_STAMP_PLACEHOLDER = "#4cff7a";    // Green cross marking one stamp member.
 
 // Incubator preview unit colors.
 inline constexpr const char *INCUBATOR_PREVIEW_BORDER = "#69f0ae"; // Border for each generated incubator footprint.

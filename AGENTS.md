@@ -12,18 +12,20 @@
 - `src/editor/`：Qt Widgets 编辑器，直接使用核心的 C++ 类型和函数，没有中间的 C API 层。
 
 旧的 Python/PySide6 编辑器（`src/app/`）已删除，需要对照时查 git 历史（`5334e04 v1.0` 及之前）。
-仓库里剩下的 Python 只有离线数据工具：`tools/decoration_pipeline/` 与 `_prepare/`，使用 `.venv`。
+仓库里剩下的 Python 只有离线数据工具 `_prepare/`，使用 `.venv`。
 
 Agent 修改代码时，先判断改动属于哪一层。坐标、VID、墙体、门、装饰物生成规则优先放在核心；UI 只负责交互、预览、项目数据保存和调用核心生成地图。
 
 ## 当前架构重点
 
 - 整张地图的生成入口是 `src/auto_mapper/core/map_generator.*` 的 `generate_map(MapRequest)`。
-- 装饰物 stamp profile 通过 `core/decoration_builder/decoration_registry.*` 查询。
+- 装饰物 stamp 由 `core/decoration_builder/decoration_library.*` 在启动时从库地图的 region 注册，见下文“装饰物 Stamp”。
 - 墙体生成核心是 `src/auto_mapper/core/wall_builder.*`。
 - 门生成核心是 `src/auto_mapper/core/door_builder.*`。
 - 地图写出逻辑是 `src/auto_mapper/io/map_writer.*`。
 - 室内装饰物在 `src/auto_mapper/core/indoor_decorations/`。
+- 游戏数据读取在 `src/game_assets/`（静态库 `auto_mapper_game_assets`）：`objects.res`、`Vid/*.vid` 单帧解码。
+  只有编辑器的装饰物贴图预览使用它，生成 `.map` 不依赖它。
 
 编辑器 `src/editor/` 的目录沿用旧 Python 包的分法：
 
@@ -39,12 +41,13 @@ Agent 修改代码时，先判断改动属于哪一层。坐标、VID、墙体�
 | `ui/colors.*` | 所有代码绘制用的颜色 |
 | `ui/main_window.*` | 组装面板、画布、快捷键，执行编辑器命令 |
 | `ui/canvas/viewport.*` | 画布：坐标换算、绘制、鼠标交互 |
-| `ui/panels/` | 左侧货架（`left_shelf`、`theme_shelf`）、右侧属性面板（`inspector`、`as1_ceiling`） |
+| `ui/canvas/stamp_sprites.*` | 装饰物成员贴图缓存（经 `game_assets` 解码，叠加库地图 gamma） |
+| `ui/panels/` | 左侧货架（`left_shelf`、`theme_shelf`）、右侧属性面板（`inspector`、`as1_ceiling`）、贴图预览小窗口（`sprite_preview_dialog`） |
 | `ui/tools/` | 绘制模式、左侧工具栏、橡皮擦几何与属性 |
 | `resources/` | `catalog.json`、`i18n/*.json`、`styles/*.qss`，编译进 exe |
 
-预览图在仓库根目录 `assets/preview/`，不编译进 exe：构建和打包时复制到 exe 旁的 `assets/`，
-运行时经 `Catalog::imagePath()` 按 exe 目录查找。
+预览图在仓库根目录 `assets/preview/`，装饰物库地图在 `assets/decoration_maps/`，都不编译进 exe：
+构建和打包时复制到 exe 旁的 `assets/`，运行时按 exe 目录查找。
 
 ## 坐标系统
 
@@ -92,8 +95,8 @@ Standard Dark 墙：
 - 项目数据的墙体和门直接是 `core::Segment` / `core::DoorInstance`（`project/project.h`）。
 - 生成地图：`Project::generate()` 组装 `core::MapRequest`，调用 `core::generate_map()`。
   墙套 1 的门同步墙体类型、墙套 2–9 的门强制 2 格、Lab 门挖空 1 格等规则都在 `map_generator.cpp`，不要在 UI 里重复。
-- 墙体几何读 `WallBuilder::get_wall_profile()`（经 `Catalog::wallProfile()`）；装饰物 stamp 读 `decoration_registry`。
-- 不要在编辑器里直接包含 `decoration_profiles_as2.h`：profile 数据是 `static` 定义，每个包含它的编译单元都会复制一份。
+- 墙体几何读 `WallBuilder::get_wall_profile()`（经 `Catalog::wallProfile()`）；装饰物 stamp 读 `Catalog` 持有的 `DecorationLibrary`，
+  生成时经 `MapRequest::decoration_library` 传给核心。
 - 不要让 UI 复制核心的布局常量，直接引用核心头文件里的常量。
 
 ## 配色与多语言
@@ -101,10 +104,33 @@ Standard Dark 墙：
 - 代码绘制的颜色（画布、墙体/门图例）只能来自 `ui/colors.h`；墙体类型到颜色的映射只有 `colors::wallColor()`。
 - 控件外观（按钮、面板、标签）只写在 `resources/styles/dark_theme.qss`，不要在代码里 `setStyleSheet` 写颜色。
 - 所有可见文字经 `Locale::tr()`。固定文案用 `TextKey::` 常量；墙体、部件、装饰系列、快捷键的文案按 id 拼 key
-  （如 `wall.<id>.label`、`decoration.stamp.<id>.label`、`hotkey.<command>`）。
+  （如 `wall.<id>.label`、`hotkey.<command>`）。装饰物系列卡片直接显示库地图文件名，条目用 `label.stamp_region` 拼出。
 - `resources/i18n/en_US.json` 与 `zh_CN.json` 必须有完全相同的 key 集合，`localesShareOneKeySet` 测试会检查。
 - `catalog.json` 只放与语言无关的数据（id、预览路径、nvid 文本、部件的 `label_key`），不放文案和颜色。
 - 唯一例外：首次启动的语言选择框和“语言 language”按钮故意中英双语。
+
+## 装饰物 Stamp
+
+Stamp 不再有手写 profile 和预览图，全部来自 `assets/decoration_maps/AS2/*.map`（官方 AS2 编辑器做的库地图）：
+
+- `decoration_library.*`：读 SPR 和 SPRD。nvid `99` 的 sprite 是 region，SPR 坐标是 stamp 原点，
+  SPRD 末尾 80 字节的 `+16` / `+20` 是宽高（Map 坐标轴对齐矩形）。其余 sprite 按 `(posX, posY)`
+  落进哪个矩形归哪个 stamp，存相对原点的偏移；army、gamma、scale、z、direction 原样保留。
+- Stamp id 是 `<文件名>:<序号>`，序号按 region 在 SPR 里的顺序从 1 开始。项目 JSON 存这个 id，
+  库地图里删改 region 会改变后面的序号；打开含未知 id 的项目会直接报错。
+- `decoration_builder.*`：`build_stamp()` 只做平移。army 用库地图里的值，因为血迹等贴花在 `vid_armies_as2.h` 里没有绑定。
+- `placeholder_vids.*`：画布占位符黑名单（血迹、阴影、`TERRAIN:` 类、书本等密集杂物），
+  没有游戏目录读不到 objects.res，所以 nvid 写死在这里；`lies_on_ground()` 标出贴地类，贴图预览先画它们。
+- 工具栏“贴图预览”打开一个非模态小窗口（`ui/panels/sprite_preview_dialog.*`），设置都写进 `AutoMapper.cfg`：
+  `as2_path`（AS2 游戏目录，驱动装饰物贴图）、`as1_path`（AS1 游戏目录，只校验 objects.res 并保存，暂无功能使用）、
+  `stamp_crosses_with_sprites`（有贴图时仍画绿色 X，0/1，默认 0）、`stamp_always_show_frame`（始终画 region 框，0/1，默认 0）、
+  `stamp_sprite_opacity`（贴图不透明度百分比滑条，默认 100，超出 `config.h` 的 10–100 按上下限取值；拖动时实时预览，松手才写 cfg）。
+  窗口只发信号，由 `MainWindow` 存 cfg 并更新画布。
+- 有游戏目录时成员用真实贴图画在 `(posX, posY - posZ)`，叠加库地图里的 gamma 和 scale，贴地类先画、其余按 posY 排序；
+  解不出贴图的成员和没有游戏目录时回退成绿色 X。逻辑在 `ui/canvas/stamp_sprites.*` 与 `Viewport::drawStampMembers()`。
+- region 框默认只在放置 ghost（绿色虚线）、选中/拖动（橙色）和超出地图（红色）时画，见 `Viewport::drawDecoration()`。
+- 贴图预览只用于装饰物，墙体、门、地板不画贴图（网格和墙体美术有半格偏差，未解决）。
+- 库地图之外的 sprite 会打 warning 并忽略；空 region 跳过但仍占一个序号。
 
 ## 装饰物阵列
 
@@ -241,7 +267,7 @@ C++ 构建由 CMake 管理，测试目标是：
 auto_mapper_tests
 ```
 
-运行离线 Python 工具（`tools/decoration_pipeline/`、`_prepare/`）前先启用虚拟环境：
+运行离线 Python 工具（`_prepare/`）前先启用虚拟环境：
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
@@ -281,6 +307,7 @@ auto_mapper_tests
 
 改装饰物：
 
+- Stamp 先看 `decoration_library.*` 和库地图本身，测试用冻结副本 `tests/golden/decoration/01dorm_library.map`
 - 先看 `array_layout.*`
 - 再看具体 builder
 - UI 预览必须和 C++ preview points 或 profile 对齐

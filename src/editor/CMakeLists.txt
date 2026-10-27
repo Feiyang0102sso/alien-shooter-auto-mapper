@@ -15,21 +15,23 @@ add_library(auto_mapper_editor_ui STATIC
     ui/widget_helpers.h
     ui/main_window.h ui/main_window.cpp
     ui/canvas/viewport.h ui/canvas/viewport.cpp
+    ui/canvas/stamp_sprites.h ui/canvas/stamp_sprites.cpp
     ui/panels/as1_ceiling.h ui/panels/as1_ceiling.cpp
     ui/panels/inspector.h ui/panels/inspector.cpp
     ui/panels/left_shelf.h ui/panels/left_shelf.cpp
     ui/panels/theme_shelf.h ui/panels/theme_shelf.cpp
+    ui/panels/sprite_preview_dialog.h ui/panels/sprite_preview_dialog.cpp
     ui/tools/drawing_modes.h
     ui/tools/drawing_toolbar.h ui/tools/drawing_toolbar.cpp
     ui/tools/eraser/eraser_geometry.h ui/tools/eraser/eraser_geometry.cpp
     ui/tools/eraser/eraser_properties.h ui/tools/eraser/eraser_properties.cpp
 )
-target_link_libraries(auto_mapper_editor_ui PUBLIC auto_mapper_core Qt6::Widgets Qt6::Concurrent)
+target_link_libraries(auto_mapper_editor_ui PUBLIC auto_mapper_core auto_mapper_game_assets Qt6::Widgets Qt6::Concurrent)
 # Keep file/line in Release Qt messages so AutoMapper.log can point at the source.
 target_compile_definitions(auto_mapper_editor_ui PUBLIC QT_MESSAGELOGCONTEXT)
 
 # Small text resources are embedded: :/catalog.json, :/i18n/*.json, :/styles/*.qss.
-# Preview images stay outside the exe in <exe dir>/assets/preview.
+# Preview images and decoration library maps stay outside the exe in <exe dir>/assets.
 file(GLOB_RECURSE EDITOR_TEXT_RESOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.json"
     "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.qss"
@@ -43,11 +45,13 @@ qt_add_resources(auto_mapper_editor_ui editor_assets
 qt_add_executable(auto_mapper_editor WIN32 main.cpp editor.rc)
 set_target_properties(auto_mapper_editor PROPERTIES OUTPUT_NAME AutoMapper RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 target_link_libraries(auto_mapper_editor PRIVATE auto_mapper_editor_ui)
-# Keep build/<preset>/assets/preview in sync so the exe runs straight from the build directory.
+# Keep build/<preset>/assets/preview and assets/decoration_maps in sync so the exe runs straight from the build directory.
 add_custom_command(TARGET auto_mapper_editor POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_directory_if_different
         "${CMAKE_SOURCE_DIR}/assets/preview" "$<TARGET_FILE_DIR:auto_mapper_editor>/assets/preview"
-    COMMENT "Syncing preview images into the build directory"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory_if_different
+        "${CMAKE_SOURCE_DIR}/assets/decoration_maps" "$<TARGET_FILE_DIR:auto_mapper_editor>/assets/decoration_maps"
+    COMMENT "Syncing preview images and decoration library maps into the build directory"
 )
 
 # Copy the Qt DLLs and plugins next to the exe so it runs straight from the build directory.
@@ -64,6 +68,7 @@ add_custom_command(TARGET auto_mapper_editor POST_BUILD
 #   styles/qmodernwindowsstyle (the "windows11" style), qt.conf (points Qt at plugins/).
 install(TARGETS auto_mapper_editor RUNTIME DESTINATION . COMPONENT NativeEditor)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/preview" DESTINATION assets COMPONENT NativeEditor)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/decoration_maps" DESTINATION assets COMPONENT NativeEditor)
 install(CODE "set(QT_DEPLOY_BIN_DIR .)" COMPONENT NativeEditor)
 qt_generate_deploy_app_script(TARGET auto_mapper_editor OUTPUT_SCRIPT EDITOR_DEPLOY_SCRIPT NO_TRANSLATIONS
     DEPLOY_TOOL_OPTIONS --no-compiler-runtime --no-system-d3d-compiler --no-system-dxc-compiler

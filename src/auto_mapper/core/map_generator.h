@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "auto_mapper/core/decoration_builder/decoration_library.h"
 #include "auto_mapper/core/door_builder/door_builder.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
@@ -18,11 +19,11 @@
 namespace auto_mapper::core {
 
 /**
- * One decoration stamp placed by the user: profile id plus its Map Coordinate center.
- * Placement is translation only; the profile keeps every member's authored layout.
+ * One decoration stamp placed by the user: stamp id plus its region center in Map Coordinates.
+ * Placement is translation only; the stamp keeps every member's authored layout.
  */
 struct StampPlacement {
-    std::string profile_id;
+    std::string stamp_id;
     float center_x = 0.0f;
     float center_y = 0.0f;
 };
@@ -40,6 +41,8 @@ struct MapRequest {
     std::vector<indoor_decorations::IncubatorArray> incubator_arrays;
     std::vector<indoor_decorations::DeskArray> desk_arrays;
     std::vector<StampPlacement> stamps;
+    // Library that resolves `stamps` ids; may be null when there are no stamps.
+    const decoration_builder::DecorationLibrary* decoration_library = nullptr;
     AS1CeilingLayerSettings as1_ceiling_layers = DEFAULT_AS1_CEILING_LAYER_SETTINGS;
     bool generate_floor = false;
     bool generate_ceiling = false;

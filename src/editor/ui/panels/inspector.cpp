@@ -73,15 +73,16 @@ InspectorPanel::InspectorPanel(const Locale &locale, QWidget *parent) : QWidget(
     connect(components_, &QComboBox::currentIndexChanged, this, &InspectorPanel::componentChosen);
     stampDetails_ = wrappingLabel({});
     stampDetails_->setObjectName("stampDetailLabel");
-    componentLayout->addWidget(stampDetails_);
     preview_ = new QLabel;
     preview_->setObjectName("componentPreview");
     preview_->setFixedSize(PREVIEW_WIDTH, PREVIEW_HEIGHT);
     preview_->setAlignment(Qt::AlignCenter);
     componentLayout->addWidget(preview_);
-    notice_ = wrappingLabel(locale.tr(TextKey::LABEL_STAMP_PREVIEW_NOTICE));
+    componentLayout->addWidget(stampDetails_);
+    notice_ = wrappingLabel({});
     notice_->setObjectName("stampPreviewNotice");
     componentLayout->addWidget(notice_);
+    setSpritePreviewReady(false);
     nvid_ = wrappingLabel({});
     nvid_->setObjectName("nvidLabel");
     componentLayout->addWidget(nvid_);
@@ -159,15 +160,48 @@ void InspectorPanel::showWallPart(const QString &imagePath, const QString &nvidT
     nvid_->setVisible(true);
     stampDetails_->setVisible(false);
     notice_->setVisible(false);
+    preview_->setVisible(true);
+    setPreviewNotConfigured(false);
     showPreview(imagePath);
 }
 
-void InspectorPanel::showStamp(const QString &imagePath, int memberCount) {
+void InspectorPanel::setSpritePreviewReady(bool ready) {
+    if (ready)
+        notice_->setText(locale_.tr(TextKey::LABEL_STAMP_PREVIEW_READY));
+    else
+        notice_->setText(locale_.tr(TextKey::LABEL_STAMP_PREVIEW_UNSET));
+    // QSS colors the notice by this property: green when ready, red otherwise.
+    notice_->setProperty("ready", ready);
+    notice_->style()->unpolish(notice_);
+    notice_->style()->polish(notice_);
+}
+
+void InspectorPanel::showStamp(int memberCount, bool spritesReady, const QImage &preview) {
     stampDetails_->setText(locale_.tr(TextKey::LABEL_STAMP_MEMBER_COUNT, {{"member_count", QString::number(memberCount)}}));
     stampDetails_->setVisible(true);
     notice_->setVisible(true);
     nvid_->setVisible(false);
-    showPreview(imagePath);
+    preview_->setVisible(true);
+    preview_->clear();
+    // QSS turns the box black with red text while no game folder is configured.
+    setPreviewNotConfigured(!spritesReady);
+    if (!spritesReady) {
+        preview_->setText(locale_.tr(TextKey::LABEL_PREVIEW_NOT_CONFIGURED));
+        return;
+    }
+    if (preview.isNull()) {
+        preview_->setText(locale_.tr(TextKey::LABEL_PREVIEW_MISSING));
+        return;
+    }
+    // Scaled like the wall part previews.
+    QPixmap pixmap = QPixmap::fromImage(preview);
+    preview_->setPixmap(pixmap.scaled(preview_->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+}
+
+void InspectorPanel::setPreviewNotConfigured(bool notConfigured) {
+    preview_->setProperty("notConfigured", notConfigured);
+    preview_->style()->unpolish(preview_);
+    preview_->style()->polish(preview_);
 }
 
 void InspectorPanel::showPreview(const QString &imagePath) {

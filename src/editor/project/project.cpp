@@ -5,7 +5,6 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSaveFile>
-#include "auto_mapper/core/decoration_builder/decoration_registry.h"
 #include <cmath>
 #include <stdexcept>
 
@@ -214,10 +213,8 @@ Project Project::fromJson(const QJsonObject &obj) {
         auto pos = objectValue(item.value(positionKey));
         decoration.origin = {number(pos, "x"), number(pos, "y")};
         if (isStamp) {
+            // Stamp ids are checked against the decoration library by the caller (MainWindow::openProject).
             decoration.profileId = item.value("profile_id").toString();
-            std::string stampId = decoration.profileId.toStdString();
-            if (auto_mapper::core::decoration_builder::find_as2_decoration_profile(stampId) == nullptr)
-                fail("Unknown decoration stamp: " + decoration.profileId);
         } else {
             decoration.rowLength = number(item, "row_length");
             decoration.columnLength = number(item, "column_length");
@@ -266,7 +263,8 @@ void Project::save(const QString &path) const {
     qInfo() << "Project saved:" << path;
 }
 
-bool Project::generate(const QString &path, bool floor, bool ceiling, bool random) const {
+bool Project::generate(const QString &path, bool floor, bool ceiling, bool random,
+                       const auto_mapper::core::decoration_builder::DecorationLibrary *decorationLibrary) const {
     auto_mapper::core::MapRequest request;
     request.format = mapFormat();
     request.map_size_x = static_cast<float>(width);
@@ -276,11 +274,12 @@ bool Project::generate(const QString &path, bool floor, bool ceiling, bool rando
     request.generate_floor = floor;
     request.generate_ceiling = ceiling;
     request.random_direction = random;
+    request.decoration_library = decorationLibrary;
 
     for (const auto &d : decorations) {
         if (d.type == DECORATION_TYPE_ROOM_STAMP) {
             auto_mapper::core::StampPlacement stamp;
-            stamp.profile_id = d.profileId.toStdString();
+            stamp.stamp_id = d.profileId.toStdString();
             stamp.center_x = static_cast<float>(d.origin.x());
             stamp.center_y = static_cast<float>(d.origin.y());
             request.stamps.push_back(stamp);

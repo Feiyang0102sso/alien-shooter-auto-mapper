@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "auto_mapper/core/decoration_builder/decoration_registry.h"
+#include "auto_mapper/core/decoration_builder/decoration_library.h"
 #include "auto_mapper/core/map_generator.h"
 #include "auto_mapper/io/templates.h"
 #include "utils/test_utils.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <iterator>
@@ -89,12 +90,24 @@ TEST(MapGeneratorTest, RejectsInvalidAS1CeilingLayerCount) {
     EXPECT_FALSE(auto_mapper::core::generate_map(request, get_test_output_path("invalid_ceiling_layers.map")));
 }
 
-TEST(MapGeneratorTest, DecorationRegistryFindsProfilesById) {
-    auto profiles = auto_mapper::core::decoration_builder::as2_decoration_profiles();
-    ASSERT_FALSE(profiles.empty());
+TEST(MapGeneratorTest, StampsResolveThroughTheDecorationLibrary) {
+    auto_mapper::core::decoration_builder::DecorationLibrary library;
+    ASSERT_TRUE(library.load_map(resolve_test_path("tests/golden/decoration/01dorm_library.map")));
 
-    for (const auto* profile : profiles) {
-        EXPECT_EQ(auto_mapper::core::decoration_builder::find_as2_decoration_profile(profile->id), profile);
-    }
-    EXPECT_EQ(auto_mapper::core::decoration_builder::find_as2_decoration_profile("no_such_stamp"), nullptr);
+    MapRequest request = empty_request(MapFormat::AS2R);
+    request.decoration_library = &library;
+    request.stamps.push_back({"01dorm_library:1", 320.0f, 240.0f});
+    request.stamps.push_back({"no_such_stamp", 320.0f, 240.0f});
+
+    std::string output_file = get_test_output_path("stamp_generator_output.map");
+    ASSERT_TRUE(auto_mapper::core::generate_map(request, output_file));
+
+    // The SPR record holds one 48-byte record per sprite: 23 from stamp 1, none from the unknown id.
+    std::vector<uint8_t> data = load_generator_test_binary(output_file);
+    std::vector<uint8_t> tag = {'S', 'P', 'R', ' '};
+    auto found = std::search(data.begin(), data.end(), tag.begin(), tag.end());
+    ASSERT_NE(found, data.end());
+    std::size_t spr = static_cast<std::size_t>(found - data.begin());
+    uint32_t spr_info_size = read_generator_test_uint32(data, spr + 20);
+    EXPECT_EQ((spr_info_size - 4) / 48, 23u);
 }

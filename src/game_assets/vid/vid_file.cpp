@@ -98,20 +98,6 @@ std::uint8_t apply_gamma_channel(std::uint8_t value, int delta) {
     return static_cast<std::uint8_t>(result);
 }
 
-void apply_gamma(VidImage &image, const ColorGamma &gamma) {
-    if (gamma.red == 0 && gamma.green == 0 && gamma.blue == 0) {
-        return;
-    }
-    for (std::size_t i = 0; i + 3 < image.rgba.size(); i += 4) {
-        if (image.rgba[i + 3] == 0) {
-            continue;
-        }
-        image.rgba[i + 0] = apply_gamma_channel(image.rgba[i + 0], gamma.red);
-        image.rgba[i + 1] = apply_gamma_channel(image.rgba[i + 1], gamma.green);
-        image.rgba[i + 2] = apply_gamma_channel(image.rgba[i + 2], gamma.blue);
-    }
-}
-
 int as2_color_bytes(std::uint32_t pixel_format) {
     switch (pixel_format) {
     case D3DFMT_P8:
@@ -132,6 +118,20 @@ int as2_color_bytes(std::uint32_t pixel_format) {
 }
 
 } // namespace
+
+void apply_gamma(VidImage &image, const ColorGamma &gamma) {
+    if (gamma.red == 0 && gamma.green == 0 && gamma.blue == 0) {
+        return;
+    }
+    for (std::size_t i = 0; i + 3 < image.rgba.size(); i += 4) {
+        if (image.rgba[i + 3] == 0) {
+            continue;
+        }
+        image.rgba[i + 0] = apply_gamma_channel(image.rgba[i + 0], gamma.red);
+        image.rgba[i + 1] = apply_gamma_channel(image.rgba[i + 1], gamma.green);
+        image.rgba[i + 2] = apply_gamma_channel(image.rgba[i + 2], gamma.blue);
+    }
+}
 
 VidImage clip_below_ground(const VidImage &image, int sink) {
     VidImage clipped = image;

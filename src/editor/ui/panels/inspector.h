@@ -30,7 +30,10 @@ class InspectorPanel : public QWidget {
     // "+" / "-" hotkeys: move the selected Editor Set Item by `step`, clamped.
     void selectRelativeComponent(int step);
     void showWallPart(const QString &imagePath, const QString &nvidText);
-    void showStamp(const QString &imagePath, int memberCount);
+    // `spritesReady`: an AS2 game folder is loaded; `preview` is the composed stamp (may be null).
+    void showStamp(int memberCount, bool spritesReady, const QImage &preview);
+    // Stamp notice: whether an AS2 game folder is loaded, so sprites render instead of crosses.
+    void setSpritePreviewReady(bool ready);
 
     // Decoration properties group; hidden when nothing is selected in edit mode.
     void setDecorationSelection(const Decoration *decoration);
@@ -43,6 +46,7 @@ class InspectorPanel : public QWidget {
 
   private:
     void showPreview(const QString &imagePath);
+    void setPreviewNotConfigured(bool notConfigured);
 
     const Locale &locale_;
     QDoubleSpinBox *width_ = nullptr;

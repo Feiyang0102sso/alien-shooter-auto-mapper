@@ -48,6 +48,8 @@ include/
 *.map
 !empty.map
 !*_sample.map
+# Decoration library maps are runtime assets: their regions become Decoration Stamps.
+!assets/decoration_maps/**/*.map
 release/
 dist/
 

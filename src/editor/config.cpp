@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QStringList>
+#include <algorithm>
 #include <stdexcept>
 
 // Q_INIT_RESOURCE must be expanded outside any namespace.
@@ -18,6 +19,15 @@ namespace editor {
 namespace {
 constexpr const char *CONFIG_FILE_NAME = "AutoMapper.cfg";
 constexpr const char *LANGUAGE_CONFIG_KEY = "language";
+// Game folders (objects.res + Vid/). AS2 drives the decoration sprite preview; AS1 is stored for later use.
+constexpr const char *AS1_GAME_PATH_CONFIG_KEY = "as1_path";
+constexpr const char *AS2_GAME_PATH_CONFIG_KEY = "as2_path";
+// 1 = keep drawing green crosses over decoration sprites; 0 (default) = crosses only without a sprite.
+constexpr const char *STAMP_CROSSES_WITH_SPRITES_CONFIG_KEY = "stamp_crosses_with_sprites";
+// 1 = always draw decoration stamp frames; 0 (default) = only while placing, selected or out of the map.
+constexpr const char *STAMP_ALWAYS_SHOW_FRAME_CONFIG_KEY = "stamp_always_show_frame";
+// Decoration sprite opacity in percent; values outside the limits in config.h are clamped.
+constexpr const char *STAMP_SPRITE_OPACITY_CONFIG_KEY = "stamp_sprite_opacity";
 // Stored language values; 0 (or a missing line) means "ask on startup".
 constexpr int LANGUAGE_EN_US = 1;
 constexpr int LANGUAGE_ZH_CN = 2;
@@ -29,21 +39,9 @@ constexpr const char *CONFIG_HEADER = "# Auto Mapper configuration\n"
 QString lineKey(const QString &line) {
     return line.section('=', 0, 0).trimmed();
 }
-} // namespace
 
-void initEditorResources() {
-    registerEditorResources();
-}
-
-QString configPath() {
-    // Prefer the original working-directory config during development.
-    QString local = QDir::current().filePath(CONFIG_FILE_NAME);
-    if (QFileInfo::exists(local))
-        return local;
-    return QDir(QCoreApplication::applicationDirPath()).filePath(CONFIG_FILE_NAME);
-}
-
-QString loadLanguage() {
+// Raw value of one "key = value" line, or an empty string when the key or the file is missing.
+QString loadConfigValue(const char *key) {
     QFile file(configPath());
     if (!file.open(QIODevice::ReadOnly))
         return {};
@@ -51,23 +49,15 @@ QString loadLanguage() {
     for (const QString &line : lines) {
         if (line.trimmed().startsWith('#'))
             continue;
-        if (lineKey(line) != LANGUAGE_CONFIG_KEY)
-            continue;
-        int value = line.section('=', 1).trimmed().toInt();
-        if (value == LANGUAGE_EN_US)
-            return LOCALE_EN_US;
-        if (value == LANGUAGE_ZH_CN)
-            return LOCALE_ZH_CN;
-        return {};
+        if (lineKey(line) == key)
+            return line.section('=', 1).trimmed();
     }
     return {};
 }
 
-void saveLanguage(const QString &locale) {
-    int value = LANGUAGE_EN_US;
-    if (locale == LOCALE_ZH_CN)
-        value = LANGUAGE_ZH_CN;
-    QString languageLine = QString("%1 = %2").arg(LANGUAGE_CONFIG_KEY).arg(value);
+// Replace or append one "key = value" line, keeping every other line and comment.
+void saveConfigValue(const char *key, const QString &value) {
+    QString valueLine = QString("%1 = %2").arg(key, value);
 
     QString path = configPath();
     QStringList lines;
@@ -84,13 +74,13 @@ void saveLanguage(const QString &locale) {
 
     bool replaced = false;
     for (QString &line : lines) {
-        if (lineKey(line) == LANGUAGE_CONFIG_KEY) {
-            line = languageLine;
+        if (lineKey(line) == key) {
+            line = valueLine;
             replaced = true;
         }
     }
     if (!replaced)
-        lines.append(languageLine);
+        lines.append(valueLine);
 
     QSaveFile target(path);
     if (!target.open(QIODevice::WriteOnly))
@@ -98,7 +88,84 @@ void saveLanguage(const QString &locale) {
     QByteArray bytes = (lines.join('\n') + '\n').toUtf8();
     if (target.write(bytes) != bytes.size() || !target.commit())
         throw std::runtime_error(target.errorString().toStdString());
-    qInfo() << "Saved UI locale preference:" << locale << "to" << path;
+}
+} // namespace
+
+void initEditorResources() {
+    registerEditorResources();
+}
+
+QString configPath() {
+    // Prefer the original working-directory config during development.
+    QString local = QDir::current().filePath(CONFIG_FILE_NAME);
+    if (QFileInfo::exists(local))
+        return local;
+    return QDir(QCoreApplication::applicationDirPath()).filePath(CONFIG_FILE_NAME);
+}
+
+QString loadLanguage() {
+    int value = loadConfigValue(LANGUAGE_CONFIG_KEY).toInt();
+    if (value == LANGUAGE_EN_US)
+        return LOCALE_EN_US;
+    if (value == LANGUAGE_ZH_CN)
+        return LOCALE_ZH_CN;
+    return {};
+}
+
+void saveLanguage(const QString &locale) {
+    int value = LANGUAGE_EN_US;
+    if (locale == LOCALE_ZH_CN)
+        value = LANGUAGE_ZH_CN;
+    saveConfigValue(LANGUAGE_CONFIG_KEY, QString::number(value));
+    qInfo() << "Saved UI locale preference:" << locale << "to" << configPath();
+}
+
+// cfg key of one game family's folder.
+const char *gamePathKey(GameFamily family) {
+    if (family == GameFamily::AS1)
+        return AS1_GAME_PATH_CONFIG_KEY;
+    return AS2_GAME_PATH_CONFIG_KEY;
+}
+
+QString loadGamePath(GameFamily family) {
+    return loadConfigValue(gamePathKey(family));
+}
+
+bool loadStampCrossesWithSprites() {
+    return loadConfigValue(STAMP_CROSSES_WITH_SPRITES_CONFIG_KEY).toInt() == 1;
+}
+
+void saveStampCrossesWithSprites(bool enabled) {
+    saveConfigValue(STAMP_CROSSES_WITH_SPRITES_CONFIG_KEY, QString::number(int(enabled)));
+    qInfo() << "Saved stamp crosses with sprites:" << enabled;
+}
+
+bool loadStampAlwaysShowFrame() {
+    return loadConfigValue(STAMP_ALWAYS_SHOW_FRAME_CONFIG_KEY).toInt() == 1;
+}
+
+void saveStampAlwaysShowFrame(bool enabled) {
+    saveConfigValue(STAMP_ALWAYS_SHOW_FRAME_CONFIG_KEY, QString::number(int(enabled)));
+    qInfo() << "Saved stamp always show frame:" << enabled;
+}
+
+int loadStampSpriteOpacity() {
+    bool ok = false;
+    int value = loadConfigValue(STAMP_SPRITE_OPACITY_CONFIG_KEY).toInt(&ok);
+    if (!ok)
+        return STAMP_SPRITE_OPACITY_DEFAULT;
+    return std::clamp(value, STAMP_SPRITE_OPACITY_MIN, STAMP_SPRITE_OPACITY_MAX);
+}
+
+void saveStampSpriteOpacity(int percent) {
+    int value = std::clamp(percent, STAMP_SPRITE_OPACITY_MIN, STAMP_SPRITE_OPACITY_MAX);
+    saveConfigValue(STAMP_SPRITE_OPACITY_CONFIG_KEY, QString::number(value));
+    qInfo() << "Saved stamp sprite opacity:" << value;
+}
+
+void saveGamePath(GameFamily family, const QString &path) {
+    saveConfigValue(gamePathKey(family), QDir::fromNativeSeparators(path));
+    qInfo() << "Saved game folder" << gamePathKey(family) << path << "to" << configPath();
 }
 
 } // namespace editor

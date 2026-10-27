@@ -27,9 +27,11 @@ the result in a map editor.
 > layout. Always treat the generated result as a starting point and verify it
 > in your map editor. The map editor is the final authority.
 
-Decoration previews have an additional limitation: the images shown in the UI
-are for reference only and may not precisely represent the final in-game
-appearance or contents. Use the map editor to confirm every decoration.
+Decorations have an additional limitation: the canvas previews them with the
+game's own sprites only after the **Sprite Preview** window points
+at an AS2 install (the folder with `objects.res` and `Vid`). Without it, each object is marked with a green
+cross inside the stamp frame. The preview only approximates the game's draw
+order, so use the map editor to confirm every decoration.
 
 ### Recommended workflow
 
@@ -76,8 +78,9 @@ Auto Mapper 是一款 Alien Shooter 地图自动铺设工具。他旨在帮助�
 > Auto Mapper 的算法不能保证在所有地图和布局下都完美无瑕。生成结果
 > 始终只应作为起点，必须在地图编辑器中进行校验；最终以地图编辑器为准。
 
-装饰物还有额外限制：UI 中的预览图片仅供参考，不能保证与游戏中的最终
-外观或具体内容完全精准。一切装饰物结果仍应以地图编辑器中的实际显示为准。
+装饰物还有额外限制：只有在工具栏“贴图预览”窗口里指定 AS2 游戏目录（含 `objects.res` 和 `Vid`）后，
+画布才用游戏贴图预览装饰物；未指定时只在装饰框内用绿色叉号标出物件位置。
+贴图的前后遮挡只是近似，一切装饰物结果仍应以地图编辑器中的实际显示为准。
 
 ### 推荐工作流
 

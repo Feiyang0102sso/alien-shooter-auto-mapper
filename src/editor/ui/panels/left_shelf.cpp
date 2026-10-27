@@ -109,17 +109,16 @@ void LeftShelfPanel::showWallSets(const QList<int> &setIds) {
 void LeftShelfPanel::showStampSeries(const QStringList &seriesIds) {
     QList<ShelfCard> cards;
     for (const QString &seriesId : seriesIds) {
+        // Stamp cards are text only: the library maps carry no preview images.
         ShelfCard card;
-        card.previewPath = catalog_.seriesImage(seriesId);
         card.title = catalog_.seriesLabel(seriesId);
-        card.description = catalog_.seriesDescription(seriesId);
         int variantCount = catalog_.seriesVariants(seriesId).size();
         card.detail = catalog_.locale.tr(TextKey::LABEL_STAMP_VARIANT_COUNT,
                                          {{"variant_count", QString::number(variantCount)}});
         cards.append(card);
     }
     QSignalBlocker blocker(shelf_);
-    shelf_->setCards(cards, false);
+    shelf_->setCards(cards, true);
 }
 
 ThemeShelfPanel *LeftShelfPanel::shelf() const {

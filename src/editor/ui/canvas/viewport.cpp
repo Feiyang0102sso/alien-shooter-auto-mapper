@@ -1,4 +1,5 @@
 #include "editor/ui/canvas/viewport.h"
+#include "auto_mapper/core/decoration_builder/placeholder_vids.h"
 #include "auto_mapper/core/door_builder/door_profiles_as1.h"
 #include "auto_mapper/core/indoor_decorations/array_layout.h"
 #include "editor/i18n/text_keys.h"
@@ -25,6 +26,8 @@ constexpr double FIT_MARGIN = 0.90;
 constexpr double EDGE_GRAB_PIXELS = 8;
 constexpr double STAMP_PREVIEW_OPACITY = 1.0;
 constexpr double STAMP_GHOST_PREVIEW_OPACITY = 0.55;
+// Half the arm length of a stamp member placeholder cross, in Map Coordinate units (scales with zoom).
+constexpr double STAMP_PLACEHOLDER_HALF_SIZE = 12.0;
 // Door states shared with the core door builder.
 constexpr int DOOR_STATE_OPEN = auto_mapper::core::DOOR_STATE_OPEN;
 constexpr int LIGHT_STATE_BROKEN = auto_mapper::core::LIGHT_STATE_BROKEN;
@@ -709,26 +712,65 @@ void Viewport::drawGrid(QPainter &painter) {
                      int(bottomRight.y() - topLeft.y()));
 }
 
-void Viewport::drawStampImage(QPainter &painter, const QString &stampId, const QPolygonF &screenPolygon,
-                              double opacity) {
-    QString path = catalog_.stampImage(stampId);
-    if (!images_.contains(path)) {
-        images_[path] = QPixmap(path);
-        if (images_[path].isNull())
-            qWarning() << "Missing stamp canvas image:" << path;
-    }
-    const QPixmap &pixmap = images_[path];
-    if (pixmap.isNull())
+void Viewport::drawStampMembers(QPainter &painter, const QString &stampId, const QPointF &center, double opacity) {
+    using namespace auto_mapper::core::decoration_builder;
+    const auto *stamp = catalog_.stamp(stampId);
+    if (stamp == nullptr)
         return;
-    QPainterPath clip;
-    clip.addPolygon(screenPolygon);
-    clip.closeSubpath();
+
+    std::vector<const DecorationMember *> members = stampDrawOrder(*stamp);
+
     painter.save();
-    painter.setClipPath(clip);
     painter.setOpacity(opacity);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform);
-    painter.drawPixmap(screenPolygon.boundingRect(), pixmap, QRectF(pixmap.rect()));
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+    // Members that still need a cross; crosses go on top of every sprite so none is hidden.
+    std::vector<QPointF> crossAnchors;
+    for (const DecorationMember *member : members) {
+        // (posX, posY) is the coordinate written to the map.
+        QPointF anchor = center + QPointF(member->offset_x, member->offset_y);
+        const StampSprite *sprite = stampSprites_.sprite(*member);
+        if (sprite != nullptr) {
+            // The engine lifts a sprite by posZ and scales its frame around the anchor.
+            QPointF lifted = anchor - QPointF(0, member->pos_z);
+            QPointF topLeft = lifted + QPointF(sprite->topLeft.x() * member->scale.x, sprite->topLeft.y() * member->scale.y);
+            QSizeF size(sprite->image.width() * member->scale.x, sprite->image.height() * member->scale.y);
+            QRectF target(mapToScreen(topLeft), size * zoom);
+            if (target.intersects(rect())) {
+                painter.setOpacity(opacity * stampSpriteOpacity / 100.0);
+                painter.drawImage(target, sprite->image);
+                painter.setOpacity(opacity);
+            }
+        }
+        if (!draws_placeholder(member->vid))
+            continue;
+        if (sprite == nullptr || stampCrossesWithSprites)
+            crossAnchors.push_back(anchor);
+    }
+    painter.setPen(cosmeticPen(QColor(colors::DECORATION_STAMP_PLACEHOLDER), 1.5));
+    QPointF arm(STAMP_PLACEHOLDER_HALF_SIZE, STAMP_PLACEHOLDER_HALF_SIZE);
+    QPointF mirroredArm(STAMP_PLACEHOLDER_HALF_SIZE, -STAMP_PLACEHOLDER_HALF_SIZE);
+    for (const QPointF &anchor : crossAnchors) {
+        painter.drawLine(mapToScreen(anchor - arm), mapToScreen(anchor + arm));
+        painter.drawLine(mapToScreen(anchor - mirroredArm), mapToScreen(anchor + mirroredArm));
+    }
     painter.restore();
+}
+
+QImage Viewport::renderStampPreview(const QString &stampId) {
+    const auto *stamp = catalog_.stamp(stampId);
+    if (stamp == nullptr)
+        return {};
+    return stampSprites_.render(*stamp);
+}
+
+bool Viewport::hasGameFolder() const {
+    return stampSprites_.isOpen();
+}
+
+bool Viewport::openGameFolder(const QString &gameRoot) {
+    bool opened = stampSprites_.open(gameRoot);
+    update();
+    return opened;
 }
 
 void Viewport::drawIncubatorUnits(QPainter &painter, const Decoration &decoration) {
@@ -768,19 +810,35 @@ void Viewport::drawDecoration(QPainter &painter, const Decoration &decoration, b
     if (!polygon.boundingRect().intersects(rect()))
         return;
     bool outside = false;
-    if (decoration.type == DECORATION_TYPE_ROOM_STAMP) {
+    if (decoration.type == DECORATION_TYPE_ROOM_STAMP)
         outside = outsideMap(decoration);
-        drawStampImage(painter, decoration.profileId, polygon, STAMP_PREVIEW_OPACITY);
-    }
     QColor border(colors::DECORATION_AREA_BORDER);
     if (selected)
         border = QColor(colors::DECORATION_AREA_SELECTED_BORDER);
     // The map bound warning wins over the selection highlight.
     if (outside)
         border = QColor(colors::DECORATION_STAMP_OUT_OF_BOUNDS);
-    painter.setPen(cosmeticPen(border));
-    painter.setBrush(colors::withAlpha(colors::DECORATION_AREA_FILL, colors::DECORATION_AREA_FILL_ALPHA));
-    painter.drawPolygon(polygon);
+    if (decoration.type != DECORATION_TYPE_ROOM_STAMP) {
+        painter.setPen(cosmeticPen(border));
+        painter.setBrush(colors::withAlpha(colors::DECORATION_AREA_FILL, colors::DECORATION_AREA_FILL_ALPHA));
+        painter.drawPolygon(polygon);
+    } else {
+        // Stamp frames clutter the sprites, so by default they only appear while they carry information:
+        // selected (orange, also while dragging) or outside the map (red).
+        bool showFrame = stampAlwaysShowFrame || selected || outside;
+        if (showFrame) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(colors::withAlpha(colors::DECORATION_AREA_FILL, colors::DECORATION_AREA_FILL_ALPHA));
+            painter.drawPolygon(polygon);
+        }
+        drawStampMembers(painter, decoration.profileId, decoration.origin, STAMP_PREVIEW_OPACITY);
+        // The border goes over the sprites so they cannot hide the frame the select tool acts on.
+        if (showFrame) {
+            painter.setPen(cosmeticPen(border));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawPolygon(polygon);
+        }
+    }
     if (decoration.type == DECORATION_TYPE_INCUBATOR_ARRAY)
         drawIncubatorUnits(painter, decoration);
 }
@@ -790,13 +848,13 @@ void Viewport::drawStampGhost(QPainter &painter, const QPointF &center) {
     if (frame.size() != 4)
         return;
     QPolygonF polygon = toScreen(frame);
-    drawStampImage(painter, activeStamp, polygon, STAMP_GHOST_PREVIEW_OPACITY);
     Decoration ghost;
     ghost.profileId = activeStamp;
     ghost.origin = center;
     QColor border(colors::DECORATION_STAMP_GHOST_BORDER);
     if (outsideMap(ghost))
         border = QColor(colors::DECORATION_STAMP_OUT_OF_BOUNDS);
+    drawStampMembers(painter, activeStamp, center, STAMP_GHOST_PREVIEW_OPACITY);
     painter.setPen(cosmeticPen(border, 2, Qt::DashLine));
     painter.setBrush(Qt::NoBrush);
     painter.drawPolygon(polygon);

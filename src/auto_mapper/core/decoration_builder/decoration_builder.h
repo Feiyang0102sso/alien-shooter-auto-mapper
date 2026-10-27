@@ -1,33 +1,21 @@
 /**
  * @file decoration_builder.h
- * @brief Expand authored decoration profiles at a target map position.
+ * @brief Expand a Decoration Stamp at a target Map Coordinate.
  */
 
 #pragma once
 
-#include "auto_mapper/core/decoration_builder/decoration_profile_types.h"
+#include "auto_mapper/core/decoration_builder/decoration_stamp.h"
 #include "auto_mapper/io/map_writer.h"
 
-#include <array>
 #include <vector>
 
 namespace auto_mapper::core::decoration_builder {
 
 /**
- * Combine both wall-direction nudges into one member shift vector.
+ * Build every member of one stamp placed with its region center at (center_x, center_y).
+ * Placement is translation only; all other sprite fields are copied from the library map.
  */
-DecorationPoint resolve_member_shift(const DecorationMemberNudge& nudge);
-
-class DecorationBuilder {
-public:
-    /**
-     * Build one complete stamp. Placement applies translation only.
-     */
-    std::vector<io::Sprite> build(
-        const DecorationProfile& profile,
-        const DecorationPlacement& placement,
-        DecorationBuildOptions options = {}
-    ) const;
-};
+std::vector<io::Sprite> build_stamp(const DecorationStamp& stamp, float center_x, float center_y);
 
 } // namespace auto_mapper::core::decoration_builder
