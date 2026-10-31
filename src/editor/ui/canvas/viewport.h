@@ -6,6 +6,7 @@
 //   off      - wall and eraser tools; decorations are only background.
 #pragma once
 #include "editor/catalog/catalog.h"
+#include "editor/config.h"
 #include "editor/project/project.h"
 #include "editor/ui/canvas/stamp_sprites.h"
 #include "editor/ui/tools/drawing_modes.h"
@@ -52,8 +53,9 @@ class Viewport : public QWidget {
     QPoint snapToGrid(const QPointF &screen) const;
     QPolygonF decorationFrame(const Decoration &decoration) const;
     bool outsideMap(const Decoration &decoration) const;
-    // AS2 game folder for the stamp sprite preview; false keeps the green crosses.
-    bool openGameFolder(const QString &gameRoot);
+    // Game folder of one family for the stamp sprite preview; false keeps the green crosses.
+    bool openGameFolder(GameFamily family, const QString &gameRoot);
+    // True when the current project's family has a game folder open.
     bool hasGameFolder() const;
     // Whole stamp drawn from game sprites for the inspector; null without a game folder.
     QImage renderStampPreview(const QString &stampId);
@@ -99,7 +101,11 @@ class Viewport : public QWidget {
     // "move" or one of the array edges "left" / "right" / "top" / "bottom"; empty when idle.
     QString dragMode_;
     Decoration dragOriginal_;
-    StampSprites stampSprites_;
+    // One sprite cache per game family: AS1 and AS2 stamps read different game folders.
+    StampSprites stampSpritesAS1_;
+    StampSprites stampSpritesAS2_;
+    // Sprite cache of the current project's family.
+    StampSprites &stampSprites();
 
     QRectF bounds(int type) const;
     bool nearBounds(const QPointF &point) const;

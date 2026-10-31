@@ -101,7 +101,7 @@
   "language_name.chinese": "Chinese",
   "shelf.mode.wall_sets": "Wall Sets",
   "shelf.mode.decoration_sets": "Decoration Sets",
-  "tooltip.decoration_sets_as2_only": "Decoration sets are only available in AS2 projects.",
+  "tooltip.decoration_sets": "Decoration sets come from the library maps of the project's game (AS1 or AS2).",
   "label.stamp_variant_count": "Contains {variant_count} room layouts.",
   "label.stamp_series_description_default": "default description",
   "decoration.01dorm.description": "Dormitory furniture layouts.",

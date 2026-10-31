@@ -224,23 +224,29 @@ class EditorTest : public QObject {
         Catalog catalog(locale);
         QCOMPARE(catalog.wallTypes().size(), auto_mapper::core::SUPPORTED_WALL_TYPE_COUNT);
         QVERIFY(locale.tr(TextKey::ACTION_NEW) != TextKey::ACTION_NEW);
-        // Stamps are registered from the regions of assets/decoration_maps/AS2/*.map beside the exe.
-        QVERIFY(catalog.stampSeries().contains("01dorm"));
-        for (const auto &seriesId : catalog.stampSeries()) {
-            auto variants = catalog.seriesVariants(seriesId);
-            QVERIFY2(!variants.isEmpty(), qPrintable(seriesId));
-            for (const auto &id : variants) {
-                const auto *stamp = catalog.stamp(id);
-                QVERIFY2(stamp != nullptr, qPrintable(id));
-                QVERIFY2(!stamp->members.empty(), qPrintable(id));
-                QCOMPARE(catalog.stampFrameSize(id), QSizeF(stamp->width, stamp->height));
+        // Stamps are registered from assets/decoration_maps/AS1 (grid cells) and AS2 (regions) beside the exe.
+        QVERIFY(catalog.stampSeries(false).contains("01dorm"));
+        QVERIFY(catalog.stampSeries(true).contains("01office"));
+        for (bool as1 : {true, false}) {
+            for (const auto &seriesId : catalog.stampSeries(as1)) {
+                auto variants = catalog.seriesVariants(as1, seriesId);
+                QVERIFY2(!variants.isEmpty(), qPrintable(seriesId));
+                for (const auto &id : variants) {
+                    const auto *stamp = catalog.stamp(as1, id);
+                    QVERIFY2(stamp != nullptr, qPrintable(id));
+                    QVERIFY2(!stamp->members.empty(), qPrintable(id));
+                    QCOMPARE(catalog.stampFrameSize(as1, id), QSizeF(stamp->width, stamp->height));
+                }
             }
         }
-        QCOMPARE(catalog.seriesVariants("01dorm").first(), QString("01dorm:1"));
+        QCOMPARE(catalog.seriesVariants(false, "01dorm").first(), QString("01dorm:1"));
         QCOMPARE(catalog.stampLabel("01dorm:3"), QString("01dorm 区域 3"));
         // A library map without its own description text still gets a card description.
         QCOMPARE(catalog.seriesDescription("99unlisted"), locale.tr(TextKey::LABEL_STAMP_SERIES_DESCRIPTION_DEFAULT));
-        QVERIFY(catalog.stamp("dorms01") == nullptr);
+        QVERIFY(catalog.stamp(false, "dorms01") == nullptr);
+        // The two families keep separate libraries.
+        QVERIFY(catalog.stamp(true, "01dorm:1") == nullptr);
+        QVERIFY(catalog.stamp(false, "01office:1") == nullptr);
         for (bool as1 : {true, false}) {
             for (int setId : catalog.wallSetOrder(as1)) {
                 WallSet wall = catalog.wallSet(setId);
@@ -375,6 +381,88 @@ class EditorTest : public QObject {
         canvas.setMode(DrawingMode::Polyline);
         QVERIFY(!canvas.isPlacing());
         QCOMPARE(canvas.part, QString("wall_body"));
+    }
+    void stampDrawOrderStacksBottomUp() {
+        using auto_mapper::core::decoration_builder::DecorationMember;
+        using auto_mapper::core::decoration_builder::DecorationStamp;
+        // Members of AS1 library stamp 02archive:6, in SPR order.
+        struct Source {
+            int vid;
+            float x, y, z;
+        };
+        const Source sources[] = {
+            {413, 4346, 576, 54}, // 0: small cabinet stack, top first as MapEdit saved it
+            {413, 4346, 576, 27}, // 1
+            {413, 4346, 576, 0},  // 2
+            {412, 4344, 594, 1},  // 3: plant in front of the stack
+            {428, 4384, 551, 71}, // 4: box on the bookcase, anchor 3 units behind it
+            {413, 4382, 554, 0},  // 5: bookcase
+            {916, 4300, 650, 0},  // 6: blood on the ground
+            {916, 4300, 500, 20}, // 7: blood raised onto something
+        };
+        DecorationStamp stamp;
+        for (const Source &source : sources) {
+            DecorationMember member;
+            member.vid = source.vid;
+            member.offset_x = source.x;
+            member.offset_y = source.y;
+            member.pos_z = source.z;
+            stamp.members.push_back(member);
+        }
+
+        // Main window headers bring in stampDrawOrder() through the viewport.
+        auto order = stampDrawOrder(stamp, auto_mapper::io::MapFormat::AS1);
+        QList<int> drawn;
+        for (const auto *member : order)
+            drawn.append(int(member - stamp.members.data()));
+        // Ground blood; bookcase then the box resting on it; the stack bottom-up; the plant in front of the
+        // stack (not covered by the raised cabinets); raised blood last.
+        QCOMPARE(drawn, QList<int>({6, 5, 4, 2, 1, 0, 3, 7}));
+    }
+    void as1ProjectsUseTheAs1StampLibrary() {
+        MainWindow window("en_US");
+        Project project;
+        project.version = "AS1";
+        project.width = 3000;
+        project.height = 3000;
+        window.replaceProject(project);
+        // The decoration shelf opens for AS1 and arms the first AS1 library stamp.
+        window.chooseShelf(true);
+        QVERIFY(window.viewport->isPlacing());
+        QVERIFY2(window.viewport->activeStamp.startsWith("01office:"), qPrintable(window.viewport->activeStamp));
+
+        window.viewport->resize(900, 700);
+        window.viewport->fitMap();
+        QTest::mouseClick(window.viewport, Qt::LeftButton, {}, QPoint(450, 350));
+        QCOMPARE(window.project.decorations.size(), size_t(1));
+        QVERIFY(window.viewport->decorationFrame(window.project.decorations[0]).size() == 4);
+        QString capture = qEnvironmentVariable("AUTO_MAPPER_CAPTURE_DIR");
+        if (!capture.isEmpty()) {
+            // AS1 shelf cards and a 1:1 close-up of the placed stamp: AS1 sprites when AutoMapper.cfg names as1_path.
+            QDir().mkpath(capture);
+            window.resize(1600, 1000);
+            window.show();
+            QPointF placed = window.project.decorations[0].origin;
+            window.viewport->zoom = 1.0;
+            window.viewport->pan = QPointF(window.viewport->rect().center()) - placed;
+            window.viewport->update();
+            QTest::qWait(250);
+            QVERIFY(window.grab().save(capture + "/native-as1-stamps.png"));
+            // Stacked cabinets placed, and the translucent placing ghost of the same stamp beside them.
+            window.viewport->armStamp("02archive:3");
+            QPoint placedAt = window.viewport->rect().center() + QPoint(-200, 0);
+            QTest::mouseClick(window.viewport, Qt::LeftButton, {}, placedAt);
+            QTest::mouseMove(window.viewport, placedAt + QPoint(320, 0));
+            QTest::qWait(250);
+            QVERIFY(window.viewport->grab().save(capture + "/native-as1-ghost.png"));
+        }
+
+        QTemporaryDir directory;
+        auto path = directory.filePath("as1-stamp.map");
+        QVERIFY(window.project.generate(path, false, false, false, &window.catalog.decorationLibrary(true)));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QVERIFY(file.size() > 280);
     }
     void arraysAndEraser() {
         Project project;

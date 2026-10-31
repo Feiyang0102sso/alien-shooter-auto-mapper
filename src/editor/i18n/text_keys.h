@@ -37,7 +37,7 @@ inline constexpr const char *BUTTON_CHOOSE_GAME_FOLDER = "button.choose_game_fol
 inline constexpr const char *CHECK_STAMP_CROSSES_WITH_SPRITES = "check.stamp_crosses_with_sprites";
 inline constexpr const char *CHECK_STAMP_ALWAYS_SHOW_FRAME = "check.stamp_always_show_frame";
 inline constexpr const char *LABEL_STAMP_SPRITE_OPACITY = "label.stamp_sprite_opacity";
-inline constexpr const char *TOOLTIP_DECORATION_SETS_AS2_ONLY = "tooltip.decoration_sets_as2_only";
+inline constexpr const char *TOOLTIP_DECORATION_SETS = "tooltip.decoration_sets";
 
 inline constexpr const char *PANEL_WALL_SETS = "panel.wall_sets";
 inline constexpr const char *PANEL_INSPECTOR = "panel.inspector";

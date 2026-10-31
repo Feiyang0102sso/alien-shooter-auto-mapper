@@ -409,7 +409,7 @@ QPointF Viewport::axisDistances(const QPointF &delta, const QString &type) const
 
 QPolygonF Viewport::decorationFrame(const Decoration &d) const {
     if (d.type == DECORATION_TYPE_ROOM_STAMP)
-        return catalog_.stampFrame(d.profileId, d.origin);
+        return catalog_.stampFrame(project_.isAS1(), d.profileId, d.origin);
     auto [row, column] = arrayAxes(d.type);
     QPolygonF polygon;
     polygon << d.origin << d.origin + row * d.rowLength << d.origin + row * d.rowLength + column * d.columnLength
@@ -714,21 +714,22 @@ void Viewport::drawGrid(QPainter &painter) {
 
 void Viewport::drawStampMembers(QPainter &painter, const QString &stampId, const QPointF &center, double opacity) {
     using namespace auto_mapper::core::decoration_builder;
-    const auto *stamp = catalog_.stamp(stampId);
+    const auto *stamp = catalog_.stamp(project_.isAS1(), stampId);
     if (stamp == nullptr)
         return;
 
-    std::vector<const DecorationMember *> members = stampDrawOrder(*stamp);
+    auto_mapper::io::MapFormat format = project_.mapFormat();
+    std::vector<const DecorationMember *> members = stampDrawOrder(*stamp, format);
 
-    painter.save();
-    painter.setOpacity(opacity);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+    // Screen rectangles of the decoded sprites, in paint order.
+    std::vector<std::pair<QRectF, const QImage *>> spriteTargets;
+    QRectF spriteBounds;
     // Members that still need a cross; crosses go on top of every sprite so none is hidden.
     std::vector<QPointF> crossAnchors;
     for (const DecorationMember *member : members) {
         // (posX, posY) is the coordinate written to the map.
         QPointF anchor = center + QPointF(member->offset_x, member->offset_y);
-        const StampSprite *sprite = stampSprites_.sprite(*member);
+        const StampSprite *sprite = stampSprites().sprite(*member);
         if (sprite != nullptr) {
             // The engine lifts a sprite by posZ and scales its frame around the anchor.
             QPointF lifted = anchor - QPointF(0, member->pos_z);
@@ -736,16 +737,41 @@ void Viewport::drawStampMembers(QPainter &painter, const QString &stampId, const
             QSizeF size(sprite->image.width() * member->scale.x, sprite->image.height() * member->scale.y);
             QRectF target(mapToScreen(topLeft), size * zoom);
             if (target.intersects(rect())) {
-                painter.setOpacity(opacity * stampSpriteOpacity / 100.0);
-                painter.drawImage(target, sprite->image);
-                painter.setOpacity(opacity);
+                spriteTargets.push_back({target, &sprite->image});
+                spriteBounds = spriteBounds.united(target);
             }
         }
-        if (!draws_placeholder(member->vid))
+        if (!draws_placeholder(format, member->vid))
             continue;
         if (sprite == nullptr || stampCrossesWithSprites)
             crossAnchors.push_back(anchor);
     }
+
+    painter.save();
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+    double spriteOpacity = opacity * stampSpriteOpacity / 100.0;
+    if (spriteOpacity >= 1.0) {
+        for (const auto &[target, image] : spriteTargets)
+            painter.drawImage(target, *image);
+    } else if (!spriteTargets.empty()) {
+        // Translucent stamps (placing ghost, opacity slider) are composed opaque first and faded as one layer;
+        // fading each sprite alone lets lower stacked sprites show through the ones in front of them.
+        QRect layerRect = spriteBounds.toAlignedRect().intersected(rect());
+        qreal pixelRatio = devicePixelRatioF();
+        QImage layer(layerRect.size() * pixelRatio, QImage::Format_ARGB32_Premultiplied);
+        layer.setDevicePixelRatio(pixelRatio);
+        layer.fill(Qt::transparent);
+        QPainter layerPainter(&layer);
+        layerPainter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+        layerPainter.translate(-layerRect.topLeft());
+        for (const auto &[target, image] : spriteTargets)
+            layerPainter.drawImage(target, *image);
+        layerPainter.end();
+        painter.setOpacity(spriteOpacity);
+        painter.drawImage(layerRect.topLeft(), layer);
+    }
+
+    painter.setOpacity(opacity);
     painter.setPen(cosmeticPen(QColor(colors::DECORATION_STAMP_PLACEHOLDER), 1.5));
     QPointF arm(STAMP_PLACEHOLDER_HALF_SIZE, STAMP_PLACEHOLDER_HALF_SIZE);
     QPointF mirroredArm(STAMP_PLACEHOLDER_HALF_SIZE, -STAMP_PLACEHOLDER_HALF_SIZE);
@@ -757,18 +783,30 @@ void Viewport::drawStampMembers(QPainter &painter, const QString &stampId, const
 }
 
 QImage Viewport::renderStampPreview(const QString &stampId) {
-    const auto *stamp = catalog_.stamp(stampId);
+    const auto *stamp = catalog_.stamp(project_.isAS1(), stampId);
     if (stamp == nullptr)
         return {};
-    return stampSprites_.render(*stamp);
+    return stampSprites().render(*stamp, project_.mapFormat());
+}
+
+StampSprites &Viewport::stampSprites() {
+    if (project_.isAS1())
+        return stampSpritesAS1_;
+    return stampSpritesAS2_;
 }
 
 bool Viewport::hasGameFolder() const {
-    return stampSprites_.isOpen();
+    if (project_.isAS1())
+        return stampSpritesAS1_.isOpen();
+    return stampSpritesAS2_.isOpen();
 }
 
-bool Viewport::openGameFolder(const QString &gameRoot) {
-    bool opened = stampSprites_.open(gameRoot);
+bool Viewport::openGameFolder(GameFamily family, const QString &gameRoot) {
+    bool opened = false;
+    if (family == GameFamily::AS1)
+        opened = stampSpritesAS1_.open(gameRoot, family);
+    else
+        opened = stampSpritesAS2_.open(gameRoot, family);
     update();
     return opened;
 }
@@ -844,7 +882,7 @@ void Viewport::drawDecoration(QPainter &painter, const Decoration &decoration, b
 }
 
 void Viewport::drawStampGhost(QPainter &painter, const QPointF &center) {
-    QPolygonF frame = catalog_.stampFrame(activeStamp, center);
+    QPolygonF frame = catalog_.stampFrame(project_.isAS1(), activeStamp, center);
     if (frame.size() != 4)
         return;
     QPolygonF polygon = toScreen(frame);

@@ -16,6 +16,9 @@ namespace {
 
 // Frozen copy of assets/decoration_maps/AS2/01dorm.map: 11 regions, 419 member sprites.
 const char* LIBRARY_FIXTURE = "tests/golden/decoration/01dorm_library.map";
+// Frozen copy of assets/decoration_maps/AS1/08leisure.map: 9 grid cells, 61 member sprites.
+// Kept in a subfolder so load_directory() on the AS2 fixture folder does not pick it up.
+const char* AS1_LIBRARY_FIXTURE = "tests/golden/decoration/AS1/08leisure.map";
 
 DecorationLibrary load_fixture_library() {
     DecorationLibrary library;
@@ -106,6 +109,70 @@ TEST(DecorationLibraryTest, LoadDirectoryReadsEveryMapFile) {
     EXPECT_EQ(library.load_directory(fixture_directory / "missing"), 0);
 }
 
+TEST(DecorationLibraryTest, As1GridCellsBecomeStampsNumberedByCell) {
+    DecorationLibrary library;
+    ASSERT_TRUE(library.load_map(resolve_test_path(AS1_LIBRARY_FIXTURE)));
+
+    const int expected_member_counts[] = {8, 4, 5, 9, 5, 4, 5, 9, 12};
+    ASSERT_EQ(library.stamps().size(), 9u);
+    ASSERT_EQ(library.series().size(), 1u);
+    EXPECT_EQ(library.series()[0], "08leisure");
+    for (std::size_t index = 0; index < library.stamps().size(); ++index) {
+        const DecorationStamp& stamp = library.stamps()[index];
+        EXPECT_EQ(stamp.id, "08leisure:" + std::to_string(index + 1));
+        EXPECT_EQ(stamp.members.size(), expected_member_counts[index]) << stamp.id;
+    }
+}
+
+TEST(DecorationLibraryTest, As1FrameIsTheMemberBoundingBoxPlusMargin) {
+    DecorationLibrary library;
+    ASSERT_TRUE(library.load_map(resolve_test_path(AS1_LIBRARY_FIXTURE)));
+
+    // Cell 4: anchors span 153 x 157 around (2850.5, 660.5); the frame adds 40 on every side.
+    const DecorationStamp* stamp = library.find("08leisure:4");
+    ASSERT_NE(stamp, nullptr);
+    EXPECT_FLOAT_EQ(stamp->width, 233.0f);
+    EXPECT_FLOAT_EQ(stamp->height, 237.0f);
+    const DecorationMember& member = stamp->members.front();
+    EXPECT_EQ(member.vid, 666);
+    EXPECT_FLOAT_EQ(member.offset_x, -38.5f);
+    EXPECT_FLOAT_EQ(member.offset_y, -78.5f);
+    EXPECT_EQ(member.direction, 36u);
+    EXPECT_EQ(member.army, 0);
+    // AS1 records carry no gamma or scale.
+    EXPECT_EQ(member.gamma.r, 0);
+    EXPECT_FLOAT_EQ(member.scale.x, 1.0f);
+
+    // Army is copied from the library map.
+    EXPECT_EQ(library.find("08leisure:1")->members.front().army, 2);
+}
+
+TEST(DecorationLibraryTest, As1EmptyCellsKeepTheirNumbersAndOffGridSpritesAreDropped) {
+    std::vector<io::Sprite> sprites(3);
+    // Cell 1 (row 0, column 0) and cell 8 (row 1, column 1); cells 2..7 stay empty.
+    sprites[0].vid = 401;
+    sprites[0].posX = 750.0f;
+    sprites[0].posY = 660.0f;
+    sprites[1].vid = 402;
+    sprites[1].posX = 1450.0f;
+    sprites[1].posY = 1180.0f;
+    // Left of the grid origin: ignored with a warning.
+    sprites[2].vid = 403;
+    sprites[2].posX = 100.0f;
+    sprites[2].posY = 100.0f;
+    std::string map_path = get_test_output_path("as1_grid_gaps.map");
+    ASSERT_TRUE(io::write_map(sprites, map_path, io::MapFormat::AS1, 5000.0f, 5000.0f));
+
+    DecorationLibrary library;
+    ASSERT_TRUE(library.load_map(map_path));
+    ASSERT_EQ(library.stamps().size(), 2u);
+    EXPECT_EQ(library.stamps()[0].id, "as1_grid_gaps:1");
+    EXPECT_EQ(library.stamps()[1].id, "as1_grid_gaps:8");
+    // A single member sits on the frame center; the frame is just the margin.
+    EXPECT_FLOAT_EQ(library.stamps()[1].members.front().offset_x, 0.0f);
+    EXPECT_FLOAT_EQ(library.stamps()[1].width, 80.0f);
+}
+
 TEST(DecorationBuilderTest, BuildTranslatesEveryMemberAndPreservesSpriteValues) {
     DecorationStamp stamp;
     stamp.id = "test:1";
@@ -144,25 +211,74 @@ TEST(DecorationBuilderTest, PlacingAtTheRegionCenterRestoresLibraryCoordinates) 
 }
 
 TEST(DecorationBuilderTest, FlatAndClutterVidsHaveNoPlaceholder) {
-    EXPECT_FALSE(draws_placeholder(120));  // blood
-    EXPECT_FALSE(draws_placeholder(135));  // shadow
-    EXPECT_FALSE(draws_placeholder(1783)); // office floor tile
-    EXPECT_FALSE(draws_placeholder(1765)); // books
-    EXPECT_TRUE(draws_placeholder(413));   // cabinet
-    EXPECT_TRUE(draws_placeholder(2300));  // bedroom interior
+    const io::MapFormat as2 = io::MapFormat::AS2R;
+    EXPECT_FALSE(draws_placeholder(as2, 120));  // blood
+    EXPECT_FALSE(draws_placeholder(as2, 135));  // shadow
+    EXPECT_FALSE(draws_placeholder(as2, 1783)); // office floor tile
+    EXPECT_FALSE(draws_placeholder(as2, 1765)); // books
+    EXPECT_TRUE(draws_placeholder(as2, 413));   // cabinet
+    EXPECT_TRUE(draws_placeholder(as2, 2300));  // bedroom interior
 }
 
 TEST(DecorationBuilderTest, BlockAirWallsAreInvisible) {
-    EXPECT_TRUE(is_invisible_block(630));  // Z dummy, big
-    EXPECT_TRUE(is_invisible_block(2648)); // closed electric door dummy
-    EXPECT_FALSE(draws_placeholder(634));  // player blocker
-    EXPECT_FALSE(is_invisible_block(413)); // cabinet
+    const io::MapFormat as2 = io::MapFormat::AS2R;
+    EXPECT_TRUE(is_invisible_block(as2, 630));  // Z dummy, big
+    EXPECT_TRUE(is_invisible_block(as2, 2648)); // closed electric door dummy
+    EXPECT_FALSE(draws_placeholder(as2, 634));  // player blocker
+    EXPECT_FALSE(is_invisible_block(as2, 413)); // cabinet
 }
 
 TEST(DecorationBuilderTest, OnlyFlatVidsLieOnTheGround) {
-    EXPECT_TRUE(lies_on_ground(120));   // blood
-    EXPECT_TRUE(lies_on_ground(135));   // shadow
-    EXPECT_TRUE(lies_on_ground(1783));  // office floor tile
-    EXPECT_FALSE(lies_on_ground(1765)); // books stand on furniture
-    EXPECT_FALSE(lies_on_ground(413));  // cabinet
+    const io::MapFormat as2 = io::MapFormat::AS2R;
+    EXPECT_TRUE(lies_on_ground(as2, 120));   // blood
+    EXPECT_TRUE(lies_on_ground(as2, 135));   // shadow
+    EXPECT_TRUE(lies_on_ground(as2, 1783));  // office floor tile
+    EXPECT_FALSE(lies_on_ground(as2, 1765)); // books stand on furniture
+    EXPECT_FALSE(lies_on_ground(as2, 413));  // cabinet
+}
+
+TEST(DecorationBuilderTest, As2SeriesFormatsShareOneList) {
+    EXPECT_TRUE(is_invisible_block(io::MapFormat::AS2, 630));
+    EXPECT_TRUE(is_invisible_block(io::MapFormat::AS2R, 630));
+    EXPECT_TRUE(is_invisible_block(io::MapFormat::AS2OE, 630));
+}
+
+TEST(DecorationBuilderTest, As1LitterHasNoPlaceholder) {
+    const io::MapFormat as1 = io::MapFormat::AS1;
+    EXPECT_FALSE(draws_placeholder(as1, 916)); // dried red blood
+    EXPECT_FALSE(draws_placeholder(as1, 152)); // lying gibs
+    EXPECT_FALSE(draws_placeholder(as1, 103)); // shell
+    EXPECT_FALSE(draws_placeholder(as1, 764)); // monster armor fragments
+    EXPECT_FALSE(draws_placeholder(as1, 783)); // rocks
+    EXPECT_FALSE(draws_placeholder(as1, 428)); // small boxes on shelves
+    EXPECT_FALSE(draws_placeholder(as1, 408)); // scattered paper
+}
+
+TEST(DecorationBuilderTest, As1CorpsesAndFrozenMonstersKeepPlaceholder) {
+    const io::MapFormat as1 = io::MapFormat::AS1;
+    EXPECT_TRUE(draws_placeholder(as1, 430)); // soldier corpse
+    EXPECT_TRUE(draws_placeholder(as1, 431)); // scientist corpse
+    EXPECT_TRUE(draws_placeholder(as1, 62));  // monster 2 corpse
+    EXPECT_TRUE(draws_placeholder(as1, 882)); // flyer corpse
+    EXPECT_TRUE(draws_placeholder(as1, 59));  // frozen monster
+    EXPECT_TRUE(draws_placeholder(as1, 404)); // desk
+}
+
+TEST(DecorationBuilderTest, As1AirWallsAndGround) {
+    const io::MapFormat as1 = io::MapFormat::AS1;
+    EXPECT_TRUE(is_invisible_block(as1, 631));  // Z dummy
+    EXPECT_TRUE(is_invisible_block(as1, 365));  // Z dummy
+    EXPECT_FALSE(is_invisible_block(as1, 908)); // scripted monster generator has the flag but is no air wall
+    EXPECT_TRUE(lies_on_ground(as1, 916));      // blood
+    EXPECT_TRUE(lies_on_ground(as1, 103));      // shell
+    EXPECT_FALSE(lies_on_ground(as1, 428));     // small boxes stand on shelves
+    EXPECT_FALSE(lies_on_ground(as1, 430));     // corpses are drawn as standing sprites
+}
+
+TEST(DecorationBuilderTest, As1AndAs2ListsAreSeparate) {
+    // 504 is AS1 ground but not an AS2 TERRAIN entry; 630 is an AS2 air wall but an ordinary AS1 nvid.
+    EXPECT_TRUE(lies_on_ground(io::MapFormat::AS1, 504));
+    EXPECT_FALSE(lies_on_ground(io::MapFormat::AS2R, 504));
+    EXPECT_TRUE(is_invisible_block(io::MapFormat::AS2R, 630));
+    EXPECT_FALSE(is_invisible_block(io::MapFormat::AS1, 630));
 }

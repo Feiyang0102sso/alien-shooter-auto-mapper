@@ -52,7 +52,7 @@ LeftShelfPanel::LeftShelfPanel(const Catalog &catalog, QWidget *parent) : QWidge
     auto *modeGroup = new QButtonGroup(this);
     wallsButton_ = new QPushButton(locale.tr(TextKey::SHELF_MODE_WALL_SETS));
     decorationsButton_ = new QPushButton(locale.tr(TextKey::SHELF_MODE_DECORATION_SETS));
-    decorationsButton_->setToolTip(locale.tr(TextKey::TOOLTIP_DECORATION_SETS_AS2_ONLY));
+    decorationsButton_->setToolTip(locale.tr(TextKey::TOOLTIP_DECORATION_SETS));
     for (QPushButton *button : {wallsButton_, decorationsButton_}) {
         button->setObjectName("shelfModeButton");
         button->setCheckable(true);
@@ -81,8 +81,6 @@ void LeftShelfPanel::setProjectVersion(const QString &version) {
     as2Format_->setVisible(!isAS1);
     as1Button_->setChecked(isAS1);
     as2Button_->setChecked(!isAS1);
-    // Decoration Stamps are AS2 Series content.
-    decorationsButton_->setEnabled(!isAS1);
 }
 
 void LeftShelfPanel::setDecorationShelf(bool decorations) {
@@ -106,7 +104,7 @@ void LeftShelfPanel::showWallSets(const QList<int> &setIds) {
     shelf_->setCards(cards, true);
 }
 
-void LeftShelfPanel::showStampSeries(const QStringList &seriesIds) {
+void LeftShelfPanel::showStampSeries(bool as1, const QStringList &seriesIds) {
     QList<ShelfCard> cards;
     for (const QString &seriesId : seriesIds) {
         // The library maps carry no preview images: MainWindow renders each series' first stamp into the box.
@@ -114,7 +112,7 @@ void LeftShelfPanel::showStampSeries(const QStringList &seriesIds) {
         card.spritePreview = true;
         card.title = catalog_.seriesLabel(seriesId);
         card.description = catalog_.seriesDescription(seriesId);
-        int variantCount = catalog_.seriesVariants(seriesId).size();
+        int variantCount = catalog_.seriesVariants(as1, seriesId).size();
         card.detail = catalog_.locale.tr(TextKey::LABEL_STAMP_VARIANT_COUNT,
                                          {{"variant_count", QString::number(variantCount)}});
         cards.append(card);

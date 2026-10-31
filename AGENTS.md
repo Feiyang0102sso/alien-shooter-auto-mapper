@@ -19,7 +19,7 @@ Agent 修改代码时，先判断改动属于哪一层。坐标、VID、墙体�
 ## 当前架构重点
 
 - 整张地图的生成入口是 `src/auto_mapper/core/map_generator.*` 的 `generate_map(MapRequest)`。
-- 装饰物 stamp 由 `core/decoration_builder/decoration_library.*` 在启动时从库地图的 region 注册，见下文“装饰物 Stamp”。
+- 装饰物 stamp 由 `core/decoration_builder/decoration_library.*` 在启动时从库地图注册（AS2 系列按 region，AS1 按固定网格），见下文“装饰物 Stamp”。
 - 墙体生成核心是 `src/auto_mapper/core/wall_builder.*`。
 - 门生成核心是 `src/auto_mapper/core/door_builder.*`。
 - 地图写出逻辑是 `src/auto_mapper/io/map_writer.*`。
@@ -112,27 +112,40 @@ Standard Dark 墙：
 
 ## 装饰物 Stamp
 
-Stamp 不再有手写 profile 和预览图，全部来自 `assets/decoration_maps/AS2/*.map`（官方 AS2 编辑器做的库地图）：
+Stamp 不再有手写 profile 和预览图，全部来自库地图：`assets/decoration_maps/AS2/*.map`（官方 AS2 编辑器做的）
+和 `assets/decoration_maps/AS1/*.map`（AS1 编辑器里手工修补过的，源头在 AS1 游戏目录 `Maps/_decoration/`）。
+两个游戏族的 nvid 互不相干，所以是两个独立的 `DecorationLibrary`，`Catalog` 的 stamp 查询都带 `as1` 参数，按项目所属游戏族选库。
 
-- `decoration_library.*`：读 SPR 和 SPRD。nvid `99` 的 sprite 是 region，SPR 坐标是 stamp 原点，
+- `decoration_library.*`：按 HEAD 里的地图版本分两种读法，`0x0C` 走 AS1 网格，其余走 AS2 region。
+- AS2 系列：读 SPR 和 SPRD。nvid `99` 的 sprite 是 region，SPR 坐标是 stamp 原点，
   SPRD 末尾 80 字节的 `+16` / `+20` 是宽高（Map 坐标轴对齐矩形）。其余 sprite 按 `(posX, posY)`
   落进哪个矩形归哪个 stamp，存相对原点的偏移；army、gamma、scale、z、direction 原样保留。
-- Stamp id 是 `<文件名>:<序号>`，序号按 region 在 SPR 里的顺序从 1 开始。项目 JSON 存这个 id，
-  库地图里删改 region 会改变后面的序号；打开含未知 id 的项目会直接报错。
+  Stamp id 是 `<文件名>:<序号>`，序号按 region 在 SPR 里的顺序从 1 开始；库地图里删改 region 会改变后面的序号。
+- AS1：objects.res 没有 region 对象，stamp 摆在固定网格上：每行 6 格，每格 700 x 520，第一格左上角 `(400, 400)`，
+  常量在 `decoration_library.cpp` 开头。每个非空格子是一个 stamp，序号是格子编号 `行 * 6 + 列 + 1`
+  （和库地图预览图上的数字一致），删掉一格不影响其它格的编号。AS1 SPR 记录 28 字节，没有 gamma 和 scale，成员取默认值。
+  选择框是成员锚点包围盒四周各加 40，框中心就是 stamp 原点；网格外的 sprite 打 warning 并忽略。
+- 项目 JSON 存 stamp id；打开含未知 id（含另一个游戏族的 id）的项目会直接报错。
 - `decoration_builder.*`：`build_stamp()` 只做平移。army 用库地图里的值，因为血迹等贴花在 `vid_armies_as2.h` 里没有绑定。
 - `placeholder_vids.*`：画布占位符黑名单（血迹、阴影、`TERRAIN:` 类、书本等密集杂物），
-  没有游戏目录读不到 objects.res，所以 nvid 写死在这里；`lies_on_ground()` 标出贴地类，贴图预览先画它们；
+  没有游戏目录读不到 objects.res，所以 nvid 写死在这里；AS1 与 AS2 系列各有一套完整名单（nvid 相同也分开列），
+  三个查询函数都按 `io::MapFormat` 选名单，AS2/AS2R/AS2OE 共用 AS2 名单；AS1 的血迹、弹壳、碎片、428 小物品不画 X，尸体照画；`lies_on_ground()` 标出贴地类，贴图预览先画它们；
   `is_invisible_block()` 标出 `BLOCK:` 空气墙，`stampDrawOrder()` 直接滤掉，既不画贴图也不画 X，生成的 `.map` 仍保留。
 - 工具栏“贴图预览”打开一个非模态小窗口（`ui/panels/sprite_preview_dialog.*`），设置都写进 `AutoMapper.cfg`：
-  `as2_path`（AS2 游戏目录，驱动装饰物贴图）、`as1_path`（AS1 游戏目录，只校验 objects.res 并保存，暂无功能使用）、
-  `stamp_crosses_with_sprites`（有贴图时仍画绿色 X，0/1，默认 0）、`stamp_always_show_frame`（始终画 region 框，0/1，默认 0）、
+  `as2_path` / `as1_path`（AS2 / AS1 游戏目录，各自驱动本游戏族的装饰物贴图；画布持有两份 `StampSprites`，按项目游戏族取用）、
+  `stamp_crosses_with_sprites`（有贴图时仍画绿色 X，0/1，默认 0）、`stamp_always_show_frame`（始终画选择框，0/1，默认 0）、
   `stamp_sprite_opacity`（贴图不透明度百分比滑条，默认 100，超出 `config.h` 的 10–100 按上下限取值；拖动时实时预览，松手才写 cfg）。
   窗口只发信号，由 `MainWindow` 存 cfg 并更新画布。
 - 有游戏目录时成员用真实贴图画在 `(posX, posY - posZ)`，叠加库地图里的 gamma 和 scale，贴地类先画、其余按 posY 排序；
+  z ≥ 5 的立物（叠放的柜子、桌上的电脑）继承最近的更低立物（锚点曼哈顿距离 60 内）的 posY，同深度按 z 自下而上，
+  抬高的贴地类（尸体上的血）最后画。只按 posY 会让上层柜子被下层盖住，按 posY + posZ 又会把高物压到前面的植物上；
   解不出贴图的成员和没有游戏目录时回退成绿色 X。逻辑在 `ui/canvas/stamp_sprites.*` 与 `Viewport::drawStampMembers()`。
-- region 框默认只在放置 ghost（绿色虚线）、选中/拖动（橙色）和超出地图（红色）时画，见 `Viewport::drawDecoration()`。
+  半透明（放置 ghost 0.55、不透明度滑条 < 100）时先把整个 stamp 不透明地画进离屏图层再整体淡化，
+  逐个贴图淡化会让叠放的下层透出上层。
+- 选择框（AS2 是 region 框）默认只在放置 ghost（绿色虚线）、选中/拖动（橙色）和超出地图（红色）时画，见 `Viewport::drawDecoration()`。
 - 贴图预览只用于装饰物，墙体、门、地板不画贴图（网格和墙体美术有半格偏差，未解决）。
 - 库地图之外的 sprite 会打 warning 并忽略；空 region 跳过但仍占一个序号。
+- 装饰物货架在 AS1 和 AS2 工程里都可用，各自只显示本游戏族的库地图。
 
 ## 装饰物阵列
 
@@ -309,7 +322,8 @@ auto_mapper_tests
 
 改装饰物：
 
-- Stamp 先看 `decoration_library.*` 和库地图本身，测试用冻结副本 `tests/golden/decoration/01dorm_library.map`
+- Stamp 先看 `decoration_library.*` 和库地图本身，测试用冻结副本 `tests/golden/decoration/01dorm_library.map`（AS2）
+  和 `tests/golden/decoration/AS1/08leisure.map`（AS1，放子目录里，避免被 AS2 的 `load_directory` 测试读到）
 - 先看 `array_layout.*`
 - 再看具体 builder
 - UI 预览必须和 C++ preview points 或 profile 对齐

@@ -46,10 +46,10 @@ An AS1-only project option that forces supported active doors open or closed; AS
 - An **AS2 Wall Set Preview** is shared by all **AS2 Series** Project Versions.
 - **Sprite Army Value** is independent of **Map Format**; AS1 support may use the same VID binding in a separate implementation step.
 
-## AS2 Series Decorations
+## Decorations
 
 **Decoration Stamp**:
-An authored group of AS2 Series sprites copied as one decoration unit. Each
+An authored group of sprites of one game family (AS1 or AS2 Series) copied as one decoration unit. Each
 placement preserves every sprite's non-positional properties and relative Map
 Coordinate offsets; placement changes only the group's Map Coordinate origin.
 _Avoid_: Decoration Array, because a stamp preserves an authored composition
@@ -61,10 +61,13 @@ stamp and Map Coordinate origin. The editor moves and deletes the instance as
 one unit rather than exposing its member sprites as independent decorations.
 
 **Decoration Library Map**:
-An AS2 Series map authored in the official editor whose regions define
-Decoration Stamps. Library maps live in `assets/decoration_maps/AS2/`; each file
-is one Decoration Stamp Series named by its file stem. SPRD behavior, commands,
-drops, and names, plus PLAY and GROU relationships, are not Stamp content.
+A map authored in the official game editor whose regions (AS2 Series) or grid
+cells (AS1) define Decoration Stamps. Library maps live in
+`assets/decoration_maps/AS2/` and `assets/decoration_maps/AS1/`; each file is one
+Decoration Stamp Series named by its file stem. A project only uses the library
+maps of its own game family, because AS1 and AS2 nvids are unrelated. SPRD
+behavior, commands, drops, and names, plus PLAY and GROU relationships, are not
+Stamp content.
 
 **Decoration Stamp Region**:
 A region sprite (nvid 99, sprite class 23) in a Decoration Library Map. Its
@@ -73,17 +76,28 @@ of an axis-aligned Map Coordinate rectangle. Every other sprite whose
 `(posX, posY)` lies inside that rectangle is a Stamp member. Stamp ids are
 `<file stem>:<n>`, numbered from 1 in SPR record order.
 
+**AS1 Decoration Stamp Cell**:
+AS1 objects.res has no region object, so an AS1 Decoration Library Map lays its
+stamps on a fixed grid: 6 cells per row, each 700 x 520 Map Coordinates, the
+first cell's top-left corner at `(400, 400)`. Every sprite inside a non-empty
+cell is a Stamp member. Stamp ids are `<file stem>:<cell number>` with cell
+number `row * 6 + column + 1`, so deleting one cell never renumbers the others.
+_Avoid_: AS1 Region, because AS1 has no region sprite.
+
 **Decoration Stamp Frame**:
-The editor selection frame representing one complete Decoration Stamp Instance:
-the region rectangle centered on the instance origin. By default it is drawn only
+The editor selection frame representing one complete Decoration Stamp Instance,
+centered on the instance origin: the region rectangle for AS2 Series stamps, and
+the member anchor bounding box grown by 40 on every side for AS1 stamps. By default it is drawn only
 while placing, while selected or dragged, or when the instance leaves the map;
 hit testing uses it even while it is hidden. Frame adjustment moves the
 whole instance and never edits member sprites independently.
 
 **Decoration Member Sprite Preview**:
-The game sprite frame the editor draws for a Stamp member once an AS2 game
-folder is chosen, placed at `(posX, posY - posZ)` with the member's map gamma
+The game sprite frame the editor draws for a Stamp member once a game folder of
+the project's family (AS1 or AS2) is chosen, placed at `(posX, posY - posZ)` with the member's map gamma
 and scale, at a user-set preview opacity. Flat ground members are drawn first and standing members by `posY`;
+a member resting on another (`posZ` of at least 5: stacked cabinets, a computer on a desk) takes its support's
+`posY` and draws right after it, and flat members raised onto others (blood on a corpse) are drawn last;
 this approximates, but is not, the game's z-buffer order. Wall Sets never use
 it.
 
@@ -106,7 +120,8 @@ Decoration Stamp relationships:
   member sprites.
 - First-version placement does not rotate, mirror, scale, or change internal
   spacing.
-- A member sprite's army, gamma, and scale are copied from the library map. The first-version scaling
+- A member sprite's army, gamma, and scale are copied from the library map; AS1 sprite records carry
+  no gamma or scale, so AS1 members use the defaults. The first-version scaling
   restriction means that no additional instance-level scale is applied.
 - Source object IDs are not Stamp properties. Generated map output assigns new
   file-wide object IDs to every expanded member sprite.

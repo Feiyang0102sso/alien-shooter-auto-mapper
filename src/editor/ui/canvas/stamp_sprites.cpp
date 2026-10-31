@@ -7,33 +7,103 @@
 #include <filesystem>
 
 namespace editor {
+namespace {
+using auto_mapper::core::decoration_builder::DecorationMember;
+
+// A sprite at least this high rests on another one: stacked cabinets (z 27 / 54), a computer on a desk (z 32),
+// blood on a corpse.
+constexpr float RESTING_MIN_Z = 5.0f;
+// A resting sprite's support is the nearest lower standing member within this Manhattan anchor distance.
+// Objects on furniture sit up to ~25 map units behind their support's anchor in the library maps.
+constexpr float SUPPORT_SEARCH_DISTANCE = 60.0f;
+
+// Paint layer: 0 = flat on the ground, 1 = standing, 2 = flat but raised onto another sprite.
+int drawLayer(const DecorationMember &member, auto_mapper::io::MapFormat format) {
+    if (!auto_mapper::core::decoration_builder::lies_on_ground(format, member.vid))
+        return 1;
+    if (member.pos_z >= RESTING_MIN_Z)
+        return 2;
+    return 0;
+}
+
+/**
+ * Painter depth of every member. Usually posY; a resting standing sprite takes its support's depth instead,
+ * so it covers the support (even with its anchor a little behind it) without jumping in front of sprites
+ * that stand between the support and the viewer. Neither posY nor posY + posZ alone gets both right.
+ */
+std::vector<float> paintDepths(const std::vector<const DecorationMember *> &members, auto_mapper::io::MapFormat format) {
+    // Lower members first, so a support's depth is final before anything resting on it looks it up.
+    std::vector<std::size_t> lowestFirst;
+    for (std::size_t index = 0; index < members.size(); ++index)
+        lowestFirst.push_back(index);
+    std::stable_sort(lowestFirst.begin(), lowestFirst.end(), [&members](std::size_t left, std::size_t right) {
+        return members[left]->pos_z < members[right]->pos_z;
+    });
+
+    std::vector<float> depths(members.size(), 0.0f);
+    for (std::size_t index : lowestFirst) {
+        const DecorationMember *member = members[index];
+        depths[index] = member->offset_y;
+        if (member->pos_z < RESTING_MIN_Z || drawLayer(*member, format) != 1)
+            continue;
+
+        int support = -1;
+        float nearest = SUPPORT_SEARCH_DISTANCE;
+        for (std::size_t other = 0; other < members.size(); ++other) {
+            const DecorationMember *candidate = members[other];
+            if (other == index || candidate->pos_z >= member->pos_z || drawLayer(*candidate, format) != 1)
+                continue;
+            float distance = std::abs(candidate->offset_x - member->offset_x) + std::abs(candidate->offset_y - member->offset_y);
+            if (distance <= nearest) {
+                nearest = distance;
+                support = static_cast<int>(other);
+            }
+        }
+        if (support >= 0)
+            depths[index] = depths[support];
+    }
+    return depths;
+}
+} // namespace
 
 std::vector<const auto_mapper::core::decoration_builder::DecorationMember *>
-stampDrawOrder(const auto_mapper::core::decoration_builder::DecorationStamp &stamp) {
+stampDrawOrder(const auto_mapper::core::decoration_builder::DecorationStamp &stamp, auto_mapper::io::MapFormat format) {
     using namespace auto_mapper::core::decoration_builder;
     std::vector<const DecorationMember *> members;
     for (const auto &member : stamp.members) {
         // Air walls are invisible in game: no sprite and no placeholder in any preview.
-        if (is_invisible_block(member.vid))
+        if (is_invisible_block(format, member.vid))
             continue;
         members.push_back(&member);
     }
-    std::stable_sort(members.begin(), members.end(), [](const DecorationMember *left, const DecorationMember *right) {
-        bool leftOnGround = lies_on_ground(left->vid);
-        bool rightOnGround = lies_on_ground(right->vid);
-        if (leftOnGround != rightOnGround)
-            return leftOnGround;
-        return left->offset_y < right->offset_y;
+
+    std::vector<float> depths = paintDepths(members, format);
+    std::vector<std::size_t> order;
+    for (std::size_t index = 0; index < members.size(); ++index)
+        order.push_back(index);
+    std::stable_sort(order.begin(), order.end(), [&](std::size_t left, std::size_t right) {
+        int leftLayer = drawLayer(*members[left], format);
+        int rightLayer = drawLayer(*members[right], format);
+        if (leftLayer != rightLayer)
+            return leftLayer < rightLayer;
+        if (depths[left] != depths[right])
+            return depths[left] < depths[right];
+        // Same depth: a stack or a resting sprite and its support, drawn bottom-up.
+        return members[left]->pos_z < members[right]->pos_z;
     });
-    return members;
+
+    std::vector<const DecorationMember *> result;
+    for (std::size_t index : order)
+        result.push_back(members[index]);
+    return result;
 }
 
-bool StampSprites::open(const QString &gameRoot) {
+bool StampSprites::open(const QString &gameRoot, auto_mapper::game_assets::GameFamily family) {
     cache_.clear();
     std::filesystem::path root(gameRoot.toStdU16String());
-    // Decorations are AS2 Series only, so the folder is always read with the AS2 OBJ layout.
-    bool opened = library_.open(root, auto_mapper::game_assets::GameFamily::AS2);
-    qInfo() << "Stamp sprite preview game folder:" << gameRoot << "opened:" << opened;
+    bool opened = library_.open(root, family);
+    qInfo() << "Stamp sprite preview game folder:" << gameRoot << "AS1:"
+             << (family == auto_mapper::game_assets::GameFamily::AS1) << "opened:" << opened;
     return opened;
 }
 
@@ -73,13 +143,14 @@ const StampSprite *StampSprites::sprite(const auto_mapper::core::decoration_buil
     return &*cached->second;
 }
 
-QImage StampSprites::render(const auto_mapper::core::decoration_builder::DecorationStamp &stamp) {
+QImage StampSprites::render(const auto_mapper::core::decoration_builder::DecorationStamp &stamp,
+                            auto_mapper::io::MapFormat format) {
     if (!library_.is_open())
         return {};
     // Same placement as the canvas: anchor lifted by posZ, frame scaled around the anchor.
     std::vector<std::pair<const StampSprite *, QRectF>> placed;
     QRectF bounds;
-    for (const auto *member : stampDrawOrder(stamp)) {
+    for (const auto *member : stampDrawOrder(stamp, format)) {
         const StampSprite *frame = sprite(*member);
         if (frame == nullptr)
             continue;

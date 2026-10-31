@@ -111,3 +111,24 @@ TEST(MapGeneratorTest, StampsResolveThroughTheDecorationLibrary) {
     uint32_t spr_info_size = read_generator_test_uint32(data, spr + 20);
     EXPECT_EQ((spr_info_size - 4) / 48, 23u);
 }
+
+TEST(MapGeneratorTest, As1StampsWriteAs1SpriteRecords) {
+    auto_mapper::core::decoration_builder::DecorationLibrary library;
+    ASSERT_TRUE(library.load_map(resolve_test_path("tests/golden/decoration/AS1/08leisure.map")));
+
+    MapRequest request = empty_request(MapFormat::AS1);
+    request.decoration_library = &library;
+    request.stamps.push_back({"08leisure:9", 320.0f, 240.0f});
+
+    std::string output_file = get_test_output_path("as1_stamp_generator_output.map");
+    ASSERT_TRUE(auto_mapper::core::generate_map(request, output_file));
+
+    // AS1 SPR records are 28 bytes: the 12 members of cell 9.
+    std::vector<uint8_t> data = load_generator_test_binary(output_file);
+    std::vector<uint8_t> tag = {'S', 'P', 'R', ' '};
+    auto found = std::search(data.begin(), data.end(), tag.begin(), tag.end());
+    ASSERT_NE(found, data.end());
+    std::size_t spr = static_cast<std::size_t>(found - data.begin());
+    uint32_t spr_info_size = read_generator_test_uint32(data, spr + 20);
+    EXPECT_EQ((spr_info_size - 4) / 28, 12u);
+}

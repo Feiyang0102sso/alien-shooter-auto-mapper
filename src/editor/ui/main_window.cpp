@@ -8,11 +8,9 @@
 #include "editor/ui/panels/sprite_preview_dialog.h"
 #include "editor/ui/tools/drawing_toolbar.h"
 #include "editor/ui/widget_helpers.h"
-#include "game_assets/vid/vid_library.h"
 #include <QtConcurrent>
 #include <QtWidgets>
 #include <algorithm>
-#include <filesystem>
 #include <stdexcept>
 
 namespace editor {
@@ -210,11 +208,12 @@ void MainWindow::buildCommandToolbar() {
     });
 
     // A saved folder that no longer works only logs a warning; stamps fall back to green crosses.
-    QString gamePath = loadGamePath(GameFamily::AS2);
-    if (!gamePath.isEmpty())
-        viewport->openGameFolder(gamePath);
-    spritePreview_->setGameFolder(GameFamily::AS2, gamePath);
-    spritePreview_->setGameFolder(GameFamily::AS1, loadGamePath(GameFamily::AS1));
+    for (GameFamily family : {GameFamily::AS1, GameFamily::AS2}) {
+        QString gamePath = loadGamePath(family);
+        if (!gamePath.isEmpty())
+            viewport->openGameFolder(family, gamePath);
+        spritePreview_->setGameFolder(family, gamePath);
+    }
 
     auto *help = new QPushButton(locale.tr(hotkeys::hotkeyTextKey("button")) + "\n" +
                                  hotkeys::hotkeyHint(hotkeys::COMMAND_HOTKEY_HELP));
@@ -344,7 +343,7 @@ void MainWindow::connectViewport() {
             return;
         }
         // Suggest a map size that would hold the whole stamp frame.
-        QSizeF frame = catalog.stampFrameSize(stampId);
+        QSizeF frame = catalog.stampFrameSize(project.isAS1(), stampId);
         QString suggestedX = QString::number(frame.width() + STAMP_MAP_SIZE_MARGIN, 'f', 0);
         QString suggestedY = QString::number(frame.height() + STAMP_MAP_SIZE_MARGIN, 'f', 0);
         showStatus(locale.tr(TextKey::STATUS_MAP_TOO_SMALL_FOR_STAMP,
@@ -434,9 +433,6 @@ void MainWindow::configureHotkeys() {
 // ---------------------------------------------------------------------------------------------
 
 void MainWindow::chooseShelf(bool decorations) {
-    // Decoration Stamps are AS2 Series content.
-    if (decorations && project.isAS1())
-        return;
     decorationShelf_ = decorations;
     viewport->resetInteraction();
     // Leave a tool the new shelf hides: Eraser lives on the wall shelf, Select on the decoration shelf.
@@ -453,8 +449,9 @@ void MainWindow::rebuildShelf() {
     visibleWallSets_.clear();
     visibleSeries_.clear();
     if (decorationShelf_) {
-        visibleSeries_ = catalog.stampSeries();
-        leftShelf_->showStampSeries(visibleSeries_);
+        // AS1 and AS2 projects each show their own family's library maps.
+        visibleSeries_ = catalog.stampSeries(project.isAS1());
+        leftShelf_->showStampSeries(project.isAS1(), visibleSeries_);
         refreshStampSeriesPreviews();
         index = std::clamp(selectedStampSeries_, 0, std::max(0, int(visibleSeries_.size()) - 1));
     } else {
@@ -483,7 +480,7 @@ void MainWindow::refreshStampSeriesPreviews() {
     for (int row = 0; row < visibleSeries_.size(); ++row) {
         QImage preview;
         if (spritesReady)
-            preview = viewport->renderStampPreview(catalog.seriesVariants(visibleSeries_[row]).first());
+            preview = viewport->renderStampPreview(catalog.seriesVariants(project.isAS1(), visibleSeries_[row]).first());
         leftShelf_->shelf()->setCardPreview(row, spritesReady, preview);
     }
 }
@@ -498,7 +495,7 @@ void MainWindow::chooseSet(int index) {
         QString seriesId = visibleSeries_[index];
         currentSetKey_ = "stamp:" + seriesId;
         title = catalog.seriesLabel(seriesId);
-        visibleStamps_ = catalog.seriesVariants(seriesId);
+        visibleStamps_ = catalog.seriesVariants(project.isAS1(), seriesId);
         for (const QString &stampId : visibleStamps_)
             labels.append(catalog.stampLabel(stampId));
     } else {
@@ -524,7 +521,7 @@ void MainWindow::chooseSet(int index) {
 }
 
 void MainWindow::showStampDetails(const QString &stampId) {
-    int memberCount = static_cast<int>(catalog.stamp(stampId)->members.size());
+    int memberCount = static_cast<int>(catalog.stamp(project.isAS1(), stampId)->members.size());
     inspector_->showStamp(memberCount, viewport->hasGameFolder(), viewport->renderStampPreview(stampId));
 }
 
@@ -624,6 +621,8 @@ void MainWindow::replaceProject(const Project &value) {
     else
         viewport->wallType = rememberedWallTypes_.value(FAMILY_AS2, catalog.wallSetOrder(false).first());
     decorationShelf_ = false;
+    // The game family may have changed, and each family has its own sprite preview folder.
+    inspector_->setSpritePreviewReady(viewport->hasGameFolder());
     // Generation options are per session and start off for every loaded project.
     floor_->setChecked(false);
     ceiling_->setChecked(false);
@@ -684,20 +683,13 @@ void MainWindow::chooseGameFolder(GameFamily family) {
     QString path = QFileDialog::getExistingDirectory(this, locale.tr(TextKey::DIALOG_GAME_FOLDER), current);
     if (path.isEmpty())
         return;
-    bool opened = false;
-    if (family == GameFamily::AS2) {
-        opened = viewport->openGameFolder(path);
-    } else {
-        // Nothing renders AS1 sprites yet; reading objects.res still rejects a wrong folder.
-        auto_mapper::game_assets::VidLibrary probe;
-        opened = probe.open(std::filesystem::path(path.toStdU16String()), GameFamily::AS1);
-    }
+    bool opened = viewport->openGameFolder(family, path);
     if (!opened) {
         errorDialog(locale.tr(TextKey::DIALOG_GAME_FOLDER),
                     locale.tr(TextKey::MESSAGE_GAME_FOLDER_INVALID, {{"path", QDir::toNativeSeparators(path)}}));
-        // Keep showing the AS2 folder that worked before.
-        if (family == GameFamily::AS2 && !current.isEmpty())
-            viewport->openGameFolder(current);
+        // Keep showing the folder of this family that worked before.
+        if (!current.isEmpty())
+            viewport->openGameFolder(family, current);
         return;
     }
     try {
@@ -738,7 +730,7 @@ bool MainWindow::openProject(const QString &path) {
         Project loaded = Project::load(path);
         // Stamps come from the decoration library maps; ids it does not know are not supported.
         for (const auto &decoration : loaded.decorations) {
-            if (decoration.type == DECORATION_TYPE_ROOM_STAMP && catalog.stamp(decoration.profileId) == nullptr)
+            if (decoration.type == DECORATION_TYPE_ROOM_STAMP && catalog.stamp(loaded.isAS1(), decoration.profileId) == nullptr)
                 throw std::runtime_error(("Unknown decoration stamp: " + decoration.profileId).toStdString());
         }
         replaceProject(loaded);
@@ -814,7 +806,7 @@ bool MainWindow::exportMap(const QString &path) {
     setCursor(Qt::WaitCursor);
     showStatus(locale.tr(TextKey::STATUS_GENERATING_MAP));
     qInfo() << "Generating map:" << path << "floor" << floor << "ceiling" << ceiling << "random" << random;
-    const auto *library = &catalog.decorationLibrary();
+    const auto *library = &catalog.decorationLibrary(snapshot.isAS1());
     exportWatcher_.setFuture(QtConcurrent::run([snapshot, path, floor, ceiling, random, library] {
         ExportResult result;
         try {

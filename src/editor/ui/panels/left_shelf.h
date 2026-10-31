@@ -17,9 +17,9 @@ class LeftShelfPanel : public QWidget {
     // Reflect the Project Version without emitting request signals.
     void setProjectVersion(const QString &version);
     void setDecorationShelf(bool decorations);
-    // Fill the shelf with Wall Set cards, or with Decoration Stamp Series cards.
+    // Fill the shelf with Wall Set cards, or with Decoration Stamp Series cards of the AS1 or AS2 family.
     void showWallSets(const QList<int> &setIds);
-    void showStampSeries(const QStringList &seriesIds);
+    void showStampSeries(bool as1, const QStringList &seriesIds);
     ThemeShelfPanel *shelf() const;
     // Q / E hotkeys: move the selected card by `step`, clamped to the shelf.
     void selectRelativeSet(int step);

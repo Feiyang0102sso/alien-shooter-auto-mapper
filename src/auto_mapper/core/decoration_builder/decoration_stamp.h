@@ -14,8 +14,9 @@
 namespace auto_mapper::core::decoration_builder {
 
 /**
- * One sprite of a stamp. Offsets are Map Coordinates relative to the region center.
- * Every other field is copied verbatim from the library map sprite record.
+ * One sprite of a stamp. Offsets are Map Coordinates relative to the stamp frame center.
+ * Every other field is copied verbatim from the library map sprite record; AS1 records
+ * carry no gamma or scale, so those keep their defaults.
  */
 struct DecorationMember {
     int32_t vid = 0;
@@ -29,10 +30,12 @@ struct DecorationMember {
 };
 
 /**
- * One region of a library map: an axis-aligned Map Coordinate rectangle and its members.
+ * One stamp of a library map: an axis-aligned Map Coordinate frame and its members.
+ * AS2 Series frames are the authored regions; AS1 frames are the member bounding box plus a margin.
  */
 struct DecorationStamp {
-    // "<map file stem>:<region number>", e.g. "01dorm:3"; numbers start at 1 in SPR order.
+    // "<map file stem>:<number>", e.g. "01dorm:3". AS2 Series: region number from 1 in SPR order;
+    // AS1: grid cell number (row * 6 + column + 1).
     std::string id;
     // Library map file stem, shared by every stamp of that map.
     std::string series_id;

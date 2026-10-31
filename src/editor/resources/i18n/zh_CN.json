@@ -101,7 +101,7 @@
   "status.decoration_deleted": "已删除装饰",
   "shelf.mode.wall_sets": "墙壁套装",
   "shelf.mode.decoration_sets": "装饰套装",
-  "tooltip.decoration_sets_as2_only": "装饰套装仅在 AS2 工程中可用。",
+  "tooltip.decoration_sets": "装饰套装来自当前工程所属游戏（AS1 或 AS2）的库地图。",
   "label.stamp_variant_count": "包含 {variant_count} 种房间布局。",
   "label.stamp_series_description_default": "默认描述",
   "decoration.01dorm.description": "宿舍家具布局。",
