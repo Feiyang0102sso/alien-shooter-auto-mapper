@@ -147,6 +147,14 @@ QString Catalog::seriesLabel(const QString &seriesId) const {
     return seriesId;
 }
 
+QString Catalog::seriesDescription(const QString &seriesId) const {
+    QString key = QString("decoration.%1.description").arg(seriesId);
+    // Checked first: a series without its own text is normal, not a missing-key warning.
+    if (!locale.contains(key))
+        return locale.tr(TextKey::LABEL_STAMP_SERIES_DESCRIPTION_DEFAULT);
+    return locale.tr(key);
+}
+
 QString Catalog::stampLabel(const QString &stampId) const {
     // Stamp ids are "<series>:<region number>".
     QString series = stampId.section(':', 0, 0);

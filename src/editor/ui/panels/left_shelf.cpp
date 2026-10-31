@@ -113,6 +113,7 @@ void LeftShelfPanel::showStampSeries(const QStringList &seriesIds) {
         ShelfCard card;
         card.spritePreview = true;
         card.title = catalog_.seriesLabel(seriesId);
+        card.description = catalog_.seriesDescription(seriesId);
         int variantCount = catalog_.seriesVariants(seriesId).size();
         card.detail = catalog_.locale.tr(TextKey::LABEL_STAMP_VARIANT_COUNT,
                                          {{"variant_count", QString::number(variantCount)}});

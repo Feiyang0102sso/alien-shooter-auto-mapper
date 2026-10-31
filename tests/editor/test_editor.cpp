@@ -238,6 +238,8 @@ class EditorTest : public QObject {
         }
         QCOMPARE(catalog.seriesVariants("01dorm").first(), QString("01dorm:1"));
         QCOMPARE(catalog.stampLabel("01dorm:3"), QString("01dorm 区域 3"));
+        // A library map without its own description text still gets a card description.
+        QCOMPARE(catalog.seriesDescription("99unlisted"), locale.tr(TextKey::LABEL_STAMP_SERIES_DESCRIPTION_DEFAULT));
         QVERIFY(catalog.stamp("dorms01") == nullptr);
         for (bool as1 : {true, false}) {
             for (int setId : catalog.wallSetOrder(as1)) {

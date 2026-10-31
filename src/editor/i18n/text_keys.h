@@ -64,6 +64,8 @@ inline constexpr const char *LABEL_PREVIEW_MISSING = "label.preview_missing";
 inline constexpr const char *LABEL_ITEM_SPACING = "label.item_spacing";
 inline constexpr const char *LABEL_COLUMN_SPACING = "label.column_spacing";
 inline constexpr const char *LABEL_STAMP_VARIANT_COUNT = "label.stamp_variant_count";
+// Series card description when "decoration.<series>.description" is absent.
+inline constexpr const char *LABEL_STAMP_SERIES_DESCRIPTION_DEFAULT = "label.stamp_series_description_default";
 inline constexpr const char *LABEL_STAMP_MEMBER_COUNT = "label.stamp_member_count";
 // "{series} #{number}": one region of a library map.
 inline constexpr const char *LABEL_STAMP_REGION = "label.stamp_region";

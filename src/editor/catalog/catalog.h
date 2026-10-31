@@ -58,6 +58,8 @@ class Catalog {
     QStringList seriesVariants(const QString &seriesId) const;
     // Series cards show the library map file name as is.
     QString seriesLabel(const QString &seriesId) const;
+    // Text of "decoration.<series>.description", or a shared default so new library maps need no i18n entry.
+    QString seriesDescription(const QString &seriesId) const;
     QString stampLabel(const QString &stampId) const;
     // Null for ids the library does not know (for example stamps of an older project).
     const auto_mapper::core::decoration_builder::DecorationStamp *stamp(const QString &stampId) const;
