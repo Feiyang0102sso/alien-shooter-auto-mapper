@@ -120,7 +120,8 @@ Stamp 不再有手写 profile 和预览图，全部来自 `assets/decoration_map
   库地图里删改 region 会改变后面的序号；打开含未知 id 的项目会直接报错。
 - `decoration_builder.*`：`build_stamp()` 只做平移。army 用库地图里的值，因为血迹等贴花在 `vid_armies_as2.h` 里没有绑定。
 - `placeholder_vids.*`：画布占位符黑名单（血迹、阴影、`TERRAIN:` 类、书本等密集杂物），
-  没有游戏目录读不到 objects.res，所以 nvid 写死在这里；`lies_on_ground()` 标出贴地类，贴图预览先画它们。
+  没有游戏目录读不到 objects.res，所以 nvid 写死在这里；`lies_on_ground()` 标出贴地类，贴图预览先画它们；
+  `is_invisible_block()` 标出 `BLOCK:` 空气墙，`stampDrawOrder()` 直接滤掉，既不画贴图也不画 X，生成的 `.map` 仍保留。
 - 工具栏“贴图预览”打开一个非模态小窗口（`ui/panels/sprite_preview_dialog.*`），设置都写进 `AutoMapper.cfg`：
   `as2_path`（AS2 游戏目录，驱动装饰物贴图）、`as1_path`（AS1 游戏目录，只校验 objects.res 并保存，暂无功能使用）、
   `stamp_crosses_with_sprites`（有贴图时仍画绿色 X，0/1，默认 0）、`stamp_always_show_frame`（始终画 region 框，0/1，默认 0）、

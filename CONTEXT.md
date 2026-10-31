@@ -95,6 +95,11 @@ terrain, books, and similar clutter) are listed by nvid in the core and get no
 placeholder. Placeholders are preview metadata and never alter generated sprite
 records.
 
+**Invisible Block Member**:
+A Stamp member whose nvid is an objects.res `BLOCK:` air wall. The game never
+draws it, so the editor preview shows neither its sprite nor a placeholder; the
+generated map still contains it.
+
 Decoration Stamp relationships:
 
 - First-version placement applies one common Map Coordinate translation to all

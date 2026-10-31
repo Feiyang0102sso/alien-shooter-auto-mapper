@@ -21,4 +21,10 @@ bool draws_placeholder(int32_t vid);
  */
 bool lies_on_ground(int32_t vid);
 
+/**
+ * True for BLOCK air walls, which the game never draws. The editor preview skips them
+ * entirely (no sprite, no placeholder); generated maps still keep them.
+ */
+bool is_invisible_block(int32_t vid);
+
 } // namespace auto_mapper::core::decoration_builder

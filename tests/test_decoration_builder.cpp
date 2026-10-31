@@ -152,6 +152,13 @@ TEST(DecorationBuilderTest, FlatAndClutterVidsHaveNoPlaceholder) {
     EXPECT_TRUE(draws_placeholder(2300));  // bedroom interior
 }
 
+TEST(DecorationBuilderTest, BlockAirWallsAreInvisible) {
+    EXPECT_TRUE(is_invisible_block(630));  // Z dummy, big
+    EXPECT_TRUE(is_invisible_block(2648)); // closed electric door dummy
+    EXPECT_FALSE(draws_placeholder(634));  // player blocker
+    EXPECT_FALSE(is_invisible_block(413)); // cabinet
+}
+
 TEST(DecorationBuilderTest, OnlyFlatVidsLieOnTheGround) {
     EXPECT_TRUE(lies_on_ground(120));   // blood
     EXPECT_TRUE(lies_on_ground(135));   // shadow

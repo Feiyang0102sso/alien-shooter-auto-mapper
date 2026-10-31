@@ -12,8 +12,12 @@ std::vector<const auto_mapper::core::decoration_builder::DecorationMember *>
 stampDrawOrder(const auto_mapper::core::decoration_builder::DecorationStamp &stamp) {
     using namespace auto_mapper::core::decoration_builder;
     std::vector<const DecorationMember *> members;
-    for (const auto &member : stamp.members)
+    for (const auto &member : stamp.members) {
+        // Air walls are invisible in game: no sprite and no placeholder in any preview.
+        if (is_invisible_block(member.vid))
+            continue;
         members.push_back(&member);
+    }
     std::stable_sort(members.begin(), members.end(), [](const DecorationMember *left, const DecorationMember *right) {
         bool leftOnGround = lies_on_ground(left->vid);
         bool rightOnGround = lies_on_ground(right->vid);
