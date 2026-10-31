@@ -14,10 +14,6 @@
                 border-radius: 8px;
                 min-height: 96px;
             }
-            #hotkeyCard[reserved="true"] {
-                background: #161d21;
-                border-color: #2b363c;
-            }
             #hotkeyKeyLabel {
                 background: #24353e;
                 border: 1px solid #4f7fbf;

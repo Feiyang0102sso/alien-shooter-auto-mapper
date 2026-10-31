@@ -16,10 +16,8 @@ QList<HotkeyBinding> buildBindings() {
         {COMMAND_CEILING, "F6", {Qt::Key_F6}, PAGE_FUNCTIONS},
         {COMMAND_DOOR_STATE, "F7", {Qt::Key_F7}, PAGE_FUNCTIONS},
         {COMMAND_RANDOM_DIRECTION, "F8", {Qt::Key_F8}, PAGE_FUNCTIONS},
-        {COMMAND_HOTKEY_HELP, "F9", {Qt::Key_F9}, PAGE_FUNCTIONS},
-        {COMMAND_LANGUAGE, "F10", {Qt::Key_F10}, PAGE_FUNCTIONS},
-        {"reserved_f11", "F11", {Qt::Key_F11}, PAGE_FUNCTIONS, false},
-        {"reserved_f12", "F12", {Qt::Key_F12}, PAGE_FUNCTIONS, false},
+        // The shortcuts and language buttons have no key of their own.
+        {COMMAND_SPRITE_PREVIEW, "F9", {Qt::Key_F9}, PAGE_FUNCTIONS},
         {COMMAND_PREVIOUS_SET, "Q", {Qt::Key_Q}, PAGE_NAVIGATION},
         {COMMAND_NEXT_SET, "E", {Qt::Key_E}, PAGE_NAVIGATION},
         // Main-row and keypad minus both report Key_Minus.
@@ -31,11 +29,6 @@ QList<HotkeyBinding> buildBindings() {
         {COMMAND_STRAIGHT_LINE, "2", {Qt::Key_2}, PAGE_TOOLS},
         {COMMAND_RECTANGLE, "3", {Qt::Key_3}, PAGE_TOOLS},
         {COMMAND_ERASER, "4", {Qt::Key_4}, PAGE_TOOLS},
-        {"reserved_5", "5", {Qt::Key_5}, PAGE_TOOLS, false},
-        {"reserved_6", "6", {Qt::Key_6}, PAGE_TOOLS, false},
-        {"reserved_7", "7", {Qt::Key_7}, PAGE_TOOLS, false},
-        {"reserved_8", "8", {Qt::Key_8}, PAGE_TOOLS, false},
-        {"reserved_9", "9", {Qt::Key_9}, PAGE_TOOLS, false},
         {COMMAND_DELETE_DECORATION, "Del", {Qt::Key_Delete}, PAGE_TOOLS},
     };
 
@@ -78,9 +71,6 @@ QString hotkeyHint(const QString &commandId) {
 }
 
 QString hotkeyTextKey(const QString &name) {
-    // Reserved slots share one label.
-    if (name.startsWith("reserved_"))
-        return "hotkey.reserved";
     return "hotkey." + name;
 }
 

@@ -27,7 +27,7 @@ constexpr double STAMP_MAP_SIZE_MARGIN = 200.0;
 constexpr const char *DEFAULT_PROJECT_FILE = "auto_mapper_project.json";
 constexpr const char *DEFAULT_MAP_FILE = "ui_output.map";
 // Shown in both languages on purpose, so users can always find the language switch.
-constexpr const char *LANGUAGE_BUTTON_TEXT = "语言\nlanguage [F10]";
+constexpr const char *LANGUAGE_BUTTON_TEXT = "语言\nlanguage";
 // Keys of rememberedWallTypes_.
 constexpr const char *FAMILY_AS1 = "AS1";
 constexpr const char *FAMILY_AS2 = "AS2";
@@ -162,7 +162,8 @@ void MainWindow::buildCommandToolbar() {
     toolbar->addWidget(spacer);
 
     // Sprite preview window: game folder plus the decoration display options, all kept in AutoMapper.cfg.
-    spritePreviewButton_ = new QPushButton(locale.tr(TextKey::ACTION_SPRITE_PREVIEW));
+    spritePreviewButton_ = new QPushButton(locale.tr(TextKey::ACTION_SPRITE_PREVIEW) + "\n" +
+                                           hotkeys::hotkeyHint(hotkeys::COMMAND_SPRITE_PREVIEW));
     spritePreviewButton_->setObjectName("spritePreviewButton");
     spritePreviewButton_->setToolTip(locale.tr(TextKey::TOOLTIP_SPRITE_PREVIEW));
     spritePreviewButton_->setFixedSize(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT);
@@ -215,8 +216,7 @@ void MainWindow::buildCommandToolbar() {
         spritePreview_->setGameFolder(family, gamePath);
     }
 
-    auto *help = new QPushButton(locale.tr(hotkeys::hotkeyTextKey("button")) + "\n" +
-                                 hotkeys::hotkeyHint(hotkeys::COMMAND_HOTKEY_HELP));
+    auto *help = new QPushButton(locale.tr(hotkeys::hotkeyTextKey("button")));
     help->setObjectName("hotkeyHelpButton");
     help->setToolTip(locale.tr(hotkeys::hotkeyTextKey("tooltip")));
     help->setFixedSize(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT);
@@ -390,11 +390,8 @@ void MainWindow::configureHotkeys() {
     hotkeys_.bindButton(COMMAND_RANDOM_DIRECTION, random_, [this] {
         random_->click();
     });
-    hotkeys_.registerCallback(COMMAND_HOTKEY_HELP, [this] {
-        showHotkeys();
-    });
-    hotkeys_.bindButton(COMMAND_LANGUAGE, languageButton_, [this] {
-        languageButton_->showMenu();
+    hotkeys_.bindButton(COMMAND_SPRITE_PREVIEW, spritePreviewButton_, [this] {
+        showSpritePreview();
     });
     hotkeys_.registerCallback(COMMAND_PREVIOUS_SET, [this] {
         leftShelf_->selectRelativeSet(-1);

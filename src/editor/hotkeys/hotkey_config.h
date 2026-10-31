@@ -20,8 +20,7 @@ inline constexpr const char *COMMAND_FLOOR = "floor";
 inline constexpr const char *COMMAND_CEILING = "ceiling";
 inline constexpr const char *COMMAND_DOOR_STATE = "door_state";
 inline constexpr const char *COMMAND_RANDOM_DIRECTION = "random_direction";
-inline constexpr const char *COMMAND_HOTKEY_HELP = "hotkey_help";
-inline constexpr const char *COMMAND_LANGUAGE = "language";
+inline constexpr const char *COMMAND_SPRITE_PREVIEW = "sprite_preview";
 inline constexpr const char *COMMAND_PREVIOUS_SET = "previous_set";
 inline constexpr const char *COMMAND_NEXT_SET = "next_set";
 inline constexpr const char *COMMAND_PREVIOUS_ITEM = "previous_item";
@@ -39,8 +38,6 @@ struct HotkeyBinding {
     QString displayKey;
     QList<int> keys;
     QString helpPage;
-    // Reserved keys are shown in the help dialog but never dispatched.
-    bool enabled = true;
 };
 
 const QList<HotkeyBinding> &hotkeyBindings();

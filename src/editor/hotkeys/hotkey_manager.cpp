@@ -16,9 +16,8 @@ namespace editor::hotkeys {
 HotkeyManager::HotkeyManager(QWidget *window) : window_(window) {}
 
 void HotkeyManager::registerCallback(const QString &commandId, std::function<void()> callback) {
-    const HotkeyBinding &binding = hotkeyBinding(commandId);
-    if (!binding.enabled)
-        throw std::runtime_error(("Reserved hotkey command cannot be registered: " + commandId).toStdString());
+    // Throws for a command id the table does not know.
+    hotkeyBinding(commandId);
     if (callbacks_.contains(commandId))
         throw std::runtime_error(("Hotkey command registered twice: " + commandId).toStdString());
     callbacks_[commandId] = std::move(callback);
@@ -61,7 +60,7 @@ bool HotkeyManager::dispatch(QKeyEvent *event) {
     for (const auto &binding : hotkeyBindings()) {
         if (!binding.keys.contains(key))
             continue;
-        if (!binding.enabled || !callbacks_.contains(binding.commandId))
+        if (!callbacks_.contains(binding.commandId))
             return false;
         qDebug() << "Hotkey triggered:" << binding.commandId;
         callbacks_[binding.commandId]();

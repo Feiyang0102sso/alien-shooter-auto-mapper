@@ -146,6 +146,9 @@ void ThemeShelfPanel::setCards(const QList<ShelfCard> &cards, bool compact) {
             preview->setObjectName("themePreview");
             preview->setAlignment(Qt::AlignCenter);
             preview->setFixedHeight(CARD_PREVIEW_HEIGHT);
+            // The shelf sets the card width, never the pixmap: a wide stamp preview scaled to CARD_PREVIEW_WIDTH
+            // would otherwise push its card past the shelf and let the cards slide sideways.
+            preview->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
             cardLayout->addWidget(preview);
         }
         if (!data.previewPath.isEmpty()) {

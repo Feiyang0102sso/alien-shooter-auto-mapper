@@ -28,8 +28,6 @@ int pageColumns(const QString &pageId) {
 QFrame *keyCard(const HotkeyBinding &binding, const Locale &locale) {
     auto *card = new QFrame;
     card->setObjectName("hotkeyCard");
-    // Reserved keys use a dimmed QSS style.
-    card->setProperty("reserved", !binding.enabled);
     auto *layout = new QVBoxLayout(card);
     layout->setContentsMargins(6, 8, 6, 8);
     layout->setSpacing(7);
@@ -115,13 +113,11 @@ HotkeyHelpDialog::HotkeyHelpDialog(const Locale &locale, QWidget *parent) : QDia
     });
     connect(stack, &QStackedWidget::currentChanged, this, updateNavigation);
 
-    // Arrow keys flip pages; the help key closes the dialog again (toggle behavior).
+    // Arrow keys flip pages; Esc closes the dialog (QDialog default).
     auto *left = new QShortcut(QKeySequence(Qt::Key_Left), this);
     auto *right = new QShortcut(QKeySequence(Qt::Key_Right), this);
-    auto *close = new QShortcut(QKeySequence(hotkeyBinding(COMMAND_HOTKEY_HELP).keys.first()), this);
     connect(left, &QShortcut::activated, previous, &QPushButton::click);
     connect(right, &QShortcut::activated, next, &QPushButton::click);
-    connect(close, &QShortcut::activated, this, &QDialog::reject);
     updateNavigation();
 }
 

@@ -218,6 +218,19 @@ class EditorTest : public QObject {
         shelf.setCardPreview(0, true, composed);
         QCOMPARE(cardPreview->property("notConfigured").toBool(), false);
         QVERIFY(!cardPreview->pixmap().isNull());
+
+        // A wide stamp preview fills CARD_PREVIEW_WIDTH but must not widen the cards past a minimum-width shelf.
+        // Several cards in a short shelf bring up the vertical scroll bar, as on the real decoration shelf.
+        shelf.setCards(QList<ShelfCard>(6, stampCard), true);
+        QImage wide(900, 200, QImage::Format_ARGB32_Premultiplied);
+        wide.fill(Qt::red);
+        for (int row = 0; row < 6; ++row)
+            shelf.setCardPreview(row, true, wide);
+        shelf.resize(280, 400);
+        shelf.show();
+        QApplication::processEvents();
+        auto *scroll = shelf.findChild<QScrollArea *>("themeShelfScrollArea");
+        QCOMPARE(scroll->horizontalScrollBar()->maximum(), 0);
     }
     void resourcesAndCoreMetadata() {
         Locale locale(LOCALE_ZH_CN);
@@ -231,6 +244,8 @@ class EditorTest : public QObject {
             for (const auto &seriesId : catalog.stampSeries(as1)) {
                 auto variants = catalog.seriesVariants(as1, seriesId);
                 QVERIFY2(!variants.isEmpty(), qPrintable(seriesId));
+                // Every shipped library map has its own card description in both locales (key sets are compared).
+                QVERIFY2(locale.contains(QString("decoration.%1.description").arg(seriesId)), qPrintable(seriesId));
                 for (const auto &id : variants) {
                     const auto *stamp = catalog.stamp(as1, id);
                     QVERIFY2(stamp != nullptr, qPrintable(id));
@@ -571,6 +586,13 @@ class EditorTest : public QObject {
         window.viewport->setFocus();
         QTest::keyClick(window.viewport, Qt::Key_F7);
         QVERIFY(!window.findChild<QCheckBox *>("isDoorOpenCheck")->isChecked());
+        // F9 opens the sprite preview window; the shortcuts and language buttons have no key.
+        QTest::keyClick(window.viewport, Qt::Key_F9);
+        QVERIFY(window.findChild<QDialog *>("spritePreviewDialog")->isVisible());
+        window.findChild<QDialog *>("spritePreviewDialog")->close();
+        // The help dialog lists real commands only: no reserved placeholder keys.
+        for (const auto &binding : hotkeys::hotkeyBindings())
+            QVERIFY2(!binding.commandId.startsWith("reserved"), qPrintable(binding.commandId));
     }
     void generateAllFormats() {
         QTemporaryDir directory;

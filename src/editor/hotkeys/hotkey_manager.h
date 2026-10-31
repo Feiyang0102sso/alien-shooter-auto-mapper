@@ -14,7 +14,7 @@ class HotkeyManager {
   public:
     explicit HotkeyManager(QWidget *window);
 
-    // Register one command; throws for unknown, reserved or duplicate command ids.
+    // Register one command; throws for unknown or duplicate command ids.
     void registerCallback(const QString &commandId, std::function<void()> callback);
     // Like registerCallback, but skipped while the button is disabled or marked "unavailable".
     void bindButton(const QString &commandId, QAbstractButton *button, std::function<void()> callback);

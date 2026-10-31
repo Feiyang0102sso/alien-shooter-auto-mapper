@@ -105,7 +105,8 @@ Standard Dark 墙：
 - 控件外观（按钮、面板、标签）只写在 `resources/styles/dark_theme.qss`，不要在代码里 `setStyleSheet` 写颜色。
 - 所有可见文字经 `Locale::tr()`。固定文案用 `TextKey::` 常量；墙体、部件、装饰系列、快捷键的文案按 id 拼 key
   （如 `wall.<id>.label`、`hotkey.<command>`）。装饰物系列卡片直接显示库地图文件名，条目用 `label.stamp_region` 拼出；
-  卡片描述读 `decoration.<文件名>.description`，没写就用 `label.stamp_series_description_default`，新库地图不用配文案。
+  卡片描述读 `decoration.<文件名>.description`，没写就用 `label.stamp_series_description_default`；
+  随仓库发布的 AS1 / AS2 库地图都要写好两份 locale 的描述，`resourcesAndCoreMetadata` 测试会逐个检查。
 - `resources/i18n/en_US.json` 与 `zh_CN.json` 必须有完全相同的 key 集合，`localesShareOneKeySet` 测试会检查。
 - `catalog.json` 只放与语言无关的数据（id、预览路径、nvid 文本、部件的 `label_key`），不放文案和颜色。
 - 唯一例外：首次启动的语言选择框和“语言 language”按钮故意中英双语。
