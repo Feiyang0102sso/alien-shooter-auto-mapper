@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
 
 #include "auto_mapper/core/wall_builder/curve_wall_builder.h"
+#include "auto_mapper/core/wall_builder/wall_builder.h"
 
 #include <cmath>
 #include <numbers>
+#include <set>
 #include <stdexcept>
 #include <vector>
 
@@ -265,5 +267,126 @@ TEST(CurveWallBuilderTest, CliffFaceFollowsTheDrawingDirection) {
     // 2000 long, 200 inside each end: 1600 / 185 -> 9 gaps, 10 pieces.
     EXPECT_EQ(eastward.size(), 10u);
     EXPECT_NEAR(eastward.front().posX, 200.0f, 1.0f);
+}
+
+namespace {
+
+// Floor sprites of one VID among everything a WallBuilder returned.
+std::vector<auto_mapper::io::Sprite> tiles_of(const std::vector<auto_mapper::io::Sprite> &sprites, int vid) {
+    std::vector<auto_mapper::io::Sprite> tiles;
+    for (const auto &sprite : sprites) {
+        if (sprite.vid == vid)
+            tiles.push_back(sprite);
+    }
+    return tiles;
+}
+
+// Inside the isometric ellipse of closed_circle(), grown by `margin` on the ground.
+bool inside_circle(const auto_mapper::io::Sprite &tile, float radius, float margin) {
+    float dx = (tile.posX - 1000.0f) / (radius + margin);
+    float dy = (tile.posY - 1000.0f) / ((radius + margin) * 0.7f);
+    return dx * dx + dy * dy <= 1.0f;
+}
+
+} // namespace
+
+TEST(CurveWallFloorTest, ClosedLoopsFillTheirInsideWithTheirFloor) {
+    struct Case {
+        int type;
+        int vid;
+        float step_x;
+        float step_y;
+    };
+    const Case cases[] = {{CURVE_WALL_TYPE_ROCK, 1121, 80.0f, 56.0f},
+                          {CURVE_WALL_TYPE_ALIEN_NEST, 510, 132.0f, 94.0f},
+                          {CURVE_WALL_TYPE_CLIFF, 512, 132.0f, 94.0f}};
+    for (const Case &test_case : cases) {
+        auto_mapper::core::WallBuilder builder(3000.0f, 3000.0f);
+        auto sprites = builder.build({}, true, false, {}, {closed_circle(test_case.type, 600, 12)});
+        auto tiles = tiles_of(sprites, test_case.vid);
+        // Nothing but floor tiles: the loop pieces come from build_curve_wall(), not from here.
+        EXPECT_EQ(tiles.size(), sprites.size()) << test_case.vid;
+        // The loop encloses pi * 600 * 420 Map units; one tile covers 2 * step_x * step_y.
+        float expected = std::numbers::pi_v<float> * 600.0f * 420.0f / (2.0f * test_case.step_x * test_case.step_y);
+        EXPECT_GT(tiles.size(), expected * 0.7f) << test_case.vid;
+        EXPECT_LT(tiles.size(), expected * 1.6f) << test_case.vid;
+        for (const auto &tile : tiles) {
+            EXPECT_TRUE(inside_circle(tile, 600.0f, test_case.step_x)) << test_case.vid;
+            EXPECT_EQ(tile.army, 0);
+            // Direction Randomization is off: every tile keeps the default direction.
+            EXPECT_EQ(tile.direction, 0u);
+        }
+    }
+}
+
+TEST(CurveWallFloorTest, OpenCurvesLayNoFloor) {
+    auto_mapper::core::WallBuilder builder(3000.0f, 3000.0f);
+    EXPECT_TRUE(builder.build({}, true, false, {}, {open_line(CURVE_WALL_TYPE_CLIFF, {200, 500}, {2600, 900})}).empty());
+    // Floors off: a loop lays nothing either.
+    EXPECT_TRUE(builder.build({}, false, false, {}, {closed_circle(CURVE_WALL_TYPE_ROCK, 600, 12)}).empty());
+}
+
+TEST(CurveWallFloorTest, RandomizedFloorsFollowTheirDirectionRules) {
+    auto_mapper::core::WallBuilder builder(3000.0f, 3000.0f, true);
+    auto rock = tiles_of(builder.build({}, true, false, {}, {closed_circle(CURVE_WALL_TYPE_ROCK, 600, 12)}), 1121);
+    ASSERT_FALSE(rock.empty());
+    std::set<uint32_t> rock_directions;
+    for (const auto &tile : rock) {
+        rock_directions.insert(tile.direction);
+        // Same six values as Wall Set 3 / 4.
+        EXPECT_TRUE(std::set<uint32_t>({0, 32, 128, 160, 192, 224}).contains(tile.direction)) << tile.direction;
+    }
+    EXPECT_GT(rock_directions.size(), 1u);
+    auto nest = tiles_of(builder.build({}, true, false, {}, {closed_circle(CURVE_WALL_TYPE_ALIEN_NEST, 900, 12)}), 510);
+    std::set<uint32_t> nest_directions;
+    for (const auto &tile : nest)
+        nest_directions.insert(tile.direction);
+    // 0 .. 255 at random: far more than six distinct values.
+    EXPECT_GT(nest_directions.size(), 6u);
+}
+
+TEST(CurveWallFloorTest, RoomInsideARockLoopKeepsItsOwnFloor) {
+    using auto_mapper::core::GridPoint;
+    using auto_mapper::core::Segment;
+    const int wall_type = auto_mapper::core::WALL_TYPE_AS2_WALL_SET1_FIXED_0;
+    std::vector<Segment> room;
+    GridPoint corners[4] = {{6, 6}, {12, 6}, {12, 11}, {6, 11}};
+    for (int index = 0; index < 4; ++index)
+        room.push_back({corners[index], corners[(index + 1) % 4], wall_type, 0});
+
+    auto_mapper::core::WallBuilder builder(3000.0f, 3000.0f);
+    const auto &profile = auto_mapper::core::WallBuilder::get_wall_profile(wall_type);
+    MapPoint shift = auto_mapper::core::WallBuilder::get_wall_shift(3000.0f, profile);
+    MapPoint top = auto_mapper::core::to_iso(corners[0], profile.step_x, profile.step_y, shift);
+    MapPoint right = auto_mapper::core::to_iso(corners[1], profile.step_x, profile.step_y, shift);
+    MapPoint bottom = auto_mapper::core::to_iso(corners[2], profile.step_x, profile.step_y, shift);
+    MapPoint left = auto_mapper::core::to_iso(corners[3], profile.step_x, profile.step_y, shift);
+    // A loop 300 Map units outside every room corner.
+    CurveWall loop;
+    loop.curve_wall_type = CURVE_WALL_TYPE_ROCK;
+    loop.closed = true;
+    loop.points = {{top.x, top.y - 300}, {right.x + 300, right.y}, {bottom.x, bottom.y + 300}, {left.x - 300, left.y}};
+
+    auto sprites = builder.build(room, true, false, {}, {loop});
+    auto rock_floor = tiles_of(sprites, 1121);
+    auto room_floor = tiles_of(sprites, 1783);
+    ASSERT_FALSE(rock_floor.empty());
+    ASSERT_FALSE(room_floor.empty());
+    // Room floor stays near the room (tiles touching the wall band may poke one tile out, as for any grid
+    // room); the rock floor fills the 300-wide ring and never the room middle.
+    float middle_x = (left.x + right.x) / 2.0f;
+    float middle_y = (top.y + bottom.y) / 2.0f;
+    float half_width = (right.x - left.x) / 2.0f;
+    float half_height = (bottom.y - top.y) / 2.0f;
+    for (const auto &tile : room_floor) {
+        float dx = std::abs(tile.posX - middle_x) / (half_width + 160.0f);
+        float dy = std::abs(tile.posY - middle_y) / (half_height + 112.0f);
+        EXPECT_LE(dx + dy, 1.0f) << tile.posX << ", " << tile.posY;
+    }
+    for (const auto &tile : rock_floor) {
+        float dx = std::abs(tile.posX - middle_x) / half_width;
+        float dy = std::abs(tile.posY - middle_y) / half_height;
+        EXPECT_GT(dx + dy, 0.6f) << tile.posX << ", " << tile.posY;
+    }
 }
 

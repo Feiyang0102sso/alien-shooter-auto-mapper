@@ -1444,4 +1444,36 @@ inline constexpr FloorProfile FLOOR_AS2_SET9 = {
     .direction_randomization = AS2_SIX_DIRECTION_RANDOMIZATION
 };
 
+// ---------------------------------------------------------------------------
+// Curve Wall floors: laid only inside areas the curves enclose (with or without grid walls).
+// Floor type ids start at 100 so they never collide with wall type numbers.
+// ---------------------------------------------------------------------------
+
+// Rock (2670) -> VID 1121, the same profile as Wall Set 3 / 4.
+inline constexpr int FLOOR_TYPE_CURVE_ROCK = 100;
+inline constexpr FloorProfile FLOOR_CURVE_ROCK = FLOOR_AS2_SET3;
+
+// Alien nest (2700) -> VID 510 "TERRAIN:Alien", dir 0-255.
+// Official maps (AS2R Level_14 / 15, Level_07 / 08) lay it on a 132 x 94 grid.
+inline constexpr int FLOOR_TYPE_CURVE_ALIEN_NEST = 101;
+inline constexpr FloorProfile FLOOR_CURVE_ALIEN_NEST = {
+    .vid = 510,
+    .step_x = 132.0f,
+    .step_y = 94.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1,
+    .direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
+};
+
+// Cliff (3300) -> VID 512 "TERRAIN:OUTSIDE", dir 0-255, also on a 132 x 94 grid (AS2R Level_12).
+inline constexpr int FLOOR_TYPE_CURVE_CLIFF = 102;
+inline constexpr FloorProfile FLOOR_CURVE_CLIFF = {
+    .vid = 512,
+    .step_x = 132.0f,
+    .step_y = 94.0f,
+    .pos_z = 0.0f,
+    .grid_divisor = 1,
+    .direction_randomization = FULL_RANGE_DIRECTION_RANDOMIZATION
+};
+
 } // namespace auto_mapper::core

@@ -84,6 +84,9 @@ inline constexpr VidArmy AS2_VID_1732_ARMY = 0;
 inline constexpr VidArmy AS2_VID_2670_ARMY = 2;
 inline constexpr VidArmy AS2_VID_2700_ARMY = 2;
 inline constexpr VidArmy AS2_VID_3300_ARMY = 0;
+// Curve Wall floors (1121 is listed with Wall Set 3 / 4)
+inline constexpr VidArmy AS2_VID_510_ARMY = 0;
+inline constexpr VidArmy AS2_VID_512_ARMY = 0;
 
 // Decoration assets
 inline constexpr VidArmy AS2_VID_407_ARMY = 2;
@@ -326,6 +329,8 @@ inline VidArmy get_as2_vid_army(int vid) {
         case 2670: return AS2_VID_2670_ARMY;
         case 2700: return AS2_VID_2700_ARMY;
         case 3300: return AS2_VID_3300_ARMY;
+        case 510: return AS2_VID_510_ARMY;
+        case 512: return AS2_VID_512_ARMY;
 
         // Decoration assets
         case 407: return AS2_VID_407_ARMY;

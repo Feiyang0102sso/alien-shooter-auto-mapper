@@ -34,14 +34,17 @@ constexpr float DUPLICATE_POINT_DISTANCE = 0.5f;
 // 2670: its broad face shows at frame 0, so the tangent maps straight to the direction.
 // End reach: solid pixels span -132 .. +119 along a horizontal run, and reach 83 .. 96 below the
 // anchor on a vertical run (/ 0.7 -> 119 .. 137 on the ground).
-constexpr CurveWallProfile ROCK_PROFILE = {2670, AS2_VID_2670_ARMY, 110.0f, 0.0f, 4, 125.0f, false};
+constexpr CurveWallProfile ROCK_PROFILE = {2670, AS2_VID_2670_ARMY, 110.0f, 0.0f, 4, 125.0f, false,
+                                           FLOOR_TYPE_CURVE_ROCK};
 // 2700: its broad faces sit about 3 frames later than 2670's; official maps put it 27 degrees back.
 // End reach: -170 .. +136 / -137 .. +172 horizontally, 94 .. 121 below the anchor vertically (134 .. 173).
-constexpr CurveWallProfile ALIEN_NEST_PROFILE = {2700, AS2_VID_2700_ARMY, 130.0f, -27.0f, 4, 155.0f, false};
+constexpr CurveWallProfile ALIEN_NEST_PROFILE = {2700, AS2_VID_2700_ARMY, 130.0f, -27.0f, 4, 155.0f, false,
+                                                 FLOOR_TYPE_CURVE_ALIEN_NEST};
 // 3300 (16 directions): every official chain keeps one face, at +40 units (+56 degrees) from its tangent
 // in walking order, so the drawing direction picks the side and directions are not folded by half a turn.
 // Gaps cluster at 170 .. 200; solid pixels span about -200 .. +200 along a horizontal run.
-constexpr CurveWallProfile CLIFF_PROFILE = {3300, AS2_VID_3300_ARMY, 185.0f, 56.0f, 4, 200.0f, true};
+constexpr CurveWallProfile CLIFF_PROFILE = {3300, AS2_VID_3300_ARMY, 185.0f, 56.0f, 4, 200.0f, true,
+                                            FLOOR_TYPE_CURVE_CLIFF};
 
 float distance(const MapPoint& a, const MapPoint& b) {
     return std::hypot(b.x - a.x, b.y - a.y);

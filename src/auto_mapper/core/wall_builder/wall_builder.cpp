@@ -1024,7 +1024,11 @@ const FloorProfile& WallBuilder::get_floor_profile(int floor_type) {
         {FLOOR_TYPE_AS2_SET6_RANDOM,  FLOOR_AS2_SET6},
         {FLOOR_TYPE_AS2_SET7_RANDOM,  FLOOR_AS2_SET7},
         {FLOOR_TYPE_AS2_SET8_RANDOM,  FLOOR_AS2_SET8},
-        {FLOOR_TYPE_AS2_SET9_RANDOM,  FLOOR_AS2_SET9}
+        {FLOOR_TYPE_AS2_SET9_RANDOM,  FLOOR_AS2_SET9},
+        // Curve Wall floors
+        {FLOOR_TYPE_CURVE_ROCK,       FLOOR_CURVE_ROCK},
+        {FLOOR_TYPE_CURVE_ALIEN_NEST, FLOOR_CURVE_ALIEN_NEST},
+        {FLOOR_TYPE_CURVE_CLIFF,      FLOOR_CURVE_CLIFF}
     };
     if (profiles.find(floor_type) != profiles.end()) {
         return profiles.at(floor_type);
@@ -1265,7 +1269,8 @@ std::vector<WallBuilder::RawSprite> WallBuilder::process_wall_sprites(
     return raw_sprites;
 }
 
-WallBuilder::PhysicalGridContext WallBuilder::build_physical_grid(const std::vector<Segment>& segments) const {
+WallBuilder::PhysicalGridContext WallBuilder::build_physical_grid(const std::vector<Segment>& segments,
+                                                                  const std::vector<CurveWall>& curve_walls) const {
     int cell_size = 5;
     float min_px = 0.0f, max_px = map_size_x_;
     float min_py = 0.0f, max_py = map_size_y_;
@@ -1277,6 +1282,19 @@ WallBuilder::PhysicalGridContext WallBuilder::build_physical_grid(const std::vec
         max_px = std::max({max_px, p1.x, p2.x});
         min_py = std::min({min_py, p1.y, p2.y});
         max_py = std::max({max_py, p1.y, p2.y});
+    }
+
+    // Curve Walls are already in Map Coordinates: rasterize their smoothed paths.
+    std::vector<std::vector<MapPoint>> curve_paths;
+    for (const CurveWall& curve_wall : curve_walls) {
+        std::vector<MapPoint> path = smooth_curve_wall(curve_wall);
+        for (const MapPoint& point : path) {
+            min_px = std::min(min_px, point.x);
+            max_px = std::max(max_px, point.x);
+            min_py = std::min(min_py, point.y);
+            max_py = std::max(max_py, point.y);
+        }
+        curve_paths.push_back(path);
     }
 
     float margin = 200.0f;
@@ -1320,6 +1338,63 @@ WallBuilder::PhysicalGridContext WallBuilder::build_physical_grid(const std::vec
         }
     }
 
+    std::vector<bool> curve_line_grid(grid_w * grid_h, false);
+    for (size_t curve = 0; curve < curve_walls.size(); ++curve) {
+        if (!is_supported_curve_wall_type(curve_walls[curve].curve_wall_type)) {
+            continue;
+        }
+        int curve_floor_type = get_curve_wall_profile(curve_walls[curve].curve_wall_type).floor_type;
+        const std::vector<MapPoint>& path = curve_paths[curve];
+        for (size_t index = 1; index < path.size(); ++index) {
+            int x1 = (path[index - 1].x - min_px) / cell_size;
+            int y1 = (path[index - 1].y - min_py) / cell_size;
+            int x2 = (path[index].x - min_px) / cell_size;
+            int y2 = (path[index].y - min_py) / cell_size;
+            // Same 3-cell-wide Bresenham line as grid walls, so loops seal against the outside flood.
+            int dx = std::abs(x2 - x1);
+            int sx = 1;
+            if (x1 > x2) {
+                sx = -1;
+            }
+            int dy = -std::abs(y2 - y1);
+            int sy = 1;
+            if (y1 > y2) {
+                sy = -1;
+            }
+            int err = dx + dy;
+            while (true) {
+                for (int i = -1; i <= 1; ++i) {
+                    for (int j = -1; j <= 1; ++j) {
+                        int nx = x1 + i;
+                        int ny = y1 + j;
+                        if (nx < 0 || nx >= grid_w || ny < 0 || ny >= grid_h) {
+                            continue;
+                        }
+                        int idx = ny * grid_w + nx;
+                        // A grid wall cell keeps its own floor type.
+                        if (!physical_grid[idx]) {
+                            physical_floor_type[idx] = curve_floor_type;
+                            curve_line_grid[idx] = true;
+                        }
+                        physical_grid[idx] = true;
+                    }
+                }
+                if (x1 == x2 && y1 == y2) {
+                    break;
+                }
+                int e2 = 2 * err;
+                if (e2 >= dy) {
+                    err += dy;
+                    x1 += sx;
+                }
+                if (e2 <= dx) {
+                    err += dx;
+                    y1 += sy;
+                }
+            }
+        }
+    }
+
     std::vector<bool> outside_grid(grid_w * grid_h, false);
     std::vector<std::pair<int, int>> q;
     q.push_back({0, 0});
@@ -1342,9 +1417,40 @@ WallBuilder::PhysicalGridContext WallBuilder::build_physical_grid(const std::vec
     }
 
     std::vector<int> floor_type_grid(grid_w * grid_h, -1);
+
+    // Pass 1: every open area a Curve Wall touches takes the nearest curve's floor, even where grid
+    // walls also bound it, so a rock loop around a room floors the whole ring with rock.
+    // Grid wall cells stop this flood; the rooms they enclose keep their own floor.
+    std::vector<std::pair<int, int>> curve_queue;
+    for (int i = 0; i < grid_w * grid_h; ++i) {
+        if (curve_line_grid[i]) {
+            floor_type_grid[i] = physical_floor_type[i];
+            curve_queue.push_back({i % grid_w, i / grid_w});
+        }
+    }
+    size_t curve_head = 0;
+    while (curve_head < curve_queue.size()) {
+        auto [cx, cy] = curve_queue[curve_head++];
+        int ft = floor_type_grid[cy * grid_w + cx];
+        int neighbors[4][2] = {{cx + 1, cy}, {cx - 1, cy}, {cx, cy + 1}, {cx, cy - 1}};
+        for (auto& n : neighbors) {
+            int nx = n[0];
+            int ny = n[1];
+            if (nx < 0 || nx >= grid_w || ny < 0 || ny >= grid_h) {
+                continue;
+            }
+            int idx = ny * grid_w + nx;
+            if (!outside_grid[idx] && !physical_grid[idx] && floor_type_grid[idx] == -1) {
+                floor_type_grid[idx] = ft;
+                curve_queue.push_back({nx, ny});
+            }
+        }
+    }
+
+    // Pass 2: grid walls fill what is left with the nearest wall's floor.
     std::vector<std::pair<int, int>> fq;
     for (int i = 0; i < grid_w * grid_h; ++i) {
-        if (physical_grid[i] && physical_floor_type[i] != -1) {
+        if (physical_grid[i] && physical_floor_type[i] != -1 && !curve_line_grid[i]) {
             floor_type_grid[i] = physical_floor_type[i];
             fq.push_back({i % grid_w, i / grid_w});
         }
@@ -1367,10 +1473,13 @@ WallBuilder::PhysicalGridContext WallBuilder::build_physical_grid(const std::vec
         }
     }
 
-    return PhysicalGridContext{grid_w, grid_h, min_px, min_py, std::move(physical_grid), std::move(outside_grid), std::move(floor_type_grid)};
+    return PhysicalGridContext{grid_w, grid_h, min_px, min_py, std::move(physical_grid), std::move(outside_grid),
+                               std::move(floor_type_grid), std::move(curve_line_grid)};
 }
 
-std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const {
+std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& segments,
+                                                  const std::vector<CurveWall>& curve_walls,
+                                                  const PhysicalGridContext& grid_ctx) const {
     std::vector<io::Sprite> floor_sprites;
     int cell_size = 5;
 
@@ -1383,6 +1492,14 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
         b_max_px = std::max({b_max_px, p1.x, p2.x});
         b_min_py = std::min({b_min_py, p1.y, p2.y});
         b_max_py = std::max({b_max_py, p1.y, p2.y});
+    }
+    for (const CurveWall& curve_wall : curve_walls) {
+        for (const MapPoint& point : curve_wall.points) {
+            b_min_px = std::min(b_min_px, point.x);
+            b_max_px = std::max(b_max_px, point.x);
+            b_min_py = std::min(b_min_py, point.y);
+            b_max_py = std::max(b_max_py, point.y);
+        }
     }
     b_min_px -= 200.0f; b_max_px += 200.0f;
     b_min_py -= 200.0f; b_max_py += 200.0f;
@@ -1407,7 +1524,11 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
         FLOOR_TYPE_AS2_SET6_RANDOM,
         FLOOR_TYPE_AS2_SET7_RANDOM,
         FLOOR_TYPE_AS2_SET8_RANDOM,
-        FLOOR_TYPE_AS2_SET9_RANDOM
+        FLOOR_TYPE_AS2_SET9_RANDOM,
+        // Curve Wall floors
+        FLOOR_TYPE_CURVE_ROCK,
+        FLOOR_TYPE_CURVE_ALIEN_NEST,
+        FLOOR_TYPE_CURVE_CLIFF
     };
     for (int ft : floor_types) {
         const FloorProfile& f_prof = get_floor_profile(ft);
@@ -1442,6 +1563,10 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
             if (grid_ctx.outside_grid[grid_index]) {
                 return false;
             }
+            // Curve Wall lines are boundaries only; enclosed cells next to them still count.
+            if (grid_ctx.curve_line_grid[grid_index]) {
+                return false;
+            }
 
             int cell_ft = grid_ctx.floor_type_grid[grid_index];
             if (cell_ft == -1) {
@@ -1471,7 +1596,9 @@ std::vector<io::Sprite> WallBuilder::place_floors(const std::vector<Segment>& se
 
                 if (should_place_floor) {
                     io::Sprite floor_sprite = place_single_floor_celling(gx, gy, f_prof.vid, f_prof.step_x, f_prof.step_y, f_prof.pos_z, f_prof.grid_divisor);
-                    if (is_as2_wall_set_type(ft)) {
+                    bool curve_floor = ft == FLOOR_TYPE_CURVE_ROCK || ft == FLOOR_TYPE_CURVE_ALIEN_NEST ||
+                                       ft == FLOOR_TYPE_CURVE_CLIFF;
+                    if (is_as2_wall_set_type(ft) || curve_floor) {
                         floor_sprite.army = get_as2_vid_army(f_prof.vid);
                     }
                     floor_sprite.gamma = f_prof.gamma;
@@ -3291,9 +3418,17 @@ std::vector<io::Sprite> WallBuilder::build(
     const std::vector<Segment>& segments, 
     bool gen_floor, 
     bool gen_ceiling,
-    const std::vector<DoorExcavation>& excavations
+    const std::vector<DoorExcavation>& excavations,
+    const std::vector<CurveWall>& curve_walls
 ) const {
-    if (segments.empty()) return {};
+    if (segments.empty()) {
+        // No grid walls: only the floors that Curve Walls enclose, if any were asked for.
+        if (!gen_floor || curve_walls.empty()) {
+            return {};
+        }
+        PhysicalGridContext grid_ctx = build_physical_grid(segments, curve_walls);
+        return place_floors(segments, curve_walls, grid_ctx);
+    }
 
     // 1. wall and  pillar (generate fully first)
     std::vector<RawSprite> raw_sprites = process_wall_sprites(segments, {});
@@ -3351,8 +3486,8 @@ std::vector<io::Sprite> WallBuilder::build(
 
     // 2. Build the physical grid only when floor generation needs it.
     if (gen_floor) {
-        PhysicalGridContext grid_ctx = build_physical_grid(segments);
-        floor_sprites = place_floors(segments, grid_ctx);
+        PhysicalGridContext grid_ctx = build_physical_grid(segments, curve_walls);
+        floor_sprites = place_floors(segments, curve_walls, grid_ctx);
     }
 
     // 3. Wall-aligned ceilings do not depend on the floor raster.

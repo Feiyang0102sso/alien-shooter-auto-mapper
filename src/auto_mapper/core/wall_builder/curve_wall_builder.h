@@ -15,6 +15,7 @@
 #pragma once
 
 #include "auto_mapper/core/geometry.h"
+#include "auto_mapper/core/wall_builder/wall_profiles_as2.h"
 #include "auto_mapper/core/vid_properties/vid_property_types.h"
 #include "auto_mapper/io/map_writer.h"
 #include <vector>
@@ -40,6 +41,8 @@ struct CurveWallProfile {
     // One-sided assets show a different face on each side. For the 3300 cliff the layered face is on the
     // left of the drawing direction and the cracked face on the right. Two-sided assets look alike from both sides.
     bool one_sided;
+    // Floor laid inside the areas this curve encloses (FLOOR_TYPE_CURVE_*).
+    int floor_type;
 };
 
 /**

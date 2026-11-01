@@ -6,6 +6,7 @@
 #pragma once
 
 #include "auto_mapper/core/geometry.h"
+#include "auto_mapper/core/wall_builder/curve_wall_builder.h"
 #include "auto_mapper/core/wall_builder/wall_profile_types.h"
 #include "auto_mapper/core/wall_builder/ceiling_profiles_as1.h"
 #include "auto_mapper/core/wall_builder/wall_profiles_as1.h"
@@ -77,11 +78,14 @@ public:
 
     // Core pipeline: Group by wall_type -> Rasterize per group ->
     // Intersection check -> Z-Order sort -> Apply shift -> Generate sprites.
+    // `curve_walls` only bound floors here (their pieces come from build_curve_wall()):
+    // areas they enclose, alone or with grid walls, get the curve's floor.
     std::vector<io::Sprite> build(
         const std::vector<Segment>& segments,
         bool gen_floor = true,
         bool gen_ceiling = true,
-        const std::vector<DoorExcavation>& excavations = {}
+        const std::vector<DoorExcavation>& excavations = {},
+        const std::vector<CurveWall>& curve_walls = {}
     ) const;
 
     // Place a single tile/wall sprite at logical grid coordinates
@@ -135,6 +139,9 @@ private:
         std::vector<bool> physical_grid;
         std::vector<bool> outside_grid;
         std::vector<int> floor_type_grid;
+        // Cells on a Curve Wall line. They bound areas but never take a floor themselves,
+        // so an open curve leaves no floor strip along its line.
+        std::vector<bool> curve_line_grid;
     };
 
     struct RareWallPosition {
@@ -156,8 +163,11 @@ private:
     // Helper methods for each stage
     MapPoint get_phys(int lx, int ly, int w_type) const;
     std::vector<RawSprite> process_wall_sprites(const std::vector<Segment>& segments, const std::vector<DoorExcavation>& excavations) const;
-    PhysicalGridContext build_physical_grid(const std::vector<Segment>& segments) const;
-    std::vector<io::Sprite> place_floors(const std::vector<Segment>& segments, const PhysicalGridContext& grid_ctx) const;
+    PhysicalGridContext build_physical_grid(const std::vector<Segment>& segments,
+                                            const std::vector<CurveWall>& curve_walls) const;
+    std::vector<io::Sprite> place_floors(const std::vector<Segment>& segments,
+                                         const std::vector<CurveWall>& curve_walls,
+                                         const PhysicalGridContext& grid_ctx) const;
     std::vector<io::Sprite> place_ceilings(const std::vector<Segment>& segments) const;
     std::vector<io::Sprite> place_wall_aligned_ceiling_curtains(const std::vector<Segment>& segments) const;
     // Legacy Wide Ceiling Curtain strategy. It detects narrow recesses, groups

@@ -144,6 +144,7 @@ Curve Wall relationships:
 - A Curve Wall is open, or closed into a loop.
 - Direction Randomization adds a small jitter around each piece's tangent direction; without it the output is deterministic.
 - AS1 has no Curve Wall assets.
+- With floors enabled, an area a Curve Wall encloses (alone or together with grid walls) takes that curve's floor: 1121 for rock, 510 for the alien nest, 512 for the cliff. Rooms enclosed by grid walls keep their own floor, and an open Curve Wall lays none.
 - A one-sided Curve Wall (the cliff) shows its layered face on the left of the drawing direction and its cracked face on the right; drawing the same curve the other way swaps them.
 
 ## Wall Set

@@ -89,10 +89,16 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
         excavations.push_back({door.pos, door.direction_type, excavation_size, door.wall_type});
     }
 
-    // 1. Build walls with excavations
+    // AS1 has no Curve Wall assets, so its curve walls neither place pieces nor bound floors.
+    std::vector<CurveWall> curve_walls;
+    if (request.format != io::MapFormat::AS1) {
+        curve_walls = request.curve_walls;
+    }
+
+    // 1. Build walls with excavations; Curve Walls bound the floors too.
     WallBuilder wall_builder(request.map_size_x, request.map_size_y, request.random_direction, request.as1_ceiling_layers);
-    std::vector<io::Sprite> sprites =
-        wall_builder.build(request.segments, request.generate_floor, request.generate_ceiling, excavations);
+    std::vector<io::Sprite> sprites = wall_builder.build(request.segments, request.generate_floor,
+                                                         request.generate_ceiling, excavations, curve_walls);
 
     // 1b. Build curve walls; their Map Coordinates need no wall shift.
     if (request.format == io::MapFormat::AS1 && !request.curve_walls.empty()) {
