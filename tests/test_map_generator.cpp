@@ -132,3 +132,30 @@ TEST(MapGeneratorTest, As1StampsWriteAs1SpriteRecords) {
     uint32_t spr_info_size = read_generator_test_uint32(data, spr + 20);
     EXPECT_EQ((spr_info_size - 4) / 28, 12u);
 }
+
+TEST(MapGeneratorTest, CurveWallsWriteAs2PiecesAndSkipAs1) {
+    auto_mapper::core::CurveWall wall;
+    wall.curve_wall_type = auto_mapper::core::CURVE_WALL_TYPE_ROCK;
+    wall.points = {{100.0f, 200.0f}, {1200.0f, 200.0f}};
+
+    MapRequest request = empty_request(MapFormat::AS2R);
+    request.curve_walls.push_back(wall);
+    std::string output_file = get_test_output_path("curve_wall_generator_output.map");
+    ASSERT_TRUE(auto_mapper::core::generate_map(request, output_file));
+
+    // 1100 long, end pieces 125 inside -> 9 pieces of 2670, one 48-byte SPR record each.
+    std::vector<uint8_t> data = load_generator_test_binary(output_file);
+    std::vector<uint8_t> tag = {'S', 'P', 'R', ' '};
+    auto found = std::search(data.begin(), data.end(), tag.begin(), tag.end());
+    ASSERT_NE(found, data.end());
+    std::size_t spr = static_cast<std::size_t>(found - data.begin());
+    uint32_t spr_info_size = read_generator_test_uint32(data, spr + 20);
+    EXPECT_EQ((spr_info_size - 4) / 48, 9u);
+
+    // AS1 has no 2670 / 2700: the curve wall is skipped and the map stays empty.
+    request = empty_request(MapFormat::AS1);
+    request.curve_walls.push_back(wall);
+    output_file = get_test_output_path("curve_wall_as1_generator_output.map");
+    ASSERT_TRUE(auto_mapper::core::generate_map(request, output_file));
+    EXPECT_EQ(load_generator_test_binary(output_file).size(), auto_mapper::io::templates::AS1_EMPTY_SIZE);
+}

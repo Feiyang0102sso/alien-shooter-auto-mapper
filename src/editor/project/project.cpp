@@ -79,7 +79,7 @@ bool Project::isAS1() const {
     return version == PROJECT_VERSION_AS1;
 }
 bool Project::empty() const {
-    return segments.empty() && doors.empty() && decorations.empty();
+    return segments.empty() && doors.empty() && curveWalls.empty() && decorations.empty();
 }
 
 auto_mapper::io::MapFormat Project::mapFormat() const {
@@ -97,7 +97,7 @@ auto_mapper::io::MapFormat Project::mapFormat() const {
 }
 
 QJsonObject Project::toJson() const {
-    QJsonArray walls, doorItems, decorationItems;
+    QJsonArray walls, doorItems, curveWallItems, decorationItems;
     for (const auto &segment : segments) {
         walls.append(QJsonObject{{"start", point(segment.start.x, segment.start.y)},
                                  {"end", point(segment.end.x, segment.end.y)},
@@ -112,6 +112,14 @@ QJsonObject Project::toJson() const {
                                      {"door_state", door.door_state},
                                      {"light_state", door.light_state},
                                      {"z_offset", door.z_offset}});
+    }
+    for (const auto &curveWall : curveWalls) {
+        QJsonArray points;
+        for (const auto &controlPoint : curveWall.points)
+            points.append(point(controlPoint.x, controlPoint.y));
+        curveWallItems.append(QJsonObject{{"curve_wall_type", curveWall.curve_wall_type},
+                                          {"closed", curveWall.closed},
+                                          {"points", points}});
     }
     for (const auto &decoration : decorations) {
         QJsonObject item{{"type", decoration.type}};
@@ -129,6 +137,9 @@ QJsonObject Project::toJson() const {
     }
     QJsonObject result{{"version", version}, {"map_size_x", width}, {"map_size_y", height},
                        {"segments", walls},  {"doors", doorItems},  {"decorations", decorationItems}};
+    // Older readers ignore unknown keys, so the key is only written when there is something to keep.
+    if (!curveWalls.empty())
+        result["curve_walls"] = curveWallItems;
     if (isAS1()) {
         result["is_door_open"] = doorsOpen;
         if (standardLayers > 0)
@@ -196,6 +207,25 @@ Project Project::fromJson(const QJsonObject &obj) {
             fail("Invalid door.");
         result.doors.push_back(door);
     }
+    for (const auto &value : arrayValue(obj.value("curve_walls"))) {
+        auto item = objectValue(value);
+        CurveWall curveWall;
+        curveWall.curve_wall_type = integer(item, "curve_wall_type");
+        curveWall.closed = item.value("closed").toBool(false);
+        for (const auto &pointValue : arrayValue(item.value("points"))) {
+            auto controlPoint = objectValue(pointValue);
+            curveWall.points.push_back({static_cast<float>(number(controlPoint, "x")),
+                                        static_cast<float>(number(controlPoint, "y"))});
+        }
+        if (!auto_mapper::core::is_supported_curve_wall_type(curveWall.curve_wall_type))
+            fail("Unsupported curve wall type.");
+        if (curveWall.points.size() < 2)
+            fail("A curve wall needs at least two points.");
+        // AS1 has no 2670 / 2700 assets.
+        if (result.isAS1())
+            fail("Curve walls need an AS2 Series project.");
+        result.curveWalls.push_back(curveWall);
+    }
     for (const auto &value : arrayValue(obj.value("decorations"))) {
         auto item = objectValue(value);
         Decoration decoration;
@@ -240,7 +270,8 @@ Project Project::load(const QString &path) {
     if (!document.isObject())
         fail("Project JSON root must be an object.");
     Project project = fromJson(document.object());
-    qInfo() << "Project loaded:" << path << "segments" << project.segments.size() << "doors" << project.doors.size();
+    qInfo() << "Project loaded:" << path << "segments" << project.segments.size() << "doors" << project.doors.size()
+            << "curve walls" << project.curveWalls.size();
     return project;
 }
 
@@ -271,6 +302,7 @@ bool Project::generate(const QString &path, bool floor, bool ceiling, bool rando
     request.map_size_y = static_cast<float>(height);
     request.segments = segments;
     request.doors = doors;
+    request.curve_walls = curveWalls;
     request.generate_floor = floor;
     request.generate_ceiling = ceiling;
     request.random_direction = random;

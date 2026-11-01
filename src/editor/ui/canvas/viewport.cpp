@@ -28,12 +28,52 @@ constexpr double STAMP_PREVIEW_OPACITY = 1.0;
 constexpr double STAMP_GHOST_PREVIEW_OPACITY = 0.55;
 // Half the arm length of a stamp member placeholder cross, in Map Coordinate units (scales with zoom).
 constexpr double STAMP_PLACEHOLDER_HALF_SIZE = 12.0;
+// Freehand stroke, in screen pixels so it feels the same at every zoom:
+// sample spacing, the distance that closes a loop, the simplification tolerance, and the shortest stroke kept.
+constexpr double STROKE_MIN_STEP_PIXELS = 3.0;
+constexpr double STROKE_CLOSE_PIXELS = 14.0;
+constexpr double STROKE_TOLERANCE_PIXELS = 5.0;
+constexpr double STROKE_MIN_LENGTH_PIXELS = 10.0;
+// Wall lines in screen pixels, shared by grid walls and Curve Walls: placed walls and the pending preview.
+constexpr double WALL_LINE_WIDTH = 4.0;
+constexpr double WALL_PREVIEW_LINE_WIDTH = 3.0;
+// Curve Wall piece dots, in screen pixels.
+constexpr double CURVE_WALL_PIECE_DOT_RADIUS = 3.0;
+// Cliff-face ticks of one-sided Curve Walls, in screen pixels: spacing along the line and tick length.
+constexpr double FACE_TICK_SPACING_PIXELS = 14.0;
+constexpr double FACE_TICK_LENGTH_PIXELS = 8.0;
 // Door states shared with the core door builder.
 constexpr int DOOR_STATE_OPEN = auto_mapper::core::DOOR_STATE_OPEN;
 constexpr int LIGHT_STATE_BROKEN = auto_mapper::core::LIGHT_STATE_BROKEN;
 
 double length(const QPointF &v) {
     return std::hypot(v.x(), v.y());
+}
+
+/**
+ * Short ticks on the left of a screen polyline, like the hachures of a map cliff symbol.
+ * One-sided Curve Walls stand their face on the left of the drawing direction.
+ */
+void drawFaceTicks(QPainter &painter, const QPolygonF &screenPath, const QPen &pen) {
+    painter.setPen(pen);
+    double travelled = 0;
+    double nextTick = FACE_TICK_SPACING_PIXELS / 2;
+    for (int index = 1; index < screenPath.size(); ++index) {
+        QPointF first = screenPath[index - 1];
+        QPointF delta = screenPath[index] - first;
+        double segment = std::hypot(delta.x(), delta.y());
+        if (segment <= 0)
+            continue;
+        QPointF along = delta / segment;
+        // Screen y points down, so the left-hand side of "along" is (along.y, -along.x).
+        QPointF left(along.y(), -along.x());
+        while (nextTick <= travelled + segment) {
+            QPointF base = first + along * (nextTick - travelled);
+            painter.drawLine(base, base + left * FACE_TICK_LENGTH_PIXELS);
+            nextTick += FACE_TICK_SPACING_PIXELS;
+        }
+        travelled += segment;
+    }
 }
 
 double segmentDistance(QPointF point, QPointF first, QPointF last) {
@@ -107,10 +147,15 @@ bool Viewport::isEditing() const {
     return mode == DrawingMode::Select && !isPlacing();
 }
 
+bool Viewport::isCurveWallCard() const {
+    return curveWallType >= 0;
+}
+
 void Viewport::resetInteraction() {
     start_.reset();
     selectedGridPoint_.reset();
     arrayStart_.reset();
+    stroke_.clear();
     activeStamp.clear();
     activeArray.clear();
     // Leaving a decoration tool must restore the wall body, or wall tools draw nothing.
@@ -132,7 +177,8 @@ void Viewport::setWall(int type, const QString &partId) {
     resetInteraction();
     wallType = type;
     part = partId;
-    if (mode == DrawingMode::Select)
+    curveWallType = -1;
+    if (mode == DrawingMode::Select || mode == DrawingMode::Freehand)
         mode = DrawingMode::Polyline;
     emit modeChanged();
 }
@@ -141,6 +187,7 @@ void Viewport::armStamp(const QString &id) {
     resetInteraction();
     activeStamp = id;
     part.clear();
+    curveWallType = -1;
     mode = DrawingMode::Select;
     emit modeChanged();
 }
@@ -149,13 +196,26 @@ void Viewport::armArray(const QString &type) {
     resetInteraction();
     activeArray = type;
     part.clear();
+    curveWallType = -1;
     mode = DrawingMode::Rectangle;
+    emit modeChanged();
+}
+
+void Viewport::armCurveWall(int type) {
+    resetInteraction();
+    curveWallType = type;
+    // The card offers Freehand and Eraser only; keep the eraser if it is already in hand.
+    if (mode != DrawingMode::Eraser)
+        mode = DrawingMode::Freehand;
     emit modeChanged();
 }
 
 void Viewport::cancel() {
     if (arrayStart_) {
         arrayStart_.reset();
+    } else if (!stroke_.empty()) {
+        stroke_.clear();
+        emit drawingCancelled();
     } else if (isPlacing()) {
         setMode(DrawingMode::Select);
         qInfo() << "Decoration placing ended, select tool active";
@@ -225,6 +285,11 @@ bool Viewport::nearBounds(const QPointF &point) const {
 QPointF Viewport::clampMap(const QPointF &point) const {
     auto area = bounds(wallType);
     return {std::clamp(point.x(), area.left(), area.right()), std::clamp(point.y(), area.top(), area.bottom())};
+}
+
+double Viewport::eraserRadius() const {
+    const auto p = catalog_.wallProfile(wallType);
+    return (eraserSize - 0.5) * std::hypot(p.step_x, p.step_y);
 }
 
 QPoint Viewport::snapToGrid(const QPointF &screen) const {
@@ -570,8 +635,16 @@ void Viewport::mousePressEvent(QMouseEvent *event) {
             emit selectionChanged();
         } else if (mode == DrawingMode::Eraser) {
             erasing_ = true;
-            if (eraseAround(project_.segments, project_.doors, snapToGrid(event->position()), eraserSize, wallType))
+            bool erased = false;
+            if (isCurveWallCard())
+                erased = eraseCurveWallsAround(project_.curveWalls, physical, eraserRadius(), curveWallType);
+            else
+                erased = eraseAround(project_.segments, project_.doors, snapToGrid(event->position()), eraserSize, wallType);
+            if (erased)
                 emit projectChanged();
+        } else if (mode == DrawingMode::Freehand) {
+            if (isCurveWallCard())
+                stroke_ = {physical};
         } else {
             wallClick(snapToGrid(event->position()));
         }
@@ -587,8 +660,18 @@ void Viewport::mouseMoveEvent(QMouseEvent *event) {
     } else if (!dragMode_.isEmpty()) {
         dragDecoration(screenToMap(event->position()));
     } else if (erasing_) {
-        if (eraseAround(project_.segments, project_.doors, snapToGrid(event->position()), eraserSize, wallType))
+        bool erased = false;
+        if (isCurveWallCard())
+            erased = eraseCurveWallsAround(project_.curveWalls, screenToMap(event->position()), eraserRadius(),
+                                           curveWallType);
+        else
+            erased = eraseAround(project_.segments, project_.doors, snapToGrid(event->position()), eraserSize, wallType);
+        if (erased)
             emit projectChanged();
+    } else if (!stroke_.empty()) {
+        QPointF physical = screenToMap(event->position());
+        if (length(physical - stroke_.back()) * zoom >= STROKE_MIN_STEP_PIXELS)
+            stroke_.push_back(physical);
     } else if (isEditing()) {
         // Hint what a press would do: move the body or resize an array edge.
         auto hit = hitDecoration(screenToMap(event->position()));
@@ -612,6 +695,8 @@ void Viewport::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         erasing_ = false;
         dragMode_.clear();
+        if (!stroke_.empty())
+            finishStroke();
     }
     update();
     event->accept();
@@ -904,6 +989,92 @@ void Viewport::drawArrayPreview(QPainter &painter, const Decoration &preview) {
     painter.drawPolygon(toScreen(decorationFrame(preview)));
 }
 
+double Viewport::strokeScreenLength(const std::vector<QPointF> &stroke) const {
+    double total = 0;
+    for (size_t index = 1; index < stroke.size(); ++index)
+        total += length(stroke[index] - stroke[index - 1]);
+    return total * zoom;
+}
+
+bool Viewport::strokeCloses(const std::vector<QPointF> &stroke) const {
+    if (stroke.size() < 2)
+        return false;
+    // A stroke that has not left its start yet cannot close: it must at least go out and come back.
+    if (strokeScreenLength(stroke) < 3 * STROKE_CLOSE_PIXELS)
+        return false;
+    return length(stroke.back() - stroke.front()) * zoom < STROKE_CLOSE_PIXELS;
+}
+
+void Viewport::finishStroke() {
+    std::vector<QPointF> stroke = stroke_;
+    stroke_.clear();
+    if (stroke.size() < 2 || strokeScreenLength(stroke) < STROKE_MIN_LENGTH_PIXELS) {
+        qInfo() << "Curve wall stroke too short, ignored";
+        return;
+    }
+
+    std::vector<auto_mapper::core::MapPoint> raw;
+    for (const QPointF &point : stroke)
+        raw.push_back({static_cast<float>(point.x()), static_cast<float>(point.y())});
+    CurveWall curveWall;
+    curveWall.curve_wall_type = curveWallType;
+    // The tolerance is fixed on screen, so a zoomed-in stroke keeps finer detail.
+    curveWall.points = auto_mapper::core::simplify_stroke(raw, static_cast<float>(STROKE_TOLERANCE_PIXELS / zoom));
+    if (strokeCloses(stroke) && curveWall.points.size() >= 4) {
+        // The last point is the stroke end next to the start; the loop joins back to the start itself.
+        curveWall.points.pop_back();
+        curveWall.closed = true;
+    }
+
+    project_.curveWalls.push_back(curveWall);
+    int pieceCount = static_cast<int>(auto_mapper::core::build_curve_wall(curveWall, false).size());
+    qInfo() << "Curve wall created: type" << curveWallType << "raw points" << stroke.size() << "control points"
+            << curveWall.points.size() << "closed" << curveWall.closed << "pieces" << pieceCount;
+    emit projectChanged();
+    emit curveWallCreated(static_cast<int>(project_.curveWalls.size()), pieceCount);
+}
+
+void Viewport::drawCurveWalls(QPainter &painter) {
+    // Curve Walls are walls: drawn as lines like grid walls, never as game sprites.
+    for (const CurveWall &curveWall : project_.curveWalls) {
+        QColor color = colors::curveWallColor(curveWall.curve_wall_type);
+        QPolygonF path;
+        for (const auto &point : auto_mapper::core::smooth_curve_wall(curveWall))
+            path << mapToScreen(QPointF(point.x, point.y));
+        painter.setPen(cosmeticPen(color, WALL_LINE_WIDTH));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPolyline(path);
+        if (auto_mapper::core::get_curve_wall_profile(curveWall.curve_wall_type).one_sided)
+            drawFaceTicks(painter, path, cosmeticPen(color, 2));
+        // Dots show where each piece lands.
+        painter.setPen(cosmeticPen(QColor(colors::CANVAS_MARKER_OUTLINE), 1));
+        painter.setBrush(color);
+        for (const auto &piece : auto_mapper::core::build_curve_wall(curveWall, false))
+            painter.drawEllipse(mapToScreen(QPointF(piece.posX, piece.posY)), CURVE_WALL_PIECE_DOT_RADIUS,
+                                CURVE_WALL_PIECE_DOT_RADIUS);
+    }
+}
+
+void Viewport::drawStroke(QPainter &painter) {
+    if (stroke_.size() < 2)
+        return;
+    QPolygonF path;
+    for (const QPointF &point : stroke_)
+        path << mapToScreen(point);
+    // Same look as the pending grid wall preview.
+    painter.setPen(cosmeticPen(QColor(colors::CANVAS_PREVIEW_SEGMENT), WALL_PREVIEW_LINE_WIDTH, Qt::DashLine));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawPolyline(path);
+    // Show the cliff face side while drawing, so the stroke direction can be chosen.
+    if (isCurveWallCard() && auto_mapper::core::get_curve_wall_profile(curveWallType).one_sided)
+        drawFaceTicks(painter, path, cosmeticPen(QColor(colors::CANVAS_PREVIEW_SEGMENT), 2));
+    if (strokeCloses(stroke_)) {
+        // Releasing here closes the loop.
+        painter.setPen(cosmeticPen(QColor(colors::CURVE_WALL_CLOSE_MARKER), 2));
+        painter.drawEllipse(mapToScreen(stroke_.front()), STROKE_CLOSE_PIXELS, STROKE_CLOSE_PIXELS);
+    }
+}
+
 void Viewport::drawDoors(QPainter &painter) {
     // The Global Door State Override only exists in AS1 projects.
     bool globalDoorsOpen = project_.isAS1() && project_.doorsOpen;
@@ -933,6 +1104,8 @@ void Viewport::drawLabels(QPainter &painter) {
         hint = locale.tr(TextKey::CANVAS_HELP_PLACING);
     if (isEditing())
         hint = locale.tr(TextKey::CANVAS_HELP_SELECTING);
+    if (mode == DrawingMode::Freehand)
+        hint = locale.tr(TextKey::CANVAS_HELP_FREEHAND);
 
     // Grid limits cover the map and anything drawn beyond it.
     auto profile = catalog_.wallProfile(wallType);
@@ -968,25 +1141,26 @@ void Viewport::paintEvent(QPaintEvent *) {
         drawDecoration(painter, project_.decorations[i], selected);
     }
     for (const auto &segment : project_.segments) {
-        painter.setPen(cosmeticPen(colors::wallColor(segment.wall_type), 4));
+        painter.setPen(cosmeticPen(colors::wallColor(segment.wall_type), WALL_LINE_WIDTH));
         QPointF start(segment.start.x, segment.start.y);
         QPointF end(segment.end.x, segment.end.y);
         painter.drawLine(mapToScreen(gridToMap(start, segment.wall_type)), mapToScreen(gridToMap(end, segment.wall_type)));
     }
+    drawCurveWalls(painter);
     drawDoors(painter);
+    drawStroke(painter);
     if (cursor_) {
         if (!activeStamp.isEmpty()) {
             drawStampGhost(painter, screenToMap(*cursor_));
         } else if (arrayStart_) {
             drawArrayPreview(painter, arrayFromPoints(*arrayStart_, clampMap(screenToMap(*cursor_))));
         } else if (mode == DrawingMode::Eraser) {
-            auto p = catalog_.wallProfile(wallType);
-            double radius = (eraserSize - 0.5) * std::hypot(p.step_x, p.step_y) * zoom;
+            double radius = eraserRadius() * zoom;
             painter.setPen(cosmeticPen(QColor(colors::ERASER_PREVIEW_COLOR), 2, Qt::DashLine));
             painter.setBrush(colors::withAlpha(colors::ERASER_PREVIEW_COLOR, colors::ERASER_PREVIEW_ALPHA));
             painter.drawEllipse(*cursor_, radius, radius);
-        } else if (!isEditing() && !isPlacing()) {
-            painter.setPen(cosmeticPen(QColor(colors::CANVAS_PREVIEW_SEGMENT), 3, Qt::DashLine));
+        } else if (!isEditing() && !isPlacing() && mode != DrawingMode::Freehand) {
+            painter.setPen(cosmeticPen(QColor(colors::CANVAS_PREVIEW_SEGMENT), WALL_PREVIEW_LINE_WIDTH, Qt::DashLine));
             painter.setBrush(Qt::NoBrush);
             for (const auto &segment : pendingSegments(snapToGrid(*cursor_))) {
                 QPointF start(segment.start.x, segment.start.y);

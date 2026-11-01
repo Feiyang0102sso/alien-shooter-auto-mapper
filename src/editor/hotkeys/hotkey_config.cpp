@@ -29,6 +29,7 @@ QList<HotkeyBinding> buildBindings() {
         {COMMAND_STRAIGHT_LINE, "2", {Qt::Key_2}, PAGE_TOOLS},
         {COMMAND_RECTANGLE, "3", {Qt::Key_3}, PAGE_TOOLS},
         {COMMAND_ERASER, "4", {Qt::Key_4}, PAGE_TOOLS},
+        {COMMAND_FREEHAND, "5", {Qt::Key_5}, PAGE_TOOLS},
         {COMMAND_DELETE_DECORATION, "Del", {Qt::Key_Delete}, PAGE_TOOLS},
     };
 

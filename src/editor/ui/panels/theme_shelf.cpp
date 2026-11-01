@@ -1,4 +1,5 @@
 #include "editor/ui/panels/theme_shelf.h"
+#include "auto_mapper/core/wall_builder/curve_wall_builder.h"
 #include <QDebug>
 #include "editor/i18n/text_keys.h"
 #include "editor/ui/colors.h"
@@ -7,6 +8,7 @@
 #include <QImage>
 #include <QLabel>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStyle>
@@ -98,6 +100,27 @@ QPixmap legendSymbol(int wallType, const QString &partId) {
     }
     painter.setPen(QPen(line, 2));
     painter.drawEllipse(dotCenter, dotRadius, dotRadius);
+    return pixmap;
+}
+
+QPixmap curveWallLegendSymbol(int curveWallType) {
+    QPixmap pixmap(LEGEND_SYMBOL_WIDTH, LEGEND_SYMBOL_HEIGHT);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    // One S bend across the same span as the straight wall line.
+    QPainterPath wave(QPointF(3, 9));
+    wave.cubicTo(QPointF(18, 1), QPointF(34, 17), QPointF(49, 9));
+    painter.setPen(QPen(colors::curveWallColor(curveWallType), 4));
+    painter.drawPath(wave);
+    if (auto_mapper::core::get_curve_wall_profile(curveWallType).one_sided) {
+        // Cliff-face ticks above the line: the face is on the left of a left-to-right stroke.
+        painter.setPen(QPen(colors::curveWallColor(curveWallType), 2));
+        for (int x = 8; x <= 44; x += 9) {
+            double y = wave.pointAtPercent((x - 3) / 46.0).y();
+            painter.drawLine(QPointF(x, y - 3), QPointF(x, y - 7));
+        }
+    }
     return pixmap;
 }
 

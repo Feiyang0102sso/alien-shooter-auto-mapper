@@ -80,6 +80,11 @@ inline constexpr VidArmy AS2_VID_1721_ARMY = 2;
 inline constexpr VidArmy AS2_VID_1731_ARMY = 0;
 inline constexpr VidArmy AS2_VID_1732_ARMY = 0;
 
+// Curve Walls (360-direction rock and alien nest pieces)
+inline constexpr VidArmy AS2_VID_2670_ARMY = 2;
+inline constexpr VidArmy AS2_VID_2700_ARMY = 2;
+inline constexpr VidArmy AS2_VID_3300_ARMY = 0;
+
 // Decoration assets
 inline constexpr VidArmy AS2_VID_407_ARMY = 2;
 inline constexpr VidArmy AS2_VID_408_ARMY = 0;
@@ -316,6 +321,11 @@ inline VidArmy get_as2_vid_army(int vid) {
         case 1721: return AS2_VID_1721_ARMY;
         case 1731: return AS2_VID_1731_ARMY;
         case 1732: return AS2_VID_1732_ARMY;
+
+        // Curve Walls
+        case 2670: return AS2_VID_2670_ARMY;
+        case 2700: return AS2_VID_2700_ARMY;
+        case 3300: return AS2_VID_3300_ARMY;
 
         // Decoration assets
         case 407: return AS2_VID_407_ARMY;

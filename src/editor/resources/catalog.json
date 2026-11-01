@@ -14,7 +14,8 @@
       10,
       11,
       12,
-      13
+      13,
+      100
     ]
   },
   "walls": [
@@ -470,6 +471,33 @@
           "label_key": "drawable.as2_door_open",
           "preview": "preview/AS2/wall_set9/wall_set9_door_open.webp",
           "nvid_text": "nvid=1731; 1732;"
+        }
+      ]
+    },
+    {
+      "id": 100,
+      "preview": "preview/AS2/curve_wall/curve_wall.webp",
+      "parts": [
+        {
+          "curve_wall_type": 0,
+          "id": "curve_wall",
+          "label_key": "drawable.curve_wall_rock",
+          "preview": "preview/AS2/curve_wall/curve_wall_rock.webp",
+          "nvid_text": "nvid=2670;"
+        },
+        {
+          "curve_wall_type": 1,
+          "id": "curve_wall",
+          "label_key": "drawable.curve_wall_alien_nest",
+          "preview": "preview/AS2/curve_wall/curve_wall_alien_nest.webp",
+          "nvid_text": "nvid=2700;"
+        },
+        {
+          "curve_wall_type": 2,
+          "id": "curve_wall",
+          "label_key": "drawable.curve_wall_cliff",
+          "preview": "preview/AS2/curve_wall/curve_wall_cliff.webp",
+          "nvid_text": "nvid=3300;"
         }
       ]
     }

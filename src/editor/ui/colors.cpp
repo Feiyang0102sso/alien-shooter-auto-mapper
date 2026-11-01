@@ -1,4 +1,5 @@
 #include "editor/ui/colors.h"
+#include "auto_mapper/core/wall_builder/curve_wall_builder.h"
 
 namespace editor::colors {
 
@@ -36,6 +37,14 @@ QColor wallColor(int wallType) {
     default:
         return QColor(WALL_PROFILE_FALLBACK);
     }
+}
+
+QColor curveWallColor(int curveWallType) {
+    if (curveWallType == auto_mapper::core::CURVE_WALL_TYPE_ALIEN_NEST)
+        return QColor(CURVE_WALL_ALIEN_NEST);
+    if (curveWallType == auto_mapper::core::CURVE_WALL_TYPE_CLIFF)
+        return QColor(CURVE_WALL_CLIFF);
+    return QColor(CURVE_WALL_ROCK);
 }
 
 } // namespace editor::colors

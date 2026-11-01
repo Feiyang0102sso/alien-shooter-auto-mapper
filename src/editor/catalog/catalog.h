@@ -16,14 +16,20 @@
 namespace editor {
 
 inline constexpr const char *PART_WALL_BODY = "wall_body";
+// Items of the Curve Wall card: drawn freehand in Map Coordinates instead of on the wall grid.
+inline constexpr const char *PART_CURVE_WALL = "curve_wall";
 
 // One selectable item inside a Wall Set card (a wall variant or a door choice).
 struct WallPart {
     int wallType = 0;
+    // Core Curve Wall type; only meaningful for PART_CURVE_WALL items.
+    int curveWallType = 0;
     QString id;
     QString labelKey;
     QString preview;
     QString nvidText;
+
+    bool isCurveWall() const { return id == PART_CURVE_WALL; }
 };
 
 // One Wall Set card. `id` is the wall type the card represents on the shelf.

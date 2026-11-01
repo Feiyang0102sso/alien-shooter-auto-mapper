@@ -74,3 +74,6 @@ ceiling-curtain-adjustment.html
 _prepare/AS2/ini/
 _prepare/AS2/_vid_army_report.txt
 _prepare/AS2/decoration/*.svg
+
+# --- local research demo (terrain curve interaction) ---
+terrain_curve_demo.html

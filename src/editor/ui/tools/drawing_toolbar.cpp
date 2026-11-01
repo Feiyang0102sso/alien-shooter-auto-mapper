@@ -25,14 +25,17 @@ DrawingToolbar::DrawingToolbar(const Locale &locale, QWidget *parent)
     // "Optional" lets placing mode leave every tool unchecked.
     group->setExclusionPolicy(QActionGroup::ExclusionPolicy::ExclusiveOptional);
 
-    // Action order matches DrawingMode values and the 0..4 hotkeys.
+    // Labels and hotkeys are indexed by DrawingMode value (hotkeys 0..5).
     const QStringList textKeys{TextKey::DRAWING_SELECT, TextKey::DRAWING_POLYLINE, TextKey::DRAWING_LINE,
-                               TextKey::DRAWING_RECT, TextKey::DRAWING_ERASER};
-    const QStringList commands{hotkeys::COMMAND_SELECT, hotkeys::COMMAND_POLYLINE,
+                               TextKey::DRAWING_RECT,   TextKey::DRAWING_ERASER,   TextKey::DRAWING_FREEHAND};
+    const QStringList commands{hotkeys::COMMAND_SELECT,    hotkeys::COMMAND_POLYLINE,
                                hotkeys::COMMAND_STRAIGHT_LINE, hotkeys::COMMAND_RECTANGLE,
-                               hotkeys::COMMAND_ERASER};
-    for (int index = 0; index < DRAWING_MODE_COUNT; ++index) {
-        DrawingMode mode = static_cast<DrawingMode>(index);
+                               hotkeys::COMMAND_ERASER,    hotkeys::COMMAND_FREEHAND};
+    // Toolbar order: Freehand draws, so it sits with the drawing tools above the Eraser separator.
+    const QList<DrawingMode> toolbarOrder{DrawingMode::Select,    DrawingMode::Polyline, DrawingMode::Straight,
+                                          DrawingMode::Rectangle, DrawingMode::Freehand, DrawingMode::Eraser};
+    for (DrawingMode mode : toolbarOrder) {
+        int index = static_cast<int>(mode);
         if (mode == DrawingMode::Eraser)
             separators_[index] = addSeparator();
         modeLabels_[index] = locale.tr(textKeys[index]);

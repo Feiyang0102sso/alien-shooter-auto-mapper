@@ -1,6 +1,6 @@
 /**
  * @file map_generator.h
- * @brief Whole-map pipeline: walls -> doors -> decorations -> .map file.
+ * @brief Whole-map pipeline: walls -> curve walls -> doors -> decorations -> .map file.
  *
  * This is the single entry point the editor calls to generate a map.
  */
@@ -11,6 +11,7 @@
 #include "auto_mapper/core/door_builder/door_builder.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
+#include "auto_mapper/core/wall_builder/curve_wall_builder.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/io/map_writer.h"
 #include <string>
@@ -30,7 +31,7 @@ struct StampPlacement {
 
 /**
  * Everything needed to generate one map. Walls and doors use Grid Coordinates;
- * decorations use Map Coordinates.
+ * Curve Walls and decorations use Map Coordinates.
  */
 struct MapRequest {
     io::MapFormat format = io::MapFormat::AS1;
@@ -38,6 +39,8 @@ struct MapRequest {
     float map_size_y = 600.0f;
     std::vector<Segment> segments;
     std::vector<DoorInstance> doors;
+    // AS2 Series only: AS1 has no 360-direction rock / alien nest pieces.
+    std::vector<CurveWall> curve_walls;
     std::vector<indoor_decorations::IncubatorArray> incubator_arrays;
     std::vector<indoor_decorations::DeskArray> desk_arrays;
     std::vector<StampPlacement> stamps;

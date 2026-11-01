@@ -26,6 +26,17 @@ int stepToward(int from, int to) {
         return -1;
     return 0;
 }
+
+// True when an eraser cut handed back `original` unchanged (the circle missed it).
+bool sameCurve(const std::vector<CurveWall> &rest, const CurveWall &original) {
+    if (rest.size() != 1 || rest[0].closed != original.closed || rest[0].points.size() != original.points.size())
+        return false;
+    for (size_t index = 0; index < original.points.size(); ++index) {
+        if (rest[0].points[index].x != original.points[index].x || rest[0].points[index].y != original.points[index].y)
+            return false;
+    }
+    return true;
+}
 } // namespace
 
 bool eraseAround(std::vector<Segment> &segments, std::vector<DoorInstance> &doors, const QPoint &center, int size,
@@ -76,6 +87,24 @@ bool eraseAround(std::vector<Segment> &segments, std::vector<DoorInstance> &door
     segments = std::move(kept);
     if (doors.size() != doorCountBefore)
         changed = true;
+    return changed;
+}
+
+bool eraseCurveWallsAround(std::vector<CurveWall> &curveWalls, const QPointF &center, double radius, int curveWallType) {
+    auto_mapper::core::MapPoint mapCenter{static_cast<float>(center.x()), static_cast<float>(center.y())};
+    std::vector<CurveWall> kept;
+    bool changed = false;
+    for (const CurveWall &curveWall : curveWalls) {
+        if (curveWall.curve_wall_type != curveWallType) {
+            kept.push_back(curveWall);
+            continue;
+        }
+        std::vector<CurveWall> rest = auto_mapper::core::erase_curve_wall_circle(curveWall, mapCenter, static_cast<float>(radius));
+        if (!sameCurve(rest, curveWall))
+            changed = true;
+        kept.insert(kept.end(), rest.begin(), rest.end());
+    }
+    curveWalls = kept;
     return changed;
 }
 

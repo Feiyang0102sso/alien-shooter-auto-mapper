@@ -10,6 +10,8 @@
 #include <QtTest>
 #include <QtWidgets>
 #include <QTemporaryDir>
+#include <cmath>
+#include <numbers>
 
 using namespace editor;
 
@@ -267,7 +269,10 @@ class EditorTest : public QObject {
                 WallSet wall = catalog.wallSet(setId);
                 QVERIFY2(!QPixmap(catalog.imagePath(wall.preview)).isNull(), qPrintable(wall.preview));
                 for (const auto &part : wall.parts) {
-                    QVERIFY2(catalog.wallTypes().contains(part.wallType), qPrintable(part.id));
+                    if (part.isCurveWall())
+                        QVERIFY2(auto_mapper::core::is_supported_curve_wall_type(part.curveWallType), qPrintable(part.id));
+                    else
+                        QVERIFY2(catalog.wallTypes().contains(part.wallType), qPrintable(part.id));
                     QVERIFY2(!QPixmap(catalog.imagePath(part.preview)).isNull(), qPrintable(part.preview));
                 }
             }
@@ -514,6 +519,140 @@ class EditorTest : public QObject {
                 ++dark;
         QCOMPARE(dark, 1);
         QCOMPARE(project.decorations.size(), size_t(1));
+    }
+    void curveWallFreehandAndEraser() {
+        using auto_mapper::core::CURVE_WALL_TYPE_ALIEN_NEST;
+        using auto_mapper::core::CURVE_WALL_TYPE_ROCK;
+        MainWindow window(LOCALE_EN_US);
+        window.resize(1400, 900);
+        window.show();
+        QApplication::processEvents();
+        window.replaceProject(Project::createEmpty(PROJECT_VERSION_AS2R));
+        auto *shelf = window.findChild<ThemeShelfPanel *>("setShelf");
+        auto *freehand = window.findChild<QAction *>("drawingMode5");
+        auto *polyline = window.findChild<QAction *>("drawingMode1");
+        QVERIFY(freehand && polyline);
+        QVERIFY(!freehand->isVisible());
+
+        // The Curve Wall card is the last AS2 wall card: it swaps the grid tools for Freehand.
+        int curveCard = window.catalog.wallSetOrder(false).size() - 1;
+        shelf->setCurrentRow(curveCard);
+        QVERIFY(window.viewport->isCurveWallCard());
+        QCOMPARE(window.viewport->curveWallType, CURVE_WALL_TYPE_ROCK);
+        QCOMPARE(window.viewport->mode, DrawingMode::Freehand);
+        QVERIFY(freehand->isVisible());
+        QVERIFY(!polyline->isVisible());
+        window.activateMode(DrawingMode::Polyline);
+        QCOMPARE(window.viewport->mode, DrawingMode::Freehand);
+
+        // A loop that ends back on its start closes; a plain drag stays open.
+        Viewport *canvas = window.viewport;
+        QPoint center = canvas->rect().center();
+        QPoint start = center + QPoint(120, 0);
+        QTest::mousePress(canvas, Qt::LeftButton, {}, start);
+        for (int step = 1; step < 24; ++step) {
+            double angle = 2 * std::numbers::pi * step / 24;
+            QTest::mouseMove(canvas, center + QPoint(int(120 * std::cos(angle)), int(80 * std::sin(angle))));
+        }
+        QTest::mouseMove(canvas, start + QPoint(3, -2));
+        QTest::mouseRelease(canvas, Qt::LeftButton, {}, start + QPoint(3, -2));
+        QCOMPARE(window.project.curveWalls.size(), size_t(1));
+        QVERIFY(window.project.curveWalls[0].closed);
+        QVERIFY(window.project.curveWalls[0].points.size() >= 3);
+        QCOMPARE(window.project.curveWalls[0].curve_wall_type, CURVE_WALL_TYPE_ROCK);
+
+        auto *combo = window.findChild<QComboBox *>("componentCombo");
+        QCOMPARE(combo->count(), 3);
+        combo->setCurrentIndex(2);
+        QCOMPARE(window.viewport->curveWallType, auto_mapper::core::CURVE_WALL_TYPE_CLIFF);
+        QString cliffCapture = qEnvironmentVariable("AUTO_MAPPER_CAPTURE_DIR");
+        if (!cliffCapture.isEmpty()) {
+            // A cliff drawn left to right, with its face ticks above the line; removed again afterwards.
+            QDir().mkpath(cliffCapture);
+            QPoint cliffStart = center + QPoint(-250, -220);
+            QTest::mousePress(canvas, Qt::LeftButton, {}, cliffStart);
+            for (int step = 1; step <= 10; ++step)
+                QTest::mouseMove(canvas, cliffStart + QPoint(step * 40, int(30 * std::sin(step / 2.0))));
+            QTest::mouseRelease(canvas, Qt::LeftButton, {}, cliffStart + QPoint(400, int(30 * std::sin(5.0))));
+            QTest::qWait(250);
+            QVERIFY(canvas->grab().save(cliffCapture + "/native-curve-wall-cliff.png"));
+            window.project.curveWalls.pop_back();
+        }
+        combo->setCurrentIndex(1);
+        QCOMPARE(window.viewport->curveWallType, CURVE_WALL_TYPE_ALIEN_NEST);
+        QPoint lineStart = center + QPoint(-200, 200);
+        QTest::mousePress(canvas, Qt::LeftButton, {}, lineStart);
+        for (int step = 1; step <= 10; ++step)
+            QTest::mouseMove(canvas, lineStart + QPoint(step * 30, 0));
+        QTest::mouseRelease(canvas, Qt::LeftButton, {}, lineStart + QPoint(300, 0));
+        QCOMPARE(window.project.curveWalls.size(), size_t(2));
+        QVERIFY(!window.project.curveWalls[1].closed);
+        // A click is not a wall; right click drops a stroke in progress.
+        QTest::mouseClick(canvas, Qt::LeftButton, {}, center);
+        QTest::mousePress(canvas, Qt::LeftButton, {}, center);
+        QTest::mouseMove(canvas, center + QPoint(80, 40));
+        QTest::mouseClick(canvas, Qt::RightButton, {}, center + QPoint(80, 40));
+        QTest::mouseRelease(canvas, Qt::LeftButton, {}, center + QPoint(80, 40));
+        QCOMPARE(window.project.curveWalls.size(), size_t(2));
+        QString capture = qEnvironmentVariable("AUTO_MAPPER_CAPTURE_DIR");
+        if (!capture.isEmpty()) {
+            // Curve Walls draw as wall lines with piece dots, like grid walls.
+            QDir().mkpath(capture);
+            QTest::qWait(250);
+            QVERIFY(window.grab().save(capture + "/native-curve-walls.png"));
+            QPointF loopCenter = canvas->screenToMap(center);
+            double savedZoom = canvas->zoom;
+            QPointF savedPan = canvas->pan;
+            canvas->zoom = 0.6;
+            canvas->pan = QPointF(canvas->rect().center()) - loopCenter * canvas->zoom;
+            canvas->update();
+            QTest::qWait(250);
+            QVERIFY(canvas->grab().save(capture + "/native-curve-walls-zoom.png"));
+            canvas->zoom = savedZoom;
+            canvas->pan = savedPan;
+        }
+
+        // The eraser keeps the card and cuts curves of the active type only.
+        window.activateMode(DrawingMode::Eraser);
+        QCOMPARE(window.viewport->mode, DrawingMode::Eraser);
+        QVERIFY(window.viewport->isCurveWallCard());
+        QTest::mouseClick(canvas, Qt::LeftButton, {}, start);
+        QCOMPARE(window.project.curveWalls.size(), size_t(2));
+        // Cutting the middle of the nest line leaves its two halves.
+        QTest::mouseClick(canvas, Qt::LeftButton, {}, lineStart + QPoint(150, 0));
+        QCOMPARE(window.project.curveWalls.size(), size_t(3));
+        QCOMPARE(window.project.curveWalls[1].curve_wall_type, CURVE_WALL_TYPE_ALIEN_NEST);
+        QCOMPARE(window.project.curveWalls[2].curve_wall_type, CURVE_WALL_TYPE_ALIEN_NEST);
+        QVERIFY(window.project.curveWalls[1].points.back().x < window.project.curveWalls[2].points.front().x);
+        // Dragging across the rest of the line erases it piece by piece.
+        window.viewport->eraserSize = 10;
+        QTest::mousePress(canvas, Qt::LeftButton, {}, lineStart);
+        for (int step = 1; step <= 10; ++step)
+            QTest::mouseMove(canvas, lineStart + QPoint(step * 30, 0));
+        QTest::mouseRelease(canvas, Qt::LeftButton, {}, lineStart + QPoint(300, 0));
+        QCOMPARE(window.project.curveWalls.size(), size_t(1));
+        QVERIFY(window.project.curveWalls[0].closed);
+        window.viewport->eraserSize = 1;
+
+        // Project JSON keeps curve walls; AS1 projects cannot hold them.
+        QJsonObject json = window.project.toJson();
+        Project reloaded = Project::fromJson(json);
+        QCOMPARE(reloaded.curveWalls.size(), size_t(1));
+        QCOMPARE(reloaded.curveWalls[0].points.size(), window.project.curveWalls[0].points.size());
+        QCOMPARE(reloaded.curveWalls[0].points[1].x, window.project.curveWalls[0].points[1].x);
+        QVERIFY(reloaded.curveWalls[0].closed);
+        json["version"] = "AS1";
+        QVERIFY_EXCEPTION_THROWN(Project::fromJson(json), std::runtime_error);
+        QVERIFY(!Project::createEmpty(PROJECT_VERSION_AS2R).toJson().contains("curve_walls"));
+        QTemporaryDir directory;
+        QVERIFY(window.project.generate(directory.filePath("curve.map"), false, false, true));
+
+        // Back on a grid card the grid tools return and Freehand hides.
+        shelf->setCurrentRow(0);
+        QVERIFY(!window.viewport->isCurveWallCard());
+        QCOMPARE(window.viewport->mode, DrawingMode::Polyline);
+        QVERIFY(!freehand->isVisible());
+        QVERIFY(polyline->isVisible());
     }
     void windowNavigationAndPersistence() {
         MainWindow window("zh_CN");

@@ -24,6 +24,7 @@ target_link_libraries(auto_mapper_io PUBLIC auto_mapper_common)
 set(CORE_SOURCES
     core/geometry.cpp
     core/wall_builder/wall_builder.cpp
+    core/wall_builder/curve_wall_builder.cpp
     core/door_builder/door_builder.cpp
     core/decoration_builder/decoration_builder.cpp
     core/decoration_builder/decoration_library.cpp

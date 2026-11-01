@@ -21,6 +21,7 @@ Agent 修改代码时，先判断改动属于哪一层。坐标、VID、墙体�
 - 整张地图的生成入口是 `src/auto_mapper/core/map_generator.*` 的 `generate_map(MapRequest)`。
 - 装饰物 stamp 由 `core/decoration_builder/decoration_library.*` 在启动时从库地图注册（AS2 系列按 region，AS1 按固定网格），见下文“装饰物 Stamp”。
 - 墙体生成核心是 `src/auto_mapper/core/wall_builder.*`。
+- 曲线墙（Curve Wall）核心是 `core/wall_builder/curve_wall_builder.*`，见下文“曲线墙”。
 - 门生成核心是 `src/auto_mapper/core/door_builder.*`。
 - 地图写出逻辑是 `src/auto_mapper/io/map_writer.*`。
 - 室内装饰物在 `src/auto_mapper/core/indoor_decorations/`。
@@ -144,7 +145,7 @@ Stamp 不再有手写 profile 和预览图，全部来自库地图：`assets/dec
   半透明（放置 ghost 0.55、不透明度滑条 < 100）时先把整个 stamp 不透明地画进离屏图层再整体淡化，
   逐个贴图淡化会让叠放的下层透出上层。
 - 选择框（AS2 是 region 框）默认只在放置 ghost（绿色虚线）、选中/拖动（橙色）和超出地图（红色）时画，见 `Viewport::drawDecoration()`。
-- 贴图预览只用于装饰物，墙体、门、地板不画贴图（网格和墙体美术有半格偏差，未解决）。
+- 贴图预览只用于装饰物，墙体（含曲线墙）、门、地板不画贴图（网格和墙体美术有半格偏差，未解决）。
 - 库地图之外的 sprite 会打 warning 并忽略；空 region 跳过但仍占一个序号。
 - 装饰物货架在 AS1 和 AS2 工程里都可用，各自只显示本游戏族的库地图。
 
@@ -231,7 +232,9 @@ UI 画布规则：
 工具栏按钮跟着左侧货架模式走，入口是 `MainWindow::chooseShelf()` 和 `MainWindow::syncMode()`：
 
 - Wall Sets 货架：显示橡皮，隐藏 Select。
-- Decoration Sets 货架：显示 Select，隐藏橡皮。
+  - 网格墙卡：显示折线 / 直线 / 矩形，隐藏手绘。
+  - 曲线墙卡（`Viewport::isCurveWallCard()`）：只显示手绘和橡皮，`activateMode()` 拒绝网格工具。
+- Decoration Sets 货架：显示 Select，隐藏橡皮和手绘。
 - 每个可隐藏的工具在 `DrawingToolbar::separators_` 里绑定了自己的分隔线，`setModeVisible()` 一起显隐。
 
 隐藏当前选中的工具会留下一个死状态，所以 `chooseShelf()` 必须同时换到
@@ -239,6 +242,30 @@ UI 画布规则：
 
 快捷键只在 `hotkeys/hotkey_config.cpp` 的表里定义，帮助对话框和分发都读这张表；
 焦点在输入框、数字框、下拉框时不触发（`HotkeyManager::acceptsShortcut()`）。
+
+## 曲线墙
+
+AS2 系列专用的“曲线墙”卡（`catalog.json` 里 id `100`，条目 `id: "curve_wall"`，用 `curve_wall_type` 区分）：
+2670 山体、2700 异形巢穴（32 方向）、3300 悬崖（16 方向）。direction 都用满 0..255，配套的空气墙由引擎自己 Link，不写。
+
+- 坐标：控制点是 Map 坐标，不走 Grid，项目 JSON 存在顶层 `curve_walls`（`curve_wall_type`、`closed`、`points`）。
+  AS1 工程不能含曲线墙；生成 AS1 时核心会跳过并打 warning。
+- 核心 `build_curve_wall()`：Catmull-Rom 平滑 → 按弧长等距取点 → `direction = 切线角（Map y 除以 0.7）+ 素材偏移`。
+  间距和偏移来自官方地图统计（AS2R `Level_13` / `Level_14`，`Level_04` / AS2R `Level_08`）：
+  2670 间距 110、偏移 0°；2700 间距 130、偏移 −27°；3300 间距 185、偏移 +56°。army：2670 / 2700 是 2，3300 是 0。
+- 单面素材（`CurveWallProfile::one_sided`，目前只有 3300）：官方每条链的方向都只取一侧，不能按 128 折叠；
+  按画线方向算，层状面在画线方向的左侧、裂纹面在右侧（贴图渲染核对过）。画布和图例在层状面一侧画短刻线，绘制中的笔迹也画。勾选“随机方向”时每片在切线方向上 ±4 单位抖动，不勾选时输出确定。
+  每片贴图沿曲线要伸出锚点很远（地面长度：2670 约 125、2700 约 155，按贴图实测），
+  所以开放曲线的首尾两片各往里缩 `end_reach`（换算成 Map 弧长时竖直方向乘 0.7），让岩石在游戏里正好止于画出的端点；
+  画布上的线仍画到端点，代表墙的实际范围。太短放不下两片时只在中点放一片。闭环不缩。
+- 编辑器：手绘工具（`DrawingMode::Freehand`，快捷键 5）按住拖动画笔迹，松手时用 `simplify_stroke()` 按屏幕 5 像素容差抽稀；
+  松手时离起点 14 像素内就闭合。橡皮在曲线墙卡上按橡皮圆（与预览圆同一半径）切掉当前类型曲线的对应一段
+  （`erase_curve_wall_circle()`）：曲线断成两段、闭环被切开，剩下的每段保留原控制点、端点落在圆上，
+  短于半个片间距的残段一并删掉。
+- `curveWallType` 不在 `resetInteraction()` 里清掉，否则在手绘和橡皮之间切换会丢掉曲线墙卡；
+  `setWall()` / `armStamp()` / `armArray()` / `chooseShelf()` 负责清掉它。
+- 画布：曲线墙属于墙体，和网格墙一样只画线（同一个 `WALL_LINE_WIDTH`，绘制中的笔迹用网格墙预览的黄色虚线），
+  另加每片的锚点小圆点，不画游戏贴图。编辑器预览与生成共用核心函数，不在 UI 里重写采样。
 
 ## 测试与 Golden 文件
 

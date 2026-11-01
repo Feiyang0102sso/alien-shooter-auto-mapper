@@ -33,6 +33,8 @@ struct ShelfCard {
 
 // Legend symbol for one drawable part: a plain wall line, or a door line with its status dot.
 QPixmap legendSymbol(int wallType, const QString &partId);
+// Legend symbol for one Curve Wall item: a wavy line in that curve type's color.
+QPixmap curveWallLegendSymbol(int curveWallType);
 
 class ThemeShelfPanel : public QWidget {
     Q_OBJECT

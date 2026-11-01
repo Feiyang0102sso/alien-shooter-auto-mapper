@@ -78,12 +78,14 @@ inline constexpr const char *CANVAS_INFO = "canvas.info";
 inline constexpr const char *CANVAS_HELP = "canvas.help";
 inline constexpr const char *CANVAS_HELP_PLACING = "canvas.help_placing";
 inline constexpr const char *CANVAS_HELP_SELECTING = "canvas.help_selecting";
+inline constexpr const char *CANVAS_HELP_FREEHAND = "canvas.help_freehand";
 
 inline constexpr const char *DRAWING_SELECT = "drawing.select";
 inline constexpr const char *DRAWING_POLYLINE = "drawing.polyline";
 inline constexpr const char *DRAWING_LINE = "drawing.line";
 inline constexpr const char *DRAWING_RECT = "drawing.rect";
 inline constexpr const char *DRAWING_ERASER = "drawing.eraser";
+inline constexpr const char *DRAWING_FREEHAND = "drawing.freehand";
 
 inline constexpr const char *DIALOG_ERROR = "dialog.error";
 inline constexpr const char *DIALOG_UNSAVED_PROJECT = "dialog.unsaved_project";
@@ -126,6 +128,7 @@ inline constexpr const char *STATUS_DECORATION_DESELECTED = "status.decoration_d
 inline constexpr const char *STATUS_DECORATION_PLACING_ENDED = "status.decoration_placing_ended";
 inline constexpr const char *STATUS_DECORATION_SPACING = "status.decoration_spacing";
 inline constexpr const char *STATUS_WALL_DRAWING_CANCELLED = "status.wall_drawing_cancelled";
+inline constexpr const char *STATUS_CURVE_WALL_CREATED = "status.curve_wall_created";
 inline constexpr const char *STATUS_MAP_SIZE_APPLIED = "status.map_size_applied";
 inline constexpr const char *STATUS_GAME_FOLDER_OPENED = "status.game_folder_opened";
 inline constexpr const char *STATUS_AS2_DOOR_OPTION_UNAVAILABLE = "status.as2_door_option_unavailable";

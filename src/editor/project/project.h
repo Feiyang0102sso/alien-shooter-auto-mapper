@@ -13,6 +13,8 @@ namespace editor {
 // Walls and doors use the core types directly (Grid Coordinates).
 using auto_mapper::core::DoorInstance;
 using auto_mapper::core::Segment;
+// Curve Walls use the core type directly too, but in Map Coordinates.
+using auto_mapper::core::CurveWall;
 
 // Project Version names stored in project JSON.
 inline constexpr const char *PROJECT_VERSION_AS1 = "AS1";
@@ -52,6 +54,8 @@ struct Project {
     int labLayers = 0;
     std::vector<Segment> segments;
     std::vector<DoorInstance> doors;
+    // AS2 Series only.
+    std::vector<CurveWall> curveWalls;
     std::vector<Decoration> decorations;
 
     bool isAS1() const;

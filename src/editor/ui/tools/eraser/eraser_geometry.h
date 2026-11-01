@@ -1,7 +1,9 @@
 // Grid-space eraser: removes wall edges and doors of one wall type around a grid point.
+// Curve Walls live in Map Coordinates; the eraser cuts out the part under its circle.
 #pragma once
 #include "editor/project/project.h"
 #include <QPoint>
+#include <QPointF>
 #include <vector>
 
 namespace editor {
@@ -15,5 +17,10 @@ inline constexpr int ERASER_MAX_SIZE = 10;
 // Returns true when anything was removed.
 bool eraseAround(std::vector<Segment> &segments, std::vector<DoorInstance> &doors, const QPoint &center, int size,
                  int wallType);
+
+// Cut the part of every Curve Wall of `curveWallType` that lies within `radius` of `center` (both in
+// Map Coordinates). A cut curve splits into the runs left on either side, and a cut loop opens.
+// Returns true when anything was removed.
+bool eraseCurveWallsAround(std::vector<CurveWall> &curveWalls, const QPointF &center, double radius, int curveWallType);
 
 } // namespace editor

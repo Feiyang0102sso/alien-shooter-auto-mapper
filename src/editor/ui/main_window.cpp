@@ -334,6 +334,10 @@ void MainWindow::connectViewport() {
                                                     {"grid_x", QString::number(grid.x())},
                                                     {"grid_y", QString::number(grid.y())}}));
     });
+    connect(viewport, &Viewport::curveWallCreated, this, [this](int count, int pieceCount) {
+        showStatus(locale.tr(TextKey::STATUS_CURVE_WALL_CREATED,
+                             {{"count", QString::number(count)}, {"piece_count", QString::number(pieceCount)}}));
+    });
     connect(viewport, &Viewport::decorationCreated, this, [this](int count) {
         showStatus(locale.tr(TextKey::STATUS_DECORATION_CREATED, {{"count", QString::number(count)}}));
     });
@@ -420,6 +424,9 @@ void MainWindow::configureHotkeys() {
     hotkeys_.registerCallback(COMMAND_ERASER, [this] {
         activateMode(DrawingMode::Eraser);
     });
+    hotkeys_.registerCallback(COMMAND_FREEHAND, [this] {
+        activateMode(DrawingMode::Freehand);
+    });
     hotkeys_.registerCallback(COMMAND_DELETE_DECORATION, [this] {
         deleteSelectedDecoration();
     });
@@ -432,8 +439,10 @@ void MainWindow::configureHotkeys() {
 void MainWindow::chooseShelf(bool decorations) {
     decorationShelf_ = decorations;
     viewport->resetInteraction();
-    // Leave a tool the new shelf hides: Eraser lives on the wall shelf, Select on the decoration shelf.
-    if (decorations && viewport->mode == DrawingMode::Eraser)
+    // The shelf reselects a card below; a grid card is the safe default until then.
+    viewport->curveWallType = -1;
+    // Leave a tool the new shelf hides: Eraser and Freehand live on the wall shelf, Select on the decoration shelf.
+    if (decorations && (viewport->mode == DrawingMode::Eraser || viewport->mode == DrawingMode::Freehand))
         viewport->mode = DrawingMode::Select;
     if (!decorations && viewport->mode == DrawingMode::Select)
         viewport->mode = DrawingMode::Polyline;
@@ -538,6 +547,15 @@ void MainWindow::chooseItem(int index) {
         return;
     itemMemory_[currentSetKey_] = index;
     const WallPart &part = visibleParts_[index];
+    if (part.isCurveWall()) {
+        // Curve Walls keep the grid wall type untouched: it still drives the grid and the eraser size.
+        viewport->armCurveWall(part.curveWallType);
+        inspector_->showWallPart(catalog.imagePath(part.preview), part.nvidText);
+        qInfo() << "Curve wall selected: type" << part.curveWallType;
+        showStatus(locale.tr(TextKey::STATUS_DRAWABLE_PART_SELECTED, {{"part_id", catalog.partLabel(part)}}));
+        syncMode();
+        return;
+    }
     viewport->setWall(part.wallType, part.id);
     QString family = FAMILY_AS2;
     if (project.isAS1())
@@ -553,6 +571,13 @@ void MainWindow::activateMode(DrawingMode mode) {
     if (mode == DrawingMode::Select && !decorationShelf_)
         return;
     if (mode == DrawingMode::Eraser && decorationShelf_)
+        return;
+    // The Curve Wall card swaps the grid tools for Freehand.
+    bool curveCard = viewport->isCurveWallCard();
+    if (mode == DrawingMode::Freehand && !curveCard)
+        return;
+    bool gridTool = mode == DrawingMode::Polyline || mode == DrawingMode::Straight || mode == DrawingMode::Rectangle;
+    if (gridTool && curveCard)
         return;
     viewport->setMode(mode);
     qInfo() << "Drawing mode changed:" << static_cast<int>(mode);
@@ -592,6 +617,11 @@ void MainWindow::syncMode() {
     drawingToolbar_->setCheckedMode(viewport->mode, !viewport->isPlacing());
     drawingToolbar_->setModeVisible(DrawingMode::Select, decorationShelf_);
     drawingToolbar_->setModeVisible(DrawingMode::Eraser, !decorationShelf_);
+    bool curveCard = viewport->isCurveWallCard();
+    drawingToolbar_->setModeVisible(DrawingMode::Freehand, curveCard);
+    drawingToolbar_->setModeVisible(DrawingMode::Polyline, !curveCard);
+    drawingToolbar_->setModeVisible(DrawingMode::Straight, !curveCard);
+    drawingToolbar_->setModeVisible(DrawingMode::Rectangle, !curveCard);
     inspector_->eraser()->setVisible(viewport->mode == DrawingMode::Eraser);
     syncSelection();
 }

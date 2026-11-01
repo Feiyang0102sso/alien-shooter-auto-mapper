@@ -128,6 +128,24 @@ Decoration Stamp relationships:
 - Scaling and internal-spacing adjustment are possible future capabilities,
   not first-version behavior.
 
+## Curve Wall
+
+An AS2 Series wall drawn freehand in Map Coordinates instead of on the wall
+grid. Pieces of one multi-direction asset (2670 rock, 2700 alien nest, or 3300
+cliff) are spaced evenly along a smoothed curve, each turned to the curve's
+local tangent.
+The engine links each piece's air wall itself.
+
+_Avoid_: Curve Wall Set, because a Curve Wall has no grid step, pillars, or doors.
+
+Curve Wall relationships:
+
+- A Curve Wall belongs to the wall shelf but never to a Wall Set grid.
+- A Curve Wall is open, or closed into a loop.
+- Direction Randomization adds a small jitter around each piece's tangent direction; without it the output is deterministic.
+- AS1 has no Curve Wall assets.
+- A one-sided Curve Wall (the cliff) shows its layered face on the left of the drawing direction and its cracked face on the right; drawing the same curve the other way swaps them.
+
 ## Wall Set
 
 A group of wall sprites that share the same physical grid step and visual style.

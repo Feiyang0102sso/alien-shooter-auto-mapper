@@ -96,8 +96,12 @@ void LeftShelfPanel::showWallSets(const QList<int> &setIds) {
         card.previewPath = catalog_.imagePath(wall.preview);
         card.title = catalog_.wallShortLabel(setId);
         card.description = catalog_.wallDescription(setId);
-        for (const auto &part : wall.parts)
-            card.legend.append({legendSymbol(part.wallType, part.id), catalog_.partLabel(part)});
+        for (const auto &part : wall.parts) {
+            if (part.isCurveWall())
+                card.legend.append({curveWallLegendSymbol(part.curveWallType), catalog_.partLabel(part)});
+            else
+                card.legend.append({legendSymbol(part.wallType, part.id), catalog_.partLabel(part)});
+        }
         cards.append(card);
     }
     QSignalBlocker blocker(shelf_);

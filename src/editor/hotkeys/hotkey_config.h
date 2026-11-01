@@ -30,6 +30,7 @@ inline constexpr const char *COMMAND_POLYLINE = "polyline";
 inline constexpr const char *COMMAND_STRAIGHT_LINE = "straight_line";
 inline constexpr const char *COMMAND_RECTANGLE = "rectangle";
 inline constexpr const char *COMMAND_ERASER = "eraser";
+inline constexpr const char *COMMAND_FREEHAND = "freehand";
 inline constexpr const char *COMMAND_DELETE_DECORATION = "delete_decoration";
 
 // One configured command and every Qt key code that triggers it.

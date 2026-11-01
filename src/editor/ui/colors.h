@@ -30,6 +30,12 @@ inline constexpr const char *WALL_PROFILE_AS2_SET7 = "#FFB8DB";    // Neon Magen
 inline constexpr const char *WALL_PROFILE_AS2_SET8 = "#CBD5E1";    // Platinum Steel Gray
 inline constexpr const char *WALL_PROFILE_AS2_SET9 = "#84CC16";    // Toxic Lime Green
 inline constexpr const char *WALL_PROFILE_FALLBACK = "#c0a05a";
+// Curve Walls (Map Coordinate freehand walls): path and piece markers on the canvas.
+inline constexpr const char *CURVE_WALL_ROCK = "#A8A29E";       // Weathered Stone
+inline constexpr const char *CURVE_WALL_ALIEN_NEST = "#C2410C"; // Hive Rust
+inline constexpr const char *CURVE_WALL_CLIFF = "#8FB996";       // Mossy Cliff
+// "Release here to close" marker of a freehand stroke (the stroke itself uses CANVAS_PREVIEW_SEGMENT).
+inline constexpr const char *CURVE_WALL_CLOSE_MARKER = "#00ff00";
 // AS2 unified door lines
 inline constexpr const char *DOOR_AS2_LINE = "#FF3333"; // Tactical Red Door
 inline constexpr const char *DOOR_AS2_DOT = "#FF0000";
@@ -93,5 +99,7 @@ inline QColor withAlpha(const char *hex, int alpha) {
 
 // Accent color of one wall type; walls, legends and the canvas all read this one mapping.
 QColor wallColor(int wallType);
+// Accent color of one Curve Wall type (core CURVE_WALL_TYPE_*).
+QColor curveWallColor(int curveWallType);
 
 } // namespace editor::colors

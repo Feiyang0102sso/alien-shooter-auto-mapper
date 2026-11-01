@@ -58,6 +58,7 @@ Catalog::Catalog(const Locale &locale) : locale(locale) {
             QJsonObject partObject = partValue.toObject();
             WallPart part;
             part.wallType = partObject.value("wall_type").toInt();
+            part.curveWallType = partObject.value("curve_wall_type").toInt();
             part.id = partObject.value("id").toString();
             part.labelKey = partObject.value("label_key").toString();
             part.preview = partObject.value("preview").toString();

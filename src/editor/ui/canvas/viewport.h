@@ -4,6 +4,9 @@
 //   placing  - a decoration tool is armed (isPlacing()); left click always drops a new one.
 //   editing  - Select tool without an armed decoration (isEditing()); left click picks and drags.
 //   off      - wall and eraser tools; decorations are only background.
+//
+// Curve Walls: while the Curve Wall card is active (isCurveWallCard()), Freehand draws a stroke in Map
+// Coordinates and Eraser removes whole curves; the grid tools are hidden.
 #pragma once
 #include "editor/catalog/catalog.h"
 #include "editor/config.h"
@@ -24,6 +27,9 @@ class Viewport : public QWidget {
     QString part = PART_WALL_BODY;
     QString activeStamp;
     QString activeArray;
+    // Curve Wall type the Freehand tool draws, or -1 while a grid wall card is active.
+    // Unlike `part`, tool switches keep it, so Eraser and Freehand can alternate on the same card.
+    int curveWallType = -1;
     int selectedDecoration = -1;
     int eraserSize = 1;
     double zoom = 1;
@@ -36,10 +42,12 @@ class Viewport : public QWidget {
 
     bool isPlacing() const;
     bool isEditing() const;
+    bool isCurveWallCard() const;
     void setMode(DrawingMode value);
     void setWall(int type, const QString &partId = PART_WALL_BODY);
     void armStamp(const QString &id);
     void armArray(const QString &type);
+    void armCurveWall(int type);
     void resetInteraction();
     // Right click / Esc: drop the pending wall start, or leave placing mode.
     void cancel();
@@ -71,6 +79,7 @@ class Viewport : public QWidget {
     void segmentStarted(QPoint grid);
     void segmentCreated(int x1, int y1, int x2, int y2, int count);
     void doorCreated(QPoint grid, int count);
+    void curveWallCreated(int count, int pieceCount);
     void decorationCreated(int count);
     void stampPlaced(const QString &stampId, bool outside);
     void decorationSelected();
@@ -94,6 +103,8 @@ class Viewport : public QWidget {
     std::optional<QPoint> selectedGridPoint_;
     std::optional<QPointF> arrayStart_;
     std::optional<QPointF> cursor_;
+    // Freehand stroke in Map Coordinates while the left button is held; empty otherwise.
+    std::vector<QPointF> stroke_;
     bool panning_ = false;
     bool erasing_ = false;
     QPointF dragStart_;
@@ -110,6 +121,13 @@ class Viewport : public QWidget {
     QRectF bounds(int type) const;
     bool nearBounds(const QPointF &point) const;
     QPointF clampMap(const QPointF &point) const;
+    // Eraser reach in Map Coordinates; the dashed preview circle has the same radius.
+    double eraserRadius() const;
+    // Stroke length in screen pixels at the current zoom.
+    double strokeScreenLength(const std::vector<QPointF> &stroke) const;
+    // True when releasing now would close the stroke into a loop (its end is back near its start).
+    bool strokeCloses(const std::vector<QPointF> &stroke) const;
+    void finishStroke();
     QPoint constrainedEnd(QPoint point) const;
     std::vector<Segment> pendingSegments(QPoint point) const;
     void wallClick(const QPoint &point);
@@ -132,6 +150,9 @@ class Viewport : public QWidget {
     void drawStampGhost(QPainter &painter, const QPointF &center);
     void drawArrayPreview(QPainter &painter, const Decoration &preview);
     void drawDoors(QPainter &painter);
+    // Curve Wall lines and piece dots; like grid walls, never game sprites.
+    void drawCurveWalls(QPainter &painter);
+    void drawStroke(QPainter &painter);
     void drawLabels(QPainter &painter);
 };
 

@@ -17,6 +17,7 @@ the result in a map editor.
 
 - Automatic placement of walls, doors, floors, and ceilings.
 - Decoration presets for quickly placing common indoor decorations.
+- Freehand curve walls for the AS2 series: drag any curve and it fills with 360-direction rock or alien nest pieces.
 - Editor preview and project save/load support.
 - Support for AS1 and the AS2 series (AS2, AS2R/C, and AS2OE) map formats and wall sets.
 
@@ -69,6 +70,7 @@ Auto Mapper 是一款 Alien Shooter 地图自动铺设工具。他旨在帮助�
 
 - 自动铺设墙壁、门、地板和天花板。
 - 提供常见室内装饰物的装饰预设，支持快速放置。
+- AS2 系列支持手绘曲线墙：按住鼠标画出任意曲线，自动铺满 360 度山体或异形巢穴。
 - 提供编辑器预览以及项目保存和加载功能。
 - 支持 AS1 以及 AS2 系列（AS2、AS2R/C、AS2OE）的地图格式和墙体组。
 

@@ -94,6 +94,19 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
     std::vector<io::Sprite> sprites =
         wall_builder.build(request.segments, request.generate_floor, request.generate_ceiling, excavations);
 
+    // 1b. Build curve walls; their Map Coordinates need no wall shift.
+    if (request.format == io::MapFormat::AS1 && !request.curve_walls.empty()) {
+        Logger::warning("AS1 has no curve wall assets, skipped {} curve wall(s)", request.curve_walls.size());
+    } else {
+        size_t piece_count = 0;
+        for (const CurveWall& curve_wall : request.curve_walls) {
+            std::vector<io::Sprite> curve_sprites = build_curve_wall(curve_wall, request.random_direction);
+            piece_count += curve_sprites.size();
+            sprites.insert(sprites.end(), curve_sprites.begin(), curve_sprites.end());
+        }
+        Logger::info("Curve walls: {} curve(s) -> {} piece(s)", request.curve_walls.size(), piece_count);
+    }
+
     // 2. Build doors
     DoorBuilder door_builder(request.map_size_x, request.map_size_y);
     std::vector<io::Sprite> door_sprites = door_builder.build(doors);
