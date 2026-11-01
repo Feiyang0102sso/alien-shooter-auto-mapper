@@ -27,10 +27,17 @@ inline constexpr const char *LOOT_KIND_WOOD = "wood";
 inline constexpr const char *LOOT_KIND_METAL = "metal";
 inline constexpr const char *LOOT_KIND_EGG = "egg";
 
+// Corpses and blood (Map Coordinates) use the core type directly; the four Gore cards in shelf order.
+using auto_mapper::core::GoreItem;
+using auto_mapper::core::GoreKind;
+inline constexpr GoreKind GORE_KINDS[] = {GoreKind::Bones, GoreKind::Monster, GoreKind::Human, GoreKind::BloodPool};
+
 // Project Version names stored in project JSON.
 inline constexpr const char *PROJECT_VERSION_AS1 = "AS1";
 inline constexpr const char *PROJECT_VERSION_AS2 = "AS2";
 inline constexpr const char *PROJECT_VERSION_AS2R = "AS2R";
+// Conscription: writes the same file as AS2R, but its game has extra corpses the Gore brush may use.
+inline constexpr const char *PROJECT_VERSION_AS2C = "AS2C";
 inline constexpr const char *PROJECT_VERSION_AS2OE = "AS2OE";
 
 // Default Map Coordinate size of a new project.
@@ -72,6 +79,8 @@ struct Project {
     // container of its card in the generated map, stamp members included.
     std::vector<LootBox> lootBoxes;
     std::map<LootBoxKind, std::vector<LootLine>> lootTables;
+    // AS2 Series only. Brushed corpses and blood.
+    std::vector<GoreItem> gore;
 
     bool isAS1() const;
     bool empty() const;
@@ -91,6 +100,8 @@ double defaultMapSize(const QString &version);
 // "wood" / "metal" / "egg"; lootKindFromId() throws std::runtime_error for anything else.
 QString lootKindId(LootBoxKind kind);
 LootBoxKind lootKindFromId(const QString &id);
+// "bones" / "monster" / "human" / "pool": Gore card ids for i18n keys.
+QString goreKindId(GoreKind kind);
 // The Global Door State Override exists only in AS1.
 bool supportsGlobalDoorState(const QString &version);
 // Door positions address grid edges; drawing and erasing work on the two end vertices.

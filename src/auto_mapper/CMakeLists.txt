@@ -33,8 +33,11 @@ set(CORE_SOURCES
     core/indoor_decorations/array_layout.cpp
     core/indoor_decorations/desk_builder.cpp
     core/indoor_decorations/incubator_builder.cpp
-    core/loot/loot_box_builder.cpp
-    core/loot/loot_table.cpp
+    # Brush shelves: the shared scatter engine, then the Loot Box and Gore brushes.
+    core/scatter/scatter_fill.cpp
+    core/scatter/loot/loot_box_builder.cpp
+    core/scatter/loot/loot_table.cpp
+    core/scatter/gore/gore_builder.cpp
     core/map_generator.cpp
 )
 add_library(auto_mapper_core STATIC ${CORE_SOURCES})

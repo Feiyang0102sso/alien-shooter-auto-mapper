@@ -9,8 +9,8 @@ class QPushButton;
 
 namespace editor {
 
-// Which shelf the left dock shows. Loot exists only for AS2 Series projects.
-enum class ShelfMode { Walls, Decorations, Loot };
+// Which shelf the left dock shows. Loot and Gore exist only for AS2 Series projects.
+enum class ShelfMode { Walls, Decorations, Loot, Gore };
 
 class LeftShelfPanel : public QWidget {
     Q_OBJECT
@@ -21,10 +21,11 @@ class LeftShelfPanel : public QWidget {
     void setProjectVersion(const QString &version);
     void setShelfMode(ShelfMode mode);
     // Fill the shelf with Wall Set cards, Decoration Stamp Series cards of the AS1 or AS2 family,
-    // or the three Loot Box cards (wood, metal, egg).
+    // the three Loot Box cards (wood, metal, egg), or the four Gore cards (bones, monster, human, pool).
     void showWallSets(const QList<int> &setIds);
     void showStampSeries(bool as1, const QStringList &seriesIds);
     void showLootKinds();
+    void showGoreKinds();
     ThemeShelfPanel *shelf() const;
     // Q / E hotkeys: move the selected card by `step`, clamped to the shelf.
     void selectRelativeSet(int step);
@@ -43,6 +44,7 @@ class LeftShelfPanel : public QWidget {
     QPushButton *wallsButton_ = nullptr;
     QPushButton *decorationsButton_ = nullptr;
     QPushButton *lootButton_ = nullptr;
+    QPushButton *goreButton_ = nullptr;
     ThemeShelfPanel *shelf_ = nullptr;
 };
 

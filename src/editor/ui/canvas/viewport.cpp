@@ -2,6 +2,7 @@
 #include "auto_mapper/core/decoration_builder/placeholder_vids.h"
 #include "auto_mapper/core/door_builder/door_profiles_as1.h"
 #include "auto_mapper/core/indoor_decorations/array_layout.h"
+#include "auto_mapper/core/randomizer.h"
 #include "editor/i18n/text_keys.h"
 #include "editor/ui/colors.h"
 #include "editor/ui/tools/eraser/eraser_geometry.h"
@@ -37,6 +38,8 @@ constexpr double STROKE_TOLERANCE_PIXELS = 5.0;
 constexpr double STROKE_MIN_LENGTH_PIXELS = 10.0;
 // Loot brush: a drag dabs again after the cursor moves this fraction of the brush radius.
 constexpr double LOOT_DAB_STEP_RADIUS_RATIO = 0.5;
+// Gore blood placeholder dot radius, in Map Coordinate units (scales with zoom).
+constexpr double GORE_BLOOD_DOT_RADIUS = 4.0;
 // Wall lines in screen pixels, shared by grid walls and Curve Walls: placed walls and the pending preview.
 constexpr double WALL_LINE_WIDTH = 4.0;
 constexpr double WALL_PREVIEW_LINE_WIDTH = 3.0;
@@ -140,6 +143,8 @@ Viewport::Viewport(Project &project, const Catalog &catalog, QWidget *parent)
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
     setCursor(Qt::CrossCursor);
+    // Each session starts from its own brush layout.
+    scatterSeed_ = static_cast<uint32_t>(auto_mapper::core::Random::get(0, std::numeric_limits<int>::max()));
 }
 
 bool Viewport::isPlacing() const {
@@ -156,6 +161,25 @@ bool Viewport::isCurveWallCard() const {
 
 bool Viewport::isLootCard() const {
     return lootKind.has_value();
+}
+
+bool Viewport::isGoreCard() const {
+    return goreKind.has_value();
+}
+
+bool Viewport::isBrushCard() const {
+    return isLootCard() || isGoreCard();
+}
+
+double Viewport::brushRadius() const {
+    if (isGoreCard())
+        return goreBrush.radius;
+    return lootBrush.radius;
+}
+
+void Viewport::rerollScatter() {
+    scatterSeed_ = static_cast<uint32_t>(auto_mapper::core::Random::get(0, std::numeric_limits<int>::max()));
+    update();
 }
 
 void Viewport::resetInteraction() {
@@ -187,6 +211,7 @@ void Viewport::setWall(int type, const QString &partId) {
     part = partId;
     curveWallType = -1;
     lootKind.reset();
+    goreKind.reset();
     if (mode == DrawingMode::Select || mode == DrawingMode::Freehand)
         mode = DrawingMode::Polyline;
     emit modeChanged();
@@ -198,6 +223,7 @@ void Viewport::armStamp(const QString &id) {
     part.clear();
     curveWallType = -1;
     lootKind.reset();
+    goreKind.reset();
     mode = DrawingMode::Select;
     emit modeChanged();
 }
@@ -208,6 +234,7 @@ void Viewport::armArray(const QString &type) {
     part.clear();
     curveWallType = -1;
     lootKind.reset();
+    goreKind.reset();
     mode = DrawingMode::Rectangle;
     emit modeChanged();
 }
@@ -216,6 +243,7 @@ void Viewport::armCurveWall(int type) {
     resetInteraction();
     curveWallType = type;
     lootKind.reset();
+    goreKind.reset();
     // The card offers Freehand and Eraser only; keep the eraser if it is already in hand.
     if (mode != DrawingMode::Eraser)
         mode = DrawingMode::Freehand;
@@ -225,8 +253,20 @@ void Viewport::armCurveWall(int type) {
 void Viewport::armLoot(LootBoxKind kind) {
     resetInteraction();
     lootKind = kind;
+    goreKind.reset();
     curveWallType = -1;
     // Like the Curve Wall card: Freehand is the brush, and an eraser already in hand stays.
+    if (mode != DrawingMode::Eraser)
+        mode = DrawingMode::Freehand;
+    emit modeChanged();
+}
+
+void Viewport::armGore(GoreKind kind) {
+    resetInteraction();
+    goreKind = kind;
+    lootKind.reset();
+    curveWallType = -1;
+    // Same tools as the Loot Box cards: Freehand is the brush, and an eraser already in hand stays.
     if (mode != DrawingMode::Eraser)
         mode = DrawingMode::Freehand;
     emit modeChanged();
@@ -618,7 +658,13 @@ void Viewport::mousePressEvent(QMouseEvent *event) {
         panStart_ = pan;
         setCursor(Qt::ClosedHandCursor);
     } else if (event->button() == Qt::RightButton) {
-        cancel();
+        // On a brush card the right button rolls another layout for the ghost instead of cancelling.
+        if (isBrushCard() && mode == DrawingMode::Freehand) {
+            rerollScatter();
+            qInfo() << "Scatter brush rerolled";
+        } else {
+            cancel();
+        }
     } else if (event->button() == Qt::LeftButton) {
         auto physical = screenToMap(event->position());
         if (isPlacing()) {
@@ -660,6 +706,8 @@ void Viewport::mousePressEvent(QMouseEvent *event) {
             bool erased = false;
             if (isLootCard())
                 eraseLoot(physical);
+            else if (isGoreCard())
+                eraseGore(physical);
             else if (isCurveWallCard())
                 erased = eraseCurveWallsAround(project_.curveWalls, physical, eraserRadius(), curveWallType);
             else
@@ -670,6 +718,9 @@ void Viewport::mousePressEvent(QMouseEvent *event) {
             if (isLootCard()) {
                 brushing_ = true;
                 lootDab(physical);
+            } else if (isGoreCard()) {
+                brushing_ = true;
+                goreDab(physical);
             } else if (isCurveWallCard()) {
                 stroke_ = {physical};
             }
@@ -691,6 +742,8 @@ void Viewport::mouseMoveEvent(QMouseEvent *event) {
         bool erased = false;
         if (isLootCard())
             eraseLoot(screenToMap(event->position()));
+        else if (isGoreCard())
+            eraseGore(screenToMap(event->position()));
         else if (isCurveWallCard())
             erased = eraseCurveWallsAround(project_.curveWalls, screenToMap(event->position()), eraserRadius(),
                                            curveWallType);
@@ -701,8 +754,12 @@ void Viewport::mouseMoveEvent(QMouseEvent *event) {
     } else if (brushing_) {
         // Dab again once the cursor has moved half a brush radius, so a drag paints a continuous band.
         QPointF physical = screenToMap(event->position());
-        if (length(physical - lastDab_) >= lootBrush.radius * LOOT_DAB_STEP_RADIUS_RATIO)
-            lootDab(physical);
+        if (length(physical - lastDab_) >= brushRadius() * LOOT_DAB_STEP_RADIUS_RATIO) {
+            if (isGoreCard())
+                goreDab(physical);
+            else
+                lootDab(physical);
+        }
     } else if (!stroke_.empty()) {
         QPointF physical = screenToMap(event->position());
         if (length(physical - stroke_.back()) * zoom >= STROKE_MIN_STEP_PIXELS)
@@ -943,21 +1000,67 @@ QImage Viewport::renderLootPreview(LootBoxKind kind) {
     return stampSprites().render(sample, project_.mapFormat());
 }
 
-void Viewport::lootDab(const QPointF &center) {
-    lastDab_ = center;
+std::vector<LootBox> Viewport::rollLoot(const QPointF &center) const {
     auto_mapper::core::LootBrushSettings settings = lootBrush;
     settings.kind = *lootKind;
-    std::vector<LootBox> added = auto_mapper::core::scatter_loot_boxes(
-        settings, static_cast<float>(center.x()), static_cast<float>(center.y()), project_.lootBoxes);
-    int kept = 0;
+    std::vector<LootBox> added;
+    {
+        auto_mapper::core::RandomSeedScope seed(scatterSeed_);
+        added = auto_mapper::core::scatter_loot_boxes(settings, static_cast<float>(center.x()),
+                                                      static_cast<float>(center.y()), project_.lootBoxes);
+    }
+    std::vector<LootBox> kept;
     for (const LootBox &box : added) {
         // A dab near the edge may spill out; such boxes would land outside the playable map.
         bool inside = box.x >= 0 && box.y >= 0 && box.x <= project_.width && box.y <= project_.height;
-        if (!inside)
-            continue;
-        project_.lootBoxes.push_back(box);
-        kept += 1;
+        if (inside)
+            kept.push_back(box);
     }
+    return kept;
+}
+
+std::vector<GoreItem> Viewport::rollGore(const QPointF &center) const {
+    auto_mapper::core::GoreBrushSettings settings = goreBrush;
+    settings.kind = *goreKind;
+    std::vector<GoreItem> added;
+    {
+        auto_mapper::core::RandomSeedScope seed(scatterSeed_);
+        added = auto_mapper::core::scatter_gore(settings, project_.mapFormat(), static_cast<float>(center.x()),
+                                                static_cast<float>(center.y()));
+    }
+    std::vector<GoreItem> kept;
+    for (const GoreItem &item : added) {
+        // Blood splashed past the edge would land outside the playable map.
+        bool inside = item.x >= 0 && item.y >= 0 && item.x <= project_.width && item.y <= project_.height;
+        if (inside)
+            kept.push_back(item);
+    }
+    return kept;
+}
+
+void Viewport::drawScatterGhost(QPainter &painter, const QPointF &cursor) {
+    // Not while dragging: each dab is placed at once, so a ghost would only flicker over it.
+    if (!brushing_) {
+        QPointF center = screenToMap(cursor);
+        if (isGoreCard())
+            drawGoreItems(painter, rollGore(center), STAMP_GHOST_PREVIEW_OPACITY);
+        else
+            drawLootItems(painter, rollLoot(center), STAMP_GHOST_PREVIEW_OPACITY);
+    }
+    double radius = brushRadius() * zoom;
+    painter.setPen(cosmeticPen(QColor(colors::SCATTER_BRUSH_GHOST_BORDER), 2, Qt::DashLine));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(cursor, radius, radius);
+}
+
+void Viewport::lootDab(const QPointF &center) {
+    lastDab_ = center;
+    std::vector<LootBox> added = rollLoot(center);
+    // The next dab (and the ghost) gets a fresh layout whether or not this one placed anything.
+    rerollScatter();
+    for (const LootBox &box : added)
+        project_.lootBoxes.push_back(box);
+    int kept = static_cast<int>(added.size());
     if (kept == 0)
         return;
     qInfo() << "Loot brush dab:" << kept << "added, total" << project_.lootBoxes.size();
@@ -976,12 +1079,12 @@ void Viewport::eraseLoot(const QPointF &center) {
     emit lootBoxesErased(erased, static_cast<int>(project_.lootBoxes.size()));
 }
 
-void Viewport::drawLootBoxes(QPainter &painter) {
-    if (project_.lootBoxes.empty())
+void Viewport::drawLootItems(QPainter &painter, const std::vector<LootBox> &boxes, double opacity) {
+    if (boxes.empty())
         return;
     auto_mapper::core::decoration_builder::DecorationStamp all;
-    all.members.reserve(project_.lootBoxes.size());
-    for (const LootBox &box : project_.lootBoxes) {
+    all.members.reserve(boxes.size());
+    for (const LootBox &box : boxes) {
         auto_mapper::core::decoration_builder::DecorationMember member;
         member.vid = box.vid;
         member.offset_x = box.x;
@@ -990,7 +1093,109 @@ void Viewport::drawLootBoxes(QPainter &painter) {
         member.direction = box.direction;
         all.members.push_back(member);
     }
-    drawMembers(painter, all, QPointF(0, 0), STAMP_PREVIEW_OPACITY);
+    drawMembers(painter, all, QPointF(0, 0), opacity);
+}
+
+QImage Viewport::renderGorePreview(GoreKind kind) {
+    using auto_mapper::core::decoration_builder::DecorationMember;
+    using auto_mapper::core::decoration_builder::DecorationStamp;
+    // Fixed sample so the card never changes between refreshes: blood around the pool's first corpse, or a pool.
+    std::vector<QVector3D> blood = {{-34, 12, 0}, {28, -10, 0}, {8, 24, 0}, {-14, -22, 0}};
+    std::vector<int32_t> bloodVids = {auto_mapper::core::GORE_VID_BLOOD, auto_mapper::core::GORE_VID_BLOOD_SMALL,
+                                      auto_mapper::core::GORE_VID_BLOOD, auto_mapper::core::GORE_VID_GIBS};
+    if (kind == GoreKind::BloodPool)
+        bloodVids[3] = auto_mapper::core::GORE_VID_BLOOD_SMALL;
+    DecorationStamp sample;
+    for (int i = 0; i < static_cast<int>(blood.size()); ++i) {
+        DecorationMember member;
+        member.vid = bloodVids[i];
+        member.offset_x = blood[i].x();
+        member.offset_y = blood[i].y();
+        member.direction = static_cast<uint32_t>(i * 64);
+        sample.members.push_back(member);
+    }
+    std::vector<int32_t> corpses = auto_mapper::core::gore_corpse_vids(kind, project_.mapFormat());
+    if (!corpses.empty()) {
+        DecorationMember corpse;
+        corpse.vid = corpses.front();
+        corpse.direction = 32;
+        sample.members.push_back(corpse);
+    }
+    return stampSprites().render(sample, project_.mapFormat());
+}
+
+void Viewport::goreDab(const QPointF &center) {
+    lastDab_ = center;
+    std::vector<GoreItem> added = rollGore(center);
+    rerollScatter();
+    for (const GoreItem &item : added)
+        project_.gore.push_back(item);
+    int kept = static_cast<int>(added.size());
+    if (kept == 0)
+        return;
+    qInfo() << "Gore brush dab:" << kept << "added, total" << project_.gore.size();
+    emit projectChanged();
+    emit gorePainted(kept, static_cast<int>(project_.gore.size()));
+}
+
+void Viewport::eraseGore(const QPointF &center) {
+    int erased = auto_mapper::core::erase_gore(project_.gore, static_cast<float>(center.x()),
+                                               static_cast<float>(center.y()), static_cast<float>(eraserRadius()),
+                                               *goreKind);
+    if (erased == 0)
+        return;
+    qInfo() << "Gore erased:" << erased << "left" << project_.gore.size();
+    emit projectChanged();
+    emit goreErased(erased, static_cast<int>(project_.gore.size()));
+}
+
+void Viewport::drawGoreItems(QPainter &painter, const std::vector<GoreItem> &items, double opacity) {
+    using auto_mapper::core::decoration_builder::DecorationMember;
+    if (items.empty())
+        return;
+    auto_mapper::core::decoration_builder::DecorationStamp all;
+    all.members.reserve(items.size());
+    for (const GoreItem &item : items) {
+        DecorationMember member;
+        member.vid = item.vid;
+        member.offset_x = item.x;
+        member.offset_y = item.y;
+        member.pos_z = item.z;
+        member.direction = item.direction;
+        all.members.push_back(member);
+    }
+    drawMembers(painter, all, QPointF(0, 0), opacity);
+
+    // drawMembers() leaves blood and bone piles blank when their frame is missing; mark them so a brush stroke
+    // never paints something invisible.
+    auto_mapper::io::MapFormat format = project_.mapFormat();
+    std::vector<QPointF> bloodDots;
+    std::vector<QPointF> crosses;
+    for (const DecorationMember &member : all.members) {
+        if (stampSprites().sprite(member) != nullptr)
+            continue;
+        QPointF anchor(member.offset_x, member.offset_y);
+        if (auto_mapper::core::is_gore_blood(member.vid))
+            bloodDots.push_back(anchor);
+        else if (!auto_mapper::core::decoration_builder::draws_placeholder(format, member.vid))
+            crosses.push_back(anchor);
+    }
+    painter.save();
+    painter.setOpacity(opacity);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(colors::GORE_BLOOD_PLACEHOLDER));
+    double dotRadius = GORE_BLOOD_DOT_RADIUS * zoom;
+    for (const QPointF &anchor : bloodDots)
+        painter.drawEllipse(mapToScreen(anchor), dotRadius, dotRadius);
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(cosmeticPen(QColor(colors::DECORATION_STAMP_PLACEHOLDER), 1.5));
+    QPointF arm(STAMP_PLACEHOLDER_HALF_SIZE, STAMP_PLACEHOLDER_HALF_SIZE);
+    QPointF mirroredArm(STAMP_PLACEHOLDER_HALF_SIZE, -STAMP_PLACEHOLDER_HALF_SIZE);
+    for (const QPointF &anchor : crosses) {
+        painter.drawLine(mapToScreen(anchor - arm), mapToScreen(anchor + arm));
+        painter.drawLine(mapToScreen(anchor - mirroredArm), mapToScreen(anchor + mirroredArm));
+    }
+    painter.restore();
 }
 
 StampSprites &Viewport::stampSprites() {
@@ -1259,7 +1464,9 @@ void Viewport::paintEvent(QPaintEvent *) {
         bool selected = isEditing() && selectedDecoration == i;
         drawDecoration(painter, project_.decorations[i], selected);
     }
-    drawLootBoxes(painter);
+    // Blood lies on the floor, so gore goes under the loot boxes.
+    drawGoreItems(painter, project_.gore, STAMP_PREVIEW_OPACITY);
+    drawLootItems(painter, project_.lootBoxes, STAMP_PREVIEW_OPACITY);
     for (const auto &segment : project_.segments) {
         painter.setPen(cosmeticPen(colors::wallColor(segment.wall_type), WALL_LINE_WIDTH));
         QPointF start(segment.start.x, segment.start.y);
@@ -1279,11 +1486,8 @@ void Viewport::paintEvent(QPaintEvent *) {
             painter.setPen(cosmeticPen(QColor(colors::ERASER_PREVIEW_COLOR), 2, Qt::DashLine));
             painter.setBrush(colors::withAlpha(colors::ERASER_PREVIEW_COLOR, colors::ERASER_PREVIEW_ALPHA));
             painter.drawEllipse(*cursor_, radius, radius);
-        } else if (isLootCard() && mode == DrawingMode::Freehand) {
-            double radius = lootBrush.radius * zoom;
-            painter.setPen(cosmeticPen(QColor(colors::LOOT_BRUSH_PREVIEW_COLOR), 2, Qt::DashLine));
-            painter.setBrush(colors::withAlpha(colors::LOOT_BRUSH_PREVIEW_COLOR, colors::LOOT_BRUSH_PREVIEW_ALPHA));
-            painter.drawEllipse(*cursor_, radius, radius);
+        } else if (isBrushCard() && mode == DrawingMode::Freehand) {
+            drawScatterGhost(painter, *cursor_);
         } else if (!isEditing() && !isPlacing() && mode != DrawingMode::Freehand) {
             painter.setPen(cosmeticPen(QColor(colors::CANVAS_PREVIEW_SEGMENT), WALL_PREVIEW_LINE_WIDTH, Qt::DashLine));
             painter.setBrush(Qt::NoBrush);

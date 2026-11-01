@@ -173,6 +173,18 @@ inline constexpr const char *BUTTON_LOOT_PRESET_SAVE = "button.loot_preset_save"
 inline constexpr const char *BUTTON_LOOT_PRESET_DELETE = "button.loot_preset_delete";
 inline constexpr const char *DIALOG_LOOT_PRESET_NAME = "dialog.loot_preset_name";
 inline constexpr const char *MESSAGE_LOOT_PRESET_NAME_INVALID = "message.loot_preset_name_invalid";
+
+// Gore shelf (corpses and blood) and its brush.
+inline constexpr const char *SHELF_MODE_GORE = "shelf.mode.gore";
+inline constexpr const char *TOOLTIP_GORE = "tooltip.gore";
+inline constexpr const char *LABEL_GORE_COUNT = "label.gore_count";
+inline constexpr const char *STATUS_GORE_KIND_SELECTED = "status.gore_kind_selected";
+inline constexpr const char *STATUS_GORE_PAINTED = "status.gore_painted";
+inline constexpr const char *STATUS_GORE_ERASED = "status.gore_erased";
+inline constexpr const char *GROUP_GORE_BRUSH = "group.gore_brush";
+inline constexpr const char *LABEL_GORE_RADIUS = "label.gore_radius";
+inline constexpr const char *LABEL_GORE_SPACING = "label.gore_spacing";
+inline constexpr const char *LABEL_GORE_BLOOD_COUNT = "label.gore_blood_count";
 inline constexpr const char *BUTTON_OK = "button.ok";
 inline constexpr const char *BUTTON_CANCEL = "button.cancel";
 

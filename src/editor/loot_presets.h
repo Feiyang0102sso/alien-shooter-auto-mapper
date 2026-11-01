@@ -12,7 +12,7 @@
 // The file ships beside AutoMapper.exe (template: loot_presets.ini in the repository root, early / mid / late box drops from
 // the official maps plus the egg line). Without it there are no presets; the first save creates it.
 #pragma once
-#include "auto_mapper/core/loot/loot_table.h"
+#include "auto_mapper/core/scatter/loot/loot_table.h"
 #include <QList>
 #include <QString>
 #include <vector>

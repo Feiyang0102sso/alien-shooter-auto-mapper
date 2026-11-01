@@ -16,6 +16,15 @@ std::mt19937& Random::engine() {
     return random_engine;
 }
 
+RandomSeedScope::RandomSeedScope(uint32_t seed)
+    : saved_(Random::engine()) {
+    Random::engine().seed(seed);
+}
+
+RandomSeedScope::~RandomSeedScope() {
+    Random::engine() = saved_;
+}
+
 int Random::get(int min_value, int max_value) {
     std::uniform_int_distribution<int> distribution(min_value, max_value);
 

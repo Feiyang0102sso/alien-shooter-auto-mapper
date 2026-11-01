@@ -51,6 +51,8 @@ class MainWindow : public QMainWindow {
     void showStampDetails(const QString &stampId);
     // Inspector box count and sample preview of the active Loot Box card.
     void showLootDetails();
+    // Inspector corpse / blood count and sample preview of the active Gore card.
+    void showGoreDetails();
     void activateMode(DrawingMode mode);
     void showHotkeys();
     bool isDirty() const;
@@ -72,6 +74,8 @@ class MainWindow : public QMainWindow {
     void refreshStampSeriesPreviews();
     // Render each Loot Box card's sample pile.
     void refreshLootPreviews();
+    // Render each Gore card's sample corpse (or pool).
+    void refreshGorePreviews();
     void syncControls();
     void syncSelection();
     void syncMode();
@@ -97,6 +101,8 @@ class MainWindow : public QMainWindow {
     void editLootTable();
     // Brush settings of one Loot Box card for this session, created with the defaults on first use.
     auto_mapper::core::LootBrushSettings &lootBrushOf(LootBoxKind kind);
+    // Brush settings of one Gore card for this session, created with the defaults on first use.
+    auto_mapper::core::GoreBrushSettings &goreBrushOf(GoreKind kind);
     void errorDialog(const QString &title, const QString &message);
 
     hotkeys::HotkeyManager hotkeys_;
@@ -129,6 +135,9 @@ class MainWindow : public QMainWindow {
     // Row of the selected Loot Box card in LOOT_KINDS order.
     int selectedLootKind_ = 0;
     std::map<LootBoxKind, auto_mapper::core::LootBrushSettings> lootBrushes_;
+    // Row of the selected Gore card in GORE_KINDS order.
+    int selectedGoreKind_ = 0;
+    std::map<GoreKind, auto_mapper::core::GoreBrushSettings> goreBrushes_;
     // Last wall type per game family ("AS1" / "AS2"), restored after a project switch.
     QHash<QString, int> rememberedWallTypes_;
     QString lastAS2Version_ = PROJECT_VERSION_AS2R;

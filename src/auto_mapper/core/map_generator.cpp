@@ -71,6 +71,14 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
         }
     }
 
+    // A Conscription-only corpse (an AS2C project switched to AS2R, say) would be an unknown object in the game.
+    for (const GoreItem& item : request.gore_items) {
+        if (request.format != io::MapFormat::AS1 && !gore_vid_available(item.vid, request.format)) {
+            Logger::error("Corpse VID {} does not exist in this map format's game; erase it first", item.vid);
+            return false;
+        }
+    }
+
     std::vector<DoorInstance> doors;
     doors.reserve(request.doors.size());
     std::vector<DoorExcavation> excavations;
@@ -159,7 +167,7 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
     sprites.insert(sprites.end(), decoration_sprites.begin(), decoration_sprites.end());
 
-    // 5. Loot boxes, then loot texts for every listed container (stamp members too).
+    // 5. Loot boxes, then loot texts for every listed container (stamp members too; gore VIDs are never listed).
     //    AS1 sprite records carry no nameText, and AS1 has no Loot Box brush.
     if (request.format == io::MapFormat::AS1) {
         if (!request.loot_boxes.empty()) {
@@ -170,6 +178,17 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
         sprites.insert(sprites.end(), loot_sprites.begin(), loot_sprites.end());
         Logger::info("Loot boxes: {}", loot_sprites.size());
         assign_loot_text(sprites, request.loot_tables);
+    }
+
+    // 6. Gore (corpses and blood); AS1 has no Gore brush either.
+    if (request.format == io::MapFormat::AS1) {
+        if (!request.gore_items.empty()) {
+            Logger::warning("AS1 has no gore brush, skipped {} gore sprite(s)", request.gore_items.size());
+        }
+    } else {
+        std::vector<io::Sprite> gore_sprites = build_gore(request.gore_items);
+        sprites.insert(sprites.end(), gore_sprites.begin(), gore_sprites.end());
+        Logger::info("Gore sprites: {}", gore_sprites.size());
     }
 
     return io::write_map(sprites, output_path, request.format, request.map_size_x, request.map_size_y);

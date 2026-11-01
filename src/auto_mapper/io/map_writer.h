@@ -17,6 +17,8 @@ enum class MapFormat {
     AS1,
     AS2,
     AS2R,
+    // Alien Shooter 2 Conscription: the AS2R file format, but objects.res has extra objects (corpses).
+    AS2C,
     AS2OE
 };
 

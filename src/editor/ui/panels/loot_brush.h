@@ -1,6 +1,6 @@
 // Inspector controls for the Loot Box brush of the active card, plus the Loot Table button.
 #pragma once
-#include "auto_mapper/core/loot/loot_box_builder.h"
+#include "auto_mapper/core/scatter/loot/loot_box_builder.h"
 #include "editor/i18n/locale.h"
 #include <QGroupBox>
 

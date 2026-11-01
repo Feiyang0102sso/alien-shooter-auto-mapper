@@ -1,6 +1,6 @@
 /**
  * @file map_generator.h
- * @brief Whole-map pipeline: walls -> curve walls -> doors -> decorations -> loot boxes -> loot texts -> .map file.
+ * @brief Whole-map pipeline: walls -> curve walls -> doors -> decorations -> loot boxes -> gore -> loot texts -> .map file.
  *
  * This is the single entry point the editor calls to generate a map.
  */
@@ -11,8 +11,9 @@
 #include "auto_mapper/core/door_builder/door_builder.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
-#include "auto_mapper/core/loot/loot_box_builder.h"
-#include "auto_mapper/core/loot/loot_table.h"
+#include "auto_mapper/core/scatter/gore/gore_builder.h"
+#include "auto_mapper/core/scatter/loot/loot_box_builder.h"
+#include "auto_mapper/core/scatter/loot/loot_table.h"
 #include "auto_mapper/core/wall_builder/curve_wall_builder.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/io/map_writer.h"
@@ -52,6 +53,8 @@ struct MapRequest {
     // sprite with a listed VID (stamp members included).
     std::vector<LootBox> loot_boxes;
     std::vector<LootTable> loot_tables;
+    // AS2 Series only: brushed corpses and blood. Conscription-only corpses need an AS2C / AS2OE format.
+    std::vector<GoreItem> gore_items;
     AS1CeilingLayerSettings as1_ceiling_layers = DEFAULT_AS1_CEILING_LAYER_SETTINGS;
     bool generate_floor = false;
     bool generate_ceiling = false;
@@ -60,7 +63,8 @@ struct MapRequest {
 
 /**
  * Build every sprite for the request and write the map file.
- * Returns false for invalid AS1 ceiling layer counts, a Loot Table above 100%, or when the file cannot be written.
+ * Returns false for invalid AS1 ceiling layer counts, a Loot Table above 100%, a corpse the format's game lacks,
+ * or when the file cannot be written.
  */
 bool generate_map(const MapRequest& request, const std::string& output_path);
 

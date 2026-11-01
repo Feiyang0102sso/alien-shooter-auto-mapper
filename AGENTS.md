@@ -22,7 +22,9 @@ Agent 修改代码时，先判断改动属于哪一层。坐标、VID、墙体�
 - 装饰物 stamp 由 `core/decoration_builder/decoration_library.*` 在启动时从库地图注册（AS2 系列按 region，AS1 按固定网格），见下文“装饰物 Stamp”。
 - 墙体生成核心是 `src/auto_mapper/core/wall_builder.*`。
 - 曲线墙（Curve Wall）核心是 `core/wall_builder/curve_wall_builder.*`，见下文“曲线墙”。
-- 物资箱（Loot Box）笔刷与掉落表在 `core/loot/`，见下文“物资箱”。
+- 散布笔刷都在 `core/scatter/`：公共的散布引擎 `scatter_fill.*` 直接放在这一层；
+  物资箱（Loot Box）笔刷与掉落表在 `core/scatter/loot/`，见下文“物资箱”；
+  尸体血迹（Gore）笔刷在 `core/scatter/gore/`，见下文“尸体血迹”。
 - 门生成核心是 `src/auto_mapper/core/door_builder.*`。
 - 地图写出逻辑是 `src/auto_mapper/io/map_writer.*`。
 - 室内装饰物在 `src/auto_mapper/core/indoor_decorations/`。
@@ -44,7 +46,7 @@ Agent 修改代码时，先判断改动属于哪一层。坐标、VID、墙体�
 | `ui/main_window.*` | 组装面板、画布、快捷键，执行编辑器命令 |
 | `ui/canvas/viewport.*` | 画布：坐标换算、绘制、鼠标交互 |
 | `ui/canvas/stamp_sprites.*` | 装饰物成员贴图缓存（经 `game_assets` 解码，叠加库地图 gamma） |
-| `ui/panels/` | 左侧货架（`left_shelf`、`theme_shelf`）、右侧属性面板（`inspector`、`as1_ceiling`、`loot_brush`）、贴图预览小窗口（`sprite_preview_dialog`）、掉落表对话框（`loot_table_dialog`） |
+| `ui/panels/` | 左侧货架（`left_shelf`、`theme_shelf`）、右侧属性面板（`inspector`、`as1_ceiling`、`loot_brush`、`gore_brush`）、贴图预览小窗口（`sprite_preview_dialog`）、掉落表对话框（`loot_table_dialog`） |
 | `ui/tools/` | 绘制模式、左侧工具栏、橡皮擦几何与属性 |
 | `resources/` | `catalog.json`、`i18n/*.json`、`styles/*.qss`，编译进 exe |
 
@@ -132,7 +134,7 @@ Stamp 不再有手写 profile 和预览图，全部来自库地图：`assets/dec
 - `decoration_builder.*`：`build_stamp()` 只做平移。army 用库地图里的值，因为血迹等贴花在 `vid_armies_as2.h` 里没有绑定。
 - `placeholder_vids.*`：画布占位符黑名单（血迹、阴影、`TERRAIN:` 类、书本等密集杂物），
   没有游戏目录读不到 objects.res，所以 nvid 写死在这里；AS1 与 AS2 系列各有一套完整名单（nvid 相同也分开列），
-  三个查询函数都按 `io::MapFormat` 选名单，AS2/AS2R/AS2OE 共用 AS2 名单；AS1 的血迹、弹壳、碎片、428 小物品不画 X，尸体照画；`lies_on_ground()` 标出贴地类，贴图预览先画它们；
+  三个查询函数都按 `io::MapFormat` 选名单，AS2/AS2R/AS2C/AS2OE 共用 AS2 名单；AS1 的血迹、弹壳、碎片、428 小物品不画 X，尸体照画；`lies_on_ground()` 标出贴地类，贴图预览先画它们；
   `is_invisible_block()` 标出 `BLOCK:` 空气墙，`stampDrawOrder()` 直接滤掉，既不画贴图也不画 X，生成的 `.map` 仍保留。
 - 工具栏“贴图预览”打开一个非模态小窗口（`ui/panels/sprite_preview_dialog.*`），设置都写进 `AutoMapper.cfg`：
   `as2_path` / `as1_path`（AS2 / AS1 游戏目录，各自驱动本游戏族的装饰物贴图；画布持有两份 `StampSprites`，按项目游戏族取用）、
@@ -236,8 +238,10 @@ UI 画布规则：
   - 网格墙卡：显示折线 / 直线 / 矩形，隐藏手绘。
   - 曲线墙卡（`Viewport::isCurveWallCard()`）：只显示手绘和橡皮，`activateMode()` 拒绝网格工具。
 - Decoration Sets 货架：显示 Select，隐藏橡皮和手绘。
-- Loot 货架（物资箱，只在 AS2 系列工程显示）：只显示手绘（即笔刷）和橡皮，`activateMode()` 拒绝 Select 和网格工具。
-  货架模式是 `ShelfMode`（`left_shelf.h`）三态：Walls / Decorations / Loot。
+- Loot 货架（物资箱）和 Gore 货架（尸体血迹），只在 AS2 系列工程显示：只显示手绘（即笔刷）和橡皮，
+  `activateMode()` 拒绝 Select 和网格工具；判断入口是 `Viewport::isBrushCard()`。
+  货架模式是 `ShelfMode`（`left_shelf.h`）四态：Walls / Decorations / Loot / Gore。
+  货架按钮排成两行（`QGridLayout`）：第一行墙壁套装 / 装饰套装，第二行物资箱 / 尸体血迹；AS1 工程隐藏第二行。
 - 每个可隐藏的工具在 `DrawingToolbar::separators_` 里绑定了自己的分隔线，`setModeVisible()` 一起显隐。
 
 隐藏当前选中的工具会留下一个死状态，所以 `chooseShelf()` 必须同时换到
@@ -266,7 +270,7 @@ AS2 系列专用的“曲线墙”卡（`catalog.json` 里 id `100`，条目 `id
   （`erase_curve_wall_circle()`）：曲线断成两段、闭环被切开，剩下的每段保留原控制点、端点落在圆上，
   短于半个片间距的残段一并删掉。
 - `curveWallType` 不在 `resetInteraction()` 里清掉，否则在手绘和橡皮之间切换会丢掉曲线墙卡；
-  `setWall()` / `armStamp()` / `armArray()` / `chooseShelf()` 负责清掉它。
+  `setWall()` / `armStamp()` / `armArray()` / `armLoot()` / `armGore()` / `chooseShelf()` 负责清掉它。
 - 地板（勾选“地板”时）：曲线墙参与 `WallBuilder` 的物理网格（`build()` 的 `curve_walls` 参数，生成器在 AS1 时传空）。
   只铺被围住的区域，开放曲线只当边界、不沿线铺砖（`curve_line_grid` 上的格子不参与采样）。
   地板类型先从曲线向外扩散：能连到曲线墙的空地都铺曲线地板（岩石圈住房间时整个环形区是岩石地板），
@@ -284,10 +288,10 @@ AS2 系列专用的第三个货架，三张卡：木箱 1225、金属箱 2332、
 - 掉落文本：写在 SPRD 每条记录末尾的 nameText（`io::Sprite::name_text`，writer 原样写出，空串时输出与以前逐字节相同）。
   一行是空格分隔的道具名（`EMPTY` 表示不掉），箱子被打碎时由游戏从这一行里随机挑一个；
   重复的名字就是权重。工具不读 `Weapon.cfg`、不解析也不校验道具名。AS2R 的蛋 nameText 是 quest 标记 `m1`，不是掉落。
-- 掉落表（`core/loot/loot_table.*`）：每张卡一张表，每行是“一整条文本 + 概率”，概率之和 ≤ 100%，剩下的不写。
+- 掉落表（`core/scatter/loot/loot_table.*`）：每张卡一张表，每行是“一整条文本 + 概率”，概率之和 ≤ 100%，剩下的不写。
   `generate_map()` 在最后一步按 VID 对**所有**输出 sprite 抽一行写入，所以装饰物 stamp 里的箱子也会带上；破损蛋不在表里。
   超过 100% 的表直接让生成失败。每次导出重新抽，没有种子。
-- 摆放（`core/loot/loot_box_builder.*`）：编辑器每落一笔调用 `scatter_loot_boxes()`，项目里存的是具体实例（`loot_boxes`）。
+- 摆放（`core/scatter/loot/loot_box_builder.*`）：编辑器每落一笔调用 `scatter_loot_boxes()`，项目里存的是具体实例（`loot_boxes`）。
   - 一笔就是一堆：笔刷圆心先放一个，再把圆内的随机点按离圆心由近到远逐个尝试，离已放的（含已有的）≥ 间距才保留，
     所以箱子和蛋都从中心向外长出一团。参数只有笔刷半径、间距、叠放概率（箱子）、破损概率（蛋）；
     默认箱子半径 80、间距 45（官方相邻箱子 38–53），蛋半径 150、间距 35（`default_loot_brush()`）。
@@ -298,7 +302,7 @@ AS2 系列专用的第三个货架，三张卡：木箱 1225、金属箱 2332、
   - army：箱子和活蛋 2，破损蛋 0（`vid_armies_as2.h` 里没有这几个 VID，由 builder 写）。
 - 编辑器：`Viewport::lootKind` 非空即 Loot 卡，手绘拖动时每移动半个笔刷半径落一笔，落到地图外的箱子丢掉；
   橡皮按橡皮圆删当前卡的箱子（蛋卡连破损蛋一起删）。`lootKind` 和 `curveWallType` 一样不在 `resetInteraction()` 里清，
-  由 `setWall()` / `armStamp()` / `armArray()` / `armCurveWall()` / `chooseShelf()` 清。
+  由 `setWall()` / `armStamp()` / `armArray()` / `armCurveWall()` / `armGore()` / `chooseShelf()` 清。
   画布把所有箱子当成一个 stamp 的成员交给 `drawMembers()`，叠放顺序、半透明、贴图和叉号都与装饰物一致。
 - 笔刷参数每张卡一份，只在本次会话里记住（`MainWindow::lootBrushes_`）。
   掉落表对话框是暗色的（`#lootTableDialog` QSS），文本列放宽，长文本在框内换行、框向下长高，不横向拉长；
@@ -316,10 +320,44 @@ AS2 系列专用的第三个货架，三张卡：木箱 1225、金属箱 2332、
   文件经 QFile 读、QSaveFile 写，不用 SimpleIni 的 `LoadFile()`（`fopen` 打不开中文路径）。
 - 项目 JSON：`loot_boxes`（`vid`、`x`、`y`、`z`、`direction`）和 `loot_tables` 只在非空时写；AS1 工程出现 `loot_boxes` 直接报错。
 
+## 尸体血迹（Gore）
+
+AS2 系列专用的第四个货架，四张卡：骨头堆 1532、怪物尸体、士兵尸体、血滩。尸体和血迹一起生成，因为官方地图里
+96–99% 的尸体旁边都有血。数据来自 AS2R 原版 17 张图（`AlienShooter2 Reloaded\Maps`）和 AS2C 原版 12 张图。
+
+- 尸体池（`core/scatter/gore/gore_builder.h` 开头的常量）：怪物 23 个、人类 5 个，池内等概率抽；
+  Boss、女王、机械、坦克、具名 NPC、碎片、`HIDE:` 版士兵（1157，与 MAPEDIT 版 1159 同贴图）不收。
+  每个 VID 都在两个游戏目录里解码核对过有帧。
+- **AS2C 特有尸体**：Conscription 的 objects.res 比 AS2R 多 4019 / 4023 / 4025 / 4029 / 4033 / 4035 / 4039 / 4041（怪物）
+  和 3959 / 3968 / 3971（士兵）。3968 在 objects.res 里叫“Монстр1”，贴图却是拿加特林的重甲兵，所以归士兵。AS2R 游戏里没有这些对象，所以只有 `MapFormat::AS2C` / `AS2OE` 的工程才抽得到（`gore_corpse_vids()`）。
+  AS2C 地图在文件格式上与 AS2R 完全相同，所以单独加了 Project Version `AS2C`（`io::MapFormat::AS2C`，writer 按 AS2R 写，逐字节相同）。
+  AS2C 工程改成 AS2R 后，读项目不报错，`generate_map()` 遇到特有尸体时报错返回 false（`gore_vid_available()`），提示用橡皮擦掉。
+- 一笔（`scatter_gore()`）：尸体卡用物资箱的 `fill_from_center()` 从圆心向外放尸体，只有同一笔里的尸体互相保持间距；
+  **不避让地图上已有的任何东西**，尸体和血可以随便叠，同一处再点一下就再多一组（物资箱仍会避让已有箱子）；
+  每具尸体在半轴 80 × 60 的椭圆里均匀撒血（官方 |dx| / |dy| 的 p90）。
+  血滩卡只在半轴 `radius` × `0.75 radius` 的椭圆里撒血，同一处多点几下血会更多。
+  参数只有笔刷半径、尸体间距（血滩卡隐藏）、血迹数（每具尸体或每笔，实际在 [n/2, 3n/2] 里随机）。
+  默认：骨头堆 80 / 35 / 4，怪物和士兵 40 / 90 / 8（点一下基本就是一具），血滩 50 / – / 6（`default_gore_brush()`）。
+- 血迹配方：尸体周围 110 45%、120 35%、916 13%、1319 7%；血滩 110 60%、120 30%、916 10%。
+  怪物 / 士兵尸体周围的血 z 在 5–15 随机，盖在尸体上（z 0 的血会被尸体压住）；血滩的血同样 5–15；骨头堆的血 z 0。
+  916（扩散血动画）z 固定 20。**不放 154**（“竖直”血迹，用户决定）。方向全部 0..255。
+- army：1532 写 2（官方地图全部是 2），其余尸体和全部血迹写 0；scale 1、gamma 0。`build_gore()` 先输出血迹再输出尸体。
+- 擦除（`erase_gore()`）：橡皮删圆内属于当前卡的 VID；血迹属于每张卡，所以在尸体卡上擦会连血一起擦，在血滩卡上只擦血。
+- 编辑器：照物资箱。`Viewport::goreKind` 非空即 Gore 卡，与 `lootKind` 至多一个非空，同样不在 `resetInteraction()` 里清；
+  拖动时每移动半个笔刷半径落一笔，落到地图外的丢掉。参数每张卡一份，只在本次会话里记住（`MainWindow::goreBrushes_`），不做预设。
+- 笔刷虚影（物资箱和尸体血迹共用）：光标处画下一笔的虚影（不透明度同装饰物放置虚影 0.55）和绿色虚线圆（`SCATTER_BRUSH_GHOST_BORDER`，
+  与装饰物虚影框同色）。每一笔都在 `RandomSeedScope(scatterSeed_)` 里跑核心散布函数（`rollLoot()` / `rollGore()`），
+  所以虚影和点下去放的完全一样（含物资箱对已有箱子的避让、出地图丢弃）；`RandomSeedScope` 结束后恢复共享随机序列。
+  右键（手绘模式下）换一个种子；每落一笔也自动换种子，拖动时每一堆都不同。拖动中不画虚影。
+  核心散布函数不打日志（虚影每次鼠标移动都会调用），落笔日志由编辑器写。
+- 画布：`drawGore()` 把所有尸体血迹交给 `drawMembers()`，画在物资箱下面。血迹和 1532 在 `placeholder_vids` 黑名单里，
+  没有游戏目录时 `drawMembers()` 什么都不画，所以 `drawGore()` 给解不出贴图的血迹画暗红小圆点、给 1532 画叉号；装饰物 stamp 不受影响。
+- 项目 JSON：顶层 `gore`（`[{vid, x, y, z, direction}]`）只在非空时写；未知 VID 或 AS1 工程出现 `gore` 直接报错。
+
 ## 测试与 Golden 文件
 
 核心测试在 `tests/test_*.cpp`，编辑器测试在 `tests/editor/test_editor.cpp`（交互、旧 JSON 兼容、四种输出、中文路径、
-多语言 key 集合、快捷键分发）。
+多语言 key 集合、快捷键分发）；五种 Project Version（AS1 / AS2 / AS2R / AS2C / AS2OE）都要能生成。
 
 重点测试：
 
@@ -330,6 +368,7 @@ AS2 系列专用的第三个货架，三张卡：木箱 1225、金属箱 2332、
 - `tests/test_door_builder.cpp`
 - `tests/test_map_writer.cpp`
 - `tests/test_loot.cpp`
+- `tests/test_gore.cpp`
 
 Golden 文件在 `tests/golden/`。改动导致 golden 输出变化时，必须能解释是预期行为变化，不要静默更新。
 

@@ -3,6 +3,7 @@
 #include "editor/i18n/locale.h"
 #include "editor/project/project.h"
 #include "editor/ui/panels/as1_ceiling.h"
+#include "editor/ui/panels/gore_brush.h"
 #include "editor/ui/panels/loot_brush.h"
 #include "editor/ui/tools/eraser/eraser_properties.h"
 #include <QWidget>
@@ -24,6 +25,7 @@ class InspectorPanel : public QWidget {
     AS1CeilingPropertiesWidget *ceiling() const;
     EraserPropertiesWidget *eraser() const;
     LootBrushPropertiesWidget *lootBrush() const;
+    GoreBrushPropertiesWidget *goreBrush() const;
 
     // Component preview: the Editor Set title and its Editor Set Items.
     void setComponentSet(const QString &title, const QStringList &itemLabels, int selectedIndex);
@@ -36,6 +38,8 @@ class InspectorPanel : public QWidget {
     void showStamp(int memberCount, bool spritesReady, const QImage &preview);
     // Loot Box card: its sample sprite preview and how many boxes of it the map holds.
     void showLoot(int boxCount, bool spritesReady, const QImage &preview);
+    // Gore card: its sample sprite preview and how many corpses and blood sprites the map holds.
+    void showGore(int corpseCount, int bloodCount, bool spritesReady, const QImage &preview);
     // Stamp notice: whether an AS2 game folder is loaded, so sprites render instead of crosses.
     void setSpritePreviewReady(bool ready);
 
@@ -71,6 +75,7 @@ class InspectorPanel : public QWidget {
     QPushButton *delete_ = nullptr;
     EraserPropertiesWidget *eraser_ = nullptr;
     LootBrushPropertiesWidget *lootBrush_ = nullptr;
+    GoreBrushPropertiesWidget *goreBrush_ = nullptr;
 };
 
 } // namespace editor

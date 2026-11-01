@@ -113,12 +113,15 @@ InspectorPanel::InspectorPanel(const Locale &locale, QWidget *parent) : QWidget(
     groupLayout(selectionGroup_)->addWidget(delete_);
     layout->addWidget(selectionGroup_);
 
-    // Tool properties (eraser size, Loot Box brush).
+    // Tool properties (eraser size, Loot Box brush, Gore brush).
     eraser_ = new EraserPropertiesWidget(locale);
     layout->addWidget(eraser_);
     lootBrush_ = new LootBrushPropertiesWidget(locale);
     lootBrush_->setVisible(false);
     layout->addWidget(lootBrush_);
+    goreBrush_ = new GoreBrushPropertiesWidget(locale);
+    goreBrush_->setVisible(false);
+    layout->addWidget(goreBrush_);
     layout->addStretch();
 }
 
@@ -137,6 +140,10 @@ EraserPropertiesWidget *InspectorPanel::eraser() const {
 
 LootBrushPropertiesWidget *InspectorPanel::lootBrush() const {
     return lootBrush_;
+}
+
+GoreBrushPropertiesWidget *InspectorPanel::goreBrush() const {
+    return goreBrush_;
 }
 
 void InspectorPanel::setComponentSet(const QString &title, const QStringList &itemLabels, int selectedIndex) {
@@ -191,6 +198,12 @@ void InspectorPanel::showStamp(int memberCount, bool spritesReady, const QImage 
 void InspectorPanel::showLoot(int boxCount, bool spritesReady, const QImage &preview) {
     showSpritePreview(locale_.tr(TextKey::LABEL_LOOT_BOX_COUNT, {{"count", QString::number(boxCount)}}), spritesReady,
                       preview);
+}
+
+void InspectorPanel::showGore(int corpseCount, int bloodCount, bool spritesReady, const QImage &preview) {
+    showSpritePreview(locale_.tr(TextKey::LABEL_GORE_COUNT, {{"corpse_count", QString::number(corpseCount)},
+                                                             {"blood_count", QString::number(bloodCount)}}),
+                      spritesReady, preview);
 }
 
 void InspectorPanel::showSpritePreview(const QString &detail, bool spritesReady, const QImage &preview) {

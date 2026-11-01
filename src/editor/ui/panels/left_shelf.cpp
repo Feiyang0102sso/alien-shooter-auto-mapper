@@ -3,6 +3,7 @@
 #include "editor/project/project.h"
 #include <QButtonGroup>
 #include <QComboBox>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QSignalBlocker>
@@ -39,15 +40,15 @@ LeftShelfPanel::LeftShelfPanel(const Catalog &catalog, QWidget *parent) : QWidge
     });
     as2Format_ = new QComboBox;
     as2Format_->setObjectName("as2FormatCombo");
-    as2Format_->addItems({PROJECT_VERSION_AS2, PROJECT_VERSION_AS2R, PROJECT_VERSION_AS2OE});
+    as2Format_->addItems({PROJECT_VERSION_AS2, PROJECT_VERSION_AS2R, PROJECT_VERSION_AS2C, PROJECT_VERSION_AS2OE});
     // AS2R is the default target when the user first switches to the AS2 family.
     as2Format_->setCurrentText(PROJECT_VERSION_AS2R);
     family->addWidget(as2Format_);
     connect(as2Format_, &QComboBox::currentTextChanged, this, &LeftShelfPanel::as2FormatRequested);
     layout->addLayout(family);
 
-    // Shelf mode row: Wall Sets / Decoration Sets / Loot Boxes (AS2 Series only).
-    auto *modes = new QHBoxLayout;
+    // Shelf mode buttons in two rows: Wall Sets / Decoration Sets, then Loot Boxes / Gore (AS2 Series only).
+    auto *modes = new QGridLayout;
     modes->setSpacing(8);
     auto *modeGroup = new QButtonGroup(this);
     wallsButton_ = new QPushButton(locale.tr(TextKey::SHELF_MODE_WALL_SETS));
@@ -55,12 +56,17 @@ LeftShelfPanel::LeftShelfPanel(const Catalog &catalog, QWidget *parent) : QWidge
     decorationsButton_->setToolTip(locale.tr(TextKey::TOOLTIP_DECORATION_SETS));
     lootButton_ = new QPushButton(locale.tr(TextKey::SHELF_MODE_LOOT));
     lootButton_->setToolTip(locale.tr(TextKey::TOOLTIP_LOOT));
-    for (QPushButton *button : {wallsButton_, decorationsButton_, lootButton_}) {
+    goreButton_ = new QPushButton(locale.tr(TextKey::SHELF_MODE_GORE));
+    goreButton_->setToolTip(locale.tr(TextKey::TOOLTIP_GORE));
+    for (QPushButton *button : {wallsButton_, decorationsButton_, lootButton_, goreButton_}) {
         button->setObjectName("shelfModeButton");
         button->setCheckable(true);
-        modes->addWidget(button);
         modeGroup->addButton(button);
     }
+    modes->addWidget(wallsButton_, 0, 0);
+    modes->addWidget(decorationsButton_, 0, 1);
+    modes->addWidget(lootButton_, 1, 0);
+    modes->addWidget(goreButton_, 1, 1);
     layout->addLayout(modes);
     connect(wallsButton_, &QPushButton::clicked, this, [this] {
         emit shelfModeRequested(ShelfMode::Walls);
@@ -70,6 +76,9 @@ LeftShelfPanel::LeftShelfPanel(const Catalog &catalog, QWidget *parent) : QWidge
     });
     connect(lootButton_, &QPushButton::clicked, this, [this] {
         emit shelfModeRequested(ShelfMode::Loot);
+    });
+    connect(goreButton_, &QPushButton::clicked, this, [this] {
+        emit shelfModeRequested(ShelfMode::Gore);
     });
 
     shelf_ = new ThemeShelfPanel(locale);
@@ -86,14 +95,16 @@ void LeftShelfPanel::setProjectVersion(const QString &version) {
     as2Format_->setVisible(!isAS1);
     as1Button_->setChecked(isAS1);
     as2Button_->setChecked(!isAS1);
-    // The Loot Box brush writes AS2 nameText only.
+    // The Loot Box brush writes AS2 nameText only, and the Gore VIDs are AS2 objects: AS1 hides the second row.
     lootButton_->setVisible(!isAS1);
+    goreButton_->setVisible(!isAS1);
 }
 
 void LeftShelfPanel::setShelfMode(ShelfMode mode) {
     wallsButton_->setChecked(mode == ShelfMode::Walls);
     decorationsButton_->setChecked(mode == ShelfMode::Decorations);
     lootButton_->setChecked(mode == ShelfMode::Loot);
+    goreButton_->setChecked(mode == ShelfMode::Gore);
 }
 
 void LeftShelfPanel::showWallSets(const QList<int> &setIds) {
@@ -143,6 +154,22 @@ void LeftShelfPanel::showLootKinds() {
         card.spritePreview = true;
         card.title = locale.tr(QString("loot.%1.label").arg(id));
         card.description = locale.tr(QString("loot.%1.description").arg(id));
+        cards.append(card);
+    }
+    QSignalBlocker blocker(shelf_);
+    shelf_->setCards(cards, true);
+}
+
+void LeftShelfPanel::showGoreKinds() {
+    const Locale &locale = catalog_.locale;
+    QList<ShelfCard> cards;
+    for (GoreKind kind : GORE_KINDS) {
+        // No preview images: MainWindow renders a sample corpse (or pool) from the game sprites into the box.
+        QString id = goreKindId(kind);
+        ShelfCard card;
+        card.spritePreview = true;
+        card.title = locale.tr(QString("gore.%1.label").arg(id));
+        card.description = locale.tr(QString("gore.%1.description").arg(id));
         cards.append(card);
     }
     QSignalBlocker blocker(shelf_);

@@ -305,6 +305,15 @@ void MainWindow::buildDocks() {
                 qInfo() << "Loot brush settings changed: radius" << settings.radius;
             });
     connect(inspector_->lootBrush(), &LootBrushPropertiesWidget::lootTableRequested, this, &MainWindow::editLootTable);
+    connect(inspector_->goreBrush(), &GoreBrushPropertiesWidget::settingsChanged, this,
+            [this](const auto_mapper::core::GoreBrushSettings &settings) {
+                if (!viewport->goreKind)
+                    return;
+                goreBrushOf(*viewport->goreKind) = settings;
+                viewport->goreBrush = settings;
+                viewport->update();
+                qInfo() << "Gore brush settings changed: radius" << settings.radius;
+            });
     QScrollArea *scroll = scrolled(inspector_, "inspectorScrollArea");
     scroll->viewport()->setObjectName("inspectorScrollViewport");
     auto *rightDock = new QDockWidget(this);
@@ -358,6 +367,16 @@ void MainWindow::connectViewport() {
         showStatus(locale.tr(TextKey::STATUS_LOOT_ERASED,
                              {{"count", QString::number(changed)}, {"total", QString::number(total)}}));
         showLootDetails();
+    });
+    connect(viewport, &Viewport::gorePainted, this, [this](int changed, int total) {
+        showStatus(locale.tr(TextKey::STATUS_GORE_PAINTED,
+                             {{"count", QString::number(changed)}, {"total", QString::number(total)}}));
+        showGoreDetails();
+    });
+    connect(viewport, &Viewport::goreErased, this, [this](int changed, int total) {
+        showStatus(locale.tr(TextKey::STATUS_GORE_ERASED,
+                             {{"count", QString::number(changed)}, {"total", QString::number(total)}}));
+        showGoreDetails();
     });
     connect(viewport, &Viewport::decorationCreated, this, [this](int count) {
         showStatus(locale.tr(TextKey::STATUS_DECORATION_CREATED, {{"count", QString::number(count)}}));
@@ -463,6 +482,7 @@ void MainWindow::chooseShelf(ShelfMode mode) {
     // The shelf reselects a card below; a grid card is the safe default until then.
     viewport->curveWallType = -1;
     viewport->lootKind.reset();
+    viewport->goreKind.reset();
     // Leave a tool the new shelf hides: Select lives on the decoration shelf only, Eraser and Freehand never there.
     bool decorations = mode == ShelfMode::Decorations;
     if (decorations && (viewport->mode == DrawingMode::Eraser || viewport->mode == DrawingMode::Freehand))
@@ -487,6 +507,10 @@ void MainWindow::rebuildShelf() {
         leftShelf_->showLootKinds();
         refreshLootPreviews();
         index = selectedLootKind_;
+    } else if (shelfMode_ == ShelfMode::Gore) {
+        leftShelf_->showGoreKinds();
+        refreshGorePreviews();
+        index = selectedGoreKind_;
     } else {
         visibleWallSets_ = catalog.wallSetOrder(project.isAS1());
         leftShelf_->showWallSets(visibleWallSets_);
@@ -532,6 +556,20 @@ void MainWindow::refreshLootPreviews() {
     }
 }
 
+void MainWindow::refreshGorePreviews() {
+    if (shelfMode_ != ShelfMode::Gore)
+        return;
+    bool spritesReady = viewport->hasGameFolder();
+    int row = 0;
+    for (GoreKind kind : GORE_KINDS) {
+        QImage preview;
+        if (spritesReady)
+            preview = viewport->renderGorePreview(kind);
+        leftShelf_->shelf()->setCardPreview(row, spritesReady, preview);
+        row += 1;
+    }
+}
+
 void MainWindow::chooseSet(int index) {
     QString title;
     QStringList labels;
@@ -543,6 +581,15 @@ void MainWindow::chooseSet(int index) {
         currentSetKey_ = "loot:" + kindId;
         // One card, one brush: the item list only names it.
         title = locale.tr(QString("loot.%1.label").arg(kindId));
+        labels.append(title);
+    } else if (shelfMode_ == ShelfMode::Gore) {
+        if (index < 0 || index >= static_cast<int>(std::size(GORE_KINDS)))
+            return;
+        selectedGoreKind_ = index;
+        QString kindId = goreKindId(GORE_KINDS[index]);
+        currentSetKey_ = "gore:" + kindId;
+        // One card, one brush, like the Loot Box cards.
+        title = locale.tr(QString("gore.%1.label").arg(kindId));
         labels.append(title);
     } else if (shelfMode_ == ShelfMode::Decorations) {
         if (index < 0 || index >= visibleSeries_.size())
@@ -572,6 +619,8 @@ void MainWindow::chooseSet(int index) {
     qInfo() << "Editor Set selected:" << currentSetKey_;
     if (shelfMode_ == ShelfMode::Loot)
         showStatus(locale.tr(TextKey::STATUS_LOOT_KIND_SELECTED, {{"loot_name", title}}));
+    else if (shelfMode_ == ShelfMode::Gore)
+        showStatus(locale.tr(TextKey::STATUS_GORE_KIND_SELECTED, {{"gore_name", title}}));
     else if (shelfMode_ == ShelfMode::Decorations)
         showStatus(locale.tr(TextKey::STATUS_DECORATION_TOOL_SELECTED, {{"decoration_name", title}}));
     else
@@ -595,6 +644,29 @@ void MainWindow::showLootDetails() {
     inspector_->showLoot(count, viewport->hasGameFolder(), viewport->renderLootPreview(kind));
 }
 
+void MainWindow::showGoreDetails() {
+    if (!viewport->goreKind)
+        return;
+    int corpseCount = 0;
+    int bloodCount = 0;
+    for (const GoreItem &item : project.gore) {
+        if (auto_mapper::core::is_gore_blood(item.vid))
+            bloodCount += 1;
+        else
+            corpseCount += 1;
+    }
+    inspector_->showGore(corpseCount, bloodCount, viewport->hasGameFolder(),
+                         viewport->renderGorePreview(*viewport->goreKind));
+}
+
+auto_mapper::core::GoreBrushSettings &MainWindow::goreBrushOf(GoreKind kind) {
+    auto found = goreBrushes_.find(kind);
+    if (found != goreBrushes_.end())
+        return found->second;
+    goreBrushes_[kind] = auto_mapper::core::default_gore_brush(kind);
+    return goreBrushes_[kind];
+}
+
 auto_mapper::core::LootBrushSettings &MainWindow::lootBrushOf(LootBoxKind kind) {
     auto found = lootBrushes_.find(kind);
     if (found != lootBrushes_.end())
@@ -612,6 +684,17 @@ void MainWindow::chooseItem(int index) {
         inspector_->lootBrush()->setSettings(viewport->lootBrush);
         showLootDetails();
         qInfo() << "Loot box card selected:" << lootKindId(kind);
+        syncMode();
+        return;
+    }
+    if (shelfMode_ == ShelfMode::Gore) {
+        GoreKind kind = GORE_KINDS[selectedGoreKind_];
+        itemMemory_[currentSetKey_] = 0;
+        viewport->goreBrush = goreBrushOf(kind);
+        viewport->armGore(kind);
+        inspector_->goreBrush()->setSettings(viewport->goreBrush);
+        showGoreDetails();
+        qInfo() << "Gore card selected:" << goreKindId(kind);
         syncMode();
         return;
     }
@@ -650,13 +733,13 @@ void MainWindow::chooseItem(int index) {
 }
 
 void MainWindow::activateMode(DrawingMode mode) {
-    // Select only acts on decorations and Eraser on walls and loot boxes; each is hidden on the other shelves.
+    // Select only acts on decorations and Eraser on walls, loot boxes and gore; each is hidden on the other shelves.
     if (mode == DrawingMode::Select && shelfMode_ != ShelfMode::Decorations)
         return;
     if (mode == DrawingMode::Eraser && shelfMode_ == ShelfMode::Decorations)
         return;
-    // The Curve Wall and Loot Box cards swap the grid tools for Freehand (the loot brush).
-    bool freehandCard = viewport->isCurveWallCard() || viewport->isLootCard();
+    // The Curve Wall, Loot Box and Gore cards swap the grid tools for Freehand (the scatter brush).
+    bool freehandCard = viewport->isCurveWallCard() || viewport->isBrushCard();
     if (mode == DrawingMode::Freehand && !freehandCard)
         return;
     bool gridTool = mode == DrawingMode::Polyline || mode == DrawingMode::Straight || mode == DrawingMode::Rectangle;
@@ -701,13 +784,14 @@ void MainWindow::syncMode() {
     bool decorations = shelfMode_ == ShelfMode::Decorations;
     drawingToolbar_->setModeVisible(DrawingMode::Select, decorations);
     drawingToolbar_->setModeVisible(DrawingMode::Eraser, !decorations);
-    bool freehandCard = viewport->isCurveWallCard() || viewport->isLootCard();
+    bool freehandCard = viewport->isCurveWallCard() || viewport->isBrushCard();
     drawingToolbar_->setModeVisible(DrawingMode::Freehand, freehandCard);
     drawingToolbar_->setModeVisible(DrawingMode::Polyline, !freehandCard);
     drawingToolbar_->setModeVisible(DrawingMode::Straight, !freehandCard);
     drawingToolbar_->setModeVisible(DrawingMode::Rectangle, !freehandCard);
     inspector_->eraser()->setVisible(viewport->mode == DrawingMode::Eraser);
     inspector_->lootBrush()->setVisible(viewport->isLootCard());
+    inspector_->goreBrush()->setVisible(viewport->isGoreCard());
     syncSelection();
 }
 
@@ -773,7 +857,7 @@ void MainWindow::selectVersion(const QString &version) {
         return;
     bool familyChanged = (version == PROJECT_VERSION_AS1) != project.isAS1();
     if (!familyChanged) {
-        // AS2 / AS2R / AS2OE share geometry: only the output format changes.
+        // AS2 / AS2R / AS2C / AS2OE share geometry: only the output format changes.
         project.version = version;
         lastAS2Version_ = version;
         markChanged();
@@ -818,6 +902,8 @@ void MainWindow::chooseGameFolder(GameFamily family) {
         showStampDetails(visibleStamps_[shownStamp]);
     refreshLootPreviews();
     showLootDetails();
+    refreshGorePreviews();
+    showGoreDetails();
     showStatus(locale.tr(TextKey::STATUS_GAME_FOLDER_OPENED, {{"path", QDir::toNativeSeparators(path)}}),
                STATUS_SHORT_MS);
 }

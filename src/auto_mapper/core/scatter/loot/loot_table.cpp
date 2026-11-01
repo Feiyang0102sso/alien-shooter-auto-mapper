@@ -3,7 +3,7 @@
  * @brief Roll whole loot texts onto loot containers.
  */
 
-#include "auto_mapper/core/loot/loot_table.h"
+#include "auto_mapper/core/scatter/loot/loot_table.h"
 
 #include "auto_mapper/common/logger.h"
 #include "auto_mapper/core/randomizer.h"

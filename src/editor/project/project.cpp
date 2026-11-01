@@ -79,6 +79,16 @@ LootBoxKind lootKindFromId(const QString &id) {
     return LootBoxKind::Wood;
 }
 
+QString goreKindId(GoreKind kind) {
+    if (kind == GoreKind::Bones)
+        return "bones";
+    if (kind == GoreKind::Human)
+        return "human";
+    if (kind == GoreKind::BloodPool)
+        return "pool";
+    return "monster";
+}
+
 bool supportsGlobalDoorState(const QString &version) {
     return version == PROJECT_VERSION_AS1;
 }
@@ -96,7 +106,8 @@ bool Project::isAS1() const {
     return version == PROJECT_VERSION_AS1;
 }
 bool Project::empty() const {
-    return segments.empty() && doors.empty() && curveWalls.empty() && decorations.empty() && lootBoxes.empty();
+    return segments.empty() && doors.empty() && curveWalls.empty() && decorations.empty() && lootBoxes.empty() &&
+           gore.empty();
 }
 
 auto_mapper::io::MapFormat Project::mapFormat() const {
@@ -107,6 +118,8 @@ auto_mapper::io::MapFormat Project::mapFormat() const {
         return MapFormat::AS2;
     if (version == PROJECT_VERSION_AS2R)
         return MapFormat::AS2R;
+    if (version == PROJECT_VERSION_AS2C)
+        return MapFormat::AS2C;
     if (version == PROJECT_VERSION_AS2OE)
         return MapFormat::AS2OE;
     fail("Unsupported project version: " + version);
@@ -164,6 +177,14 @@ QJsonObject Project::toJson() const {
                                             {"direction", static_cast<int>(box.direction)}});
         }
         result["loot_boxes"] = lootBoxItems;
+    }
+    if (!gore.empty()) {
+        QJsonArray goreItems;
+        for (const auto &item : gore) {
+            goreItems.append(QJsonObject{{"vid", item.vid}, {"x", item.x}, {"y", item.y}, {"z", item.z},
+                                         {"direction", static_cast<int>(item.direction)}});
+        }
+        result["gore"] = goreItems;
     }
     QJsonObject lootTableItems;
     for (const auto &[kind, lines] : lootTables) {
@@ -312,6 +333,27 @@ Project Project::fromJson(const QJsonObject &obj) {
             fail("Loot boxes need an AS2 Series project.");
         result.lootBoxes.push_back(box);
     }
+    for (const auto &value : arrayValue(obj.value("gore"))) {
+        auto item = objectValue(value);
+        GoreItem gore;
+        gore.vid = integer(item, "vid");
+        gore.x = static_cast<float>(number(item, "x"));
+        gore.y = static_cast<float>(number(item, "y"));
+        gore.z = static_cast<float>(number(item, "z"));
+        gore.direction = static_cast<uint32_t>(integer(item, "direction"));
+        bool known = false;
+        for (GoreKind kind : GORE_KINDS) {
+            if (auto_mapper::core::gore_item_belongs_to(gore.vid, kind))
+                known = true;
+        }
+        if (!known)
+            fail("Unsupported gore vid.");
+        // The Gore brush exists only in the AS2 Series. Conscription-only corpses are checked at generation,
+        // so a project switched from AS2C to AS2R still opens and can be cleaned up with the eraser.
+        if (result.isAS1())
+            fail("Corpses and blood need an AS2 Series project.");
+        result.gore.push_back(gore);
+    }
     QJsonObject lootTableItems = objectValue(obj.value("loot_tables"));
     for (auto entry = lootTableItems.begin(); entry != lootTableItems.end(); ++entry) {
         LootBoxKind kind = lootKindFromId(entry.key());
@@ -379,6 +421,7 @@ bool Project::generate(const QString &path, bool floor, bool ceiling, bool rando
     request.random_direction = random;
     request.decoration_library = decorationLibrary;
     request.loot_boxes = lootBoxes;
+    request.gore_items = gore;
     for (const auto &[kind, lines] : lootTables) {
         auto_mapper::core::LootTable table;
         table.vids = auto_mapper::core::loot_table_vids(kind);

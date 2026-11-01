@@ -3,7 +3,7 @@
  * @brief Which stamp members get an editor placeholder mark.
  *
  * AS1 and the AS2 Series number their objects independently, so every query takes the
- * Map Format and reads that game's own list; AS2, AS2R and AS2OE share the AS2 lists.
+ * Map Format and reads that game's own list; AS2, AS2R, AS2C and AS2OE share the AS2 lists.
  */
 
 #pragma once

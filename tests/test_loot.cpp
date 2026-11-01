@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "auto_mapper/core/loot/loot_box_builder.h"
-#include "auto_mapper/core/loot/loot_table.h"
+#include "auto_mapper/core/scatter/loot/loot_box_builder.h"
+#include "auto_mapper/core/scatter/loot/loot_table.h"
 
 #include <cmath>
 #include <iterator>

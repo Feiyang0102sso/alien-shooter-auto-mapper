@@ -53,7 +53,25 @@ public:
     static double get_real(double min_value, double max_value);
 
 private:
+    friend class RandomSeedScope;
     static std::mt19937& engine();
+};
+
+/**
+ * @brief Run the Random helpers from a fixed seed until the scope ends, then continue the previous sequence.
+ *
+ * The brush preview relies on it: the same seed, settings, center and existing items give the same dab,
+ * so the ghost under the cursor is exactly what a click places.
+ */
+class RandomSeedScope {
+public:
+    explicit RandomSeedScope(uint32_t seed);
+    ~RandomSeedScope();
+    RandomSeedScope(const RandomSeedScope&) = delete;
+    RandomSeedScope& operator=(const RandomSeedScope&) = delete;
+
+private:
+    std::mt19937 saved_;
 };
 
 class DirectionRandomizer {

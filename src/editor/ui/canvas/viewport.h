@@ -10,6 +10,9 @@
 //
 // Loot Boxes: while a Loot Box card is active (isLootCard()), Freehand is the brush (each dab calls the core
 // scatter) and Eraser removes that card's boxes; Select and the grid tools are hidden.
+// Gore works the same way (isGoreCard()): corpses with blood around them, or bare blood pools.
+// Both brushes show the next dab as a ghost under the cursor: every dab runs from scatterSeed_, so the ghost is
+// exactly what a click places. Right click rolls a new seed; every placed dab rolls one too.
 #pragma once
 #include "editor/catalog/catalog.h"
 #include "editor/config.h"
@@ -37,6 +40,9 @@ class Viewport : public QWidget {
     std::optional<LootBoxKind> lootKind;
     // Brush parameters of the active Loot Box card; MainWindow keeps one copy per card.
     auto_mapper::core::LootBrushSettings lootBrush;
+    // Gore card and its brush, kept like lootKind / lootBrush; at most one of lootKind and goreKind is set.
+    std::optional<GoreKind> goreKind;
+    auto_mapper::core::GoreBrushSettings goreBrush;
     int selectedDecoration = -1;
     int eraserSize = 1;
     double zoom = 1;
@@ -51,12 +57,16 @@ class Viewport : public QWidget {
     bool isEditing() const;
     bool isCurveWallCard() const;
     bool isLootCard() const;
+    bool isGoreCard() const;
+    // A Loot Box or Gore card: Freehand is a scatter brush and Eraser removes that card's sprites.
+    bool isBrushCard() const;
     void setMode(DrawingMode value);
     void setWall(int type, const QString &partId = PART_WALL_BODY);
     void armStamp(const QString &id);
     void armArray(const QString &type);
     void armCurveWall(int type);
     void armLoot(LootBoxKind kind);
+    void armGore(GoreKind kind);
     void resetInteraction();
     // Right click / Esc: drop the pending wall start, or leave placing mode.
     void cancel();
@@ -79,6 +89,8 @@ class Viewport : public QWidget {
     // A small sample pile (or egg patch) of one Loot Box card for its shelf card and the inspector; null without
     // a game folder.
     QImage renderLootPreview(LootBoxKind kind);
+    // A corpse with a little blood (or a small pool) of one Gore card; null without a game folder.
+    QImage renderGorePreview(GoreKind kind);
 
   signals:
     void projectChanged();
@@ -95,6 +107,9 @@ class Viewport : public QWidget {
     // A brush dab or an eraser stroke changed the loot boxes; `changed` is how many were added or removed.
     void lootBoxesPainted(int changed, int total);
     void lootBoxesErased(int changed, int total);
+    // The same for corpses and blood; `changed` counts sprites.
+    void gorePainted(int changed, int total);
+    void goreErased(int changed, int total);
     void decorationCreated(int count);
     void stampPlaced(const QString &stampId, bool outside);
     void decorationSelected();
@@ -125,6 +140,8 @@ class Viewport : public QWidget {
     // Loot brush: held left button, and the Map Coordinate of the last dab.
     bool brushing_ = false;
     QPointF lastDab_;
+    // Seed of the next brush dab (see the header comment).
+    uint32_t scatterSeed_ = 0;
     QPointF dragStart_;
     QPointF panStart_;
     // "move" or one of the array edges "left" / "right" / "top" / "bottom"; empty when idle.
@@ -149,6 +166,19 @@ class Viewport : public QWidget {
     // One loot brush dab at a Map Coordinate; boxes landing outside the map are dropped.
     void lootDab(const QPointF &center);
     void eraseLoot(const QPointF &center);
+    // One gore brush dab, and the gore eraser; same rules as the loot ones.
+    void goreDab(const QPointF &center);
+    void eraseGore(const QPointF &center);
+    // Radius of the active brush card's circle (Map Coordinates).
+    double brushRadius() const;
+    // The dab a click at `center` would place now: same seed, so preview and placement agree.
+    // Items landing outside the map are already dropped.
+    std::vector<LootBox> rollLoot(const QPointF &center) const;
+    std::vector<GoreItem> rollGore(const QPointF &center) const;
+    // Right click on a brush card, and after every placed dab: the next dab gets a different layout.
+    void rerollScatter();
+    // Ghost of the next dab plus the green dashed brush circle.
+    void drawScatterGhost(QPainter &painter, const QPointF &cursor);
     QPoint constrainedEnd(QPoint point) const;
     std::vector<Segment> pendingSegments(QPoint point) const;
     void wallClick(const QPoint &point);
@@ -170,8 +200,11 @@ class Viewport : public QWidget {
     // Shared by stamps and loot boxes: members around `center`, sprites in stampDrawOrder() then crosses.
     void drawMembers(QPainter &painter, const auto_mapper::core::decoration_builder::DecorationStamp &stamp,
                      const QPointF &center, double opacity);
-    // Every loot box as members of one stamp at the origin, so stacking and opacity follow the stamp rules.
-    void drawLootBoxes(QPainter &painter);
+    // Loot boxes as members of one stamp at the origin, so stacking and opacity follow the stamp rules.
+    void drawLootItems(QPainter &painter, const std::vector<LootBox> &boxes, double opacity);
+    // Corpse and blood sprites as members of one stamp; without a decoded frame blood gets a dark red dot and
+    // bone piles a cross, since the placeholder rules (placeholder_vids) hide both.
+    void drawGoreItems(QPainter &painter, const std::vector<GoreItem> &items, double opacity);
     void drawIncubatorUnits(QPainter &painter, const Decoration &decoration);
     void drawStampGhost(QPainter &painter, const QPointF &center);
     void drawArrayPreview(QPainter &painter, const Decoration &preview);

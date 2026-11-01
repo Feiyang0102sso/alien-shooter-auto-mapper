@@ -139,7 +139,7 @@ class EditorTest : public QObject {
     void legacyJsonRoundTrip() {
         Project legacy = Project::fromJson({});
         QCOMPARE(legacy.version, QString("AS1"));
-        for (const auto &version : {"AS1", "AS2", "AS2R", "AS2OE"}) {
+        for (const auto &version : {"AS1", "AS2", "AS2R", "AS2C", "AS2OE"}) {
             Project project;
             project.version = version;
             project.doorsOpen = true;
@@ -153,14 +153,25 @@ class EditorTest : public QObject {
             project.decorations.push_back(stamp);
             project.lootTables[LootBoxKind::Wood] = {{"EMPTY Ammo_shotgun Obj_money3", 40.5}, {"Obj_money1", 9.5}};
             // Loot boxes exist only in the AS2 Series.
-            if (!project.isAS1())
+            if (!project.isAS1()) {
                 project.lootBoxes.push_back({auto_mapper::core::LOOT_VID_WOOD_BOX, 300.5f, 410.0f, 25.0f, 28});
+                project.gore.push_back({auto_mapper::core::GORE_VID_BONES, 500.5f, 210.0f, 0.0f, 85});
+                project.gore.push_back({auto_mapper::core::GORE_VID_BLOOD_SPREADING, 520.0f, 230.0f, 20.0f, 3});
+            }
             auto json = project.toJson();
             auto copy = Project::fromJson(json);
             QCOMPARE(copy.toJson(), json);
             QCOMPARE(json.contains("is_door_open"), project.isAS1());
             QCOMPARE(json.contains("loot_boxes"), !project.isAS1());
+            QCOMPARE(json.contains("gore"), !project.isAS1());
         }
+        QJsonObject as1Gore{{"gore", QJsonArray{QJsonObject{{"vid", 1532}, {"x", 1}, {"y", 1}}}}};
+        QVERIFY_EXCEPTION_THROWN(Project::fromJson(as1Gore), std::runtime_error);
+        QJsonObject unknownGoreVid{{"version", "AS2R"}, {"gore", QJsonArray{QJsonObject{{"vid", 601}, {"x", 1}, {"y", 1}}}}};
+        QVERIFY_EXCEPTION_THROWN(Project::fromJson(unknownGoreVid), std::runtime_error);
+        // A Conscription corpse still loads into an AS2R project; only generation refuses it.
+        QJsonObject switchedGore{{"version", "AS2R"}, {"gore", QJsonArray{QJsonObject{{"vid", 3959}, {"x", 1}, {"y", 1}}}}};
+        QCOMPARE(Project::fromJson(switchedGore).gore.size(), std::size_t(1));
         QJsonObject as1Loot{{"loot_boxes", QJsonArray{QJsonObject{{"vid", 1225}, {"x", 1}, {"y", 1}}}}};
         QVERIFY_EXCEPTION_THROWN(Project::fromJson(as1Loot), std::runtime_error);
         QJsonObject unknownLootVid{{"version", "AS2R"},
@@ -740,6 +751,115 @@ class EditorTest : public QObject {
         }
         QVERIFY(!lootButtonVisible);
     }
+    void goreBrushEraserAndShelfRows() {
+        using auto_mapper::core::GORE_VID_BONES;
+        MainWindow window(LOCALE_EN_US);
+        window.resize(1400, 900);
+        window.show();
+        QApplication::processEvents();
+        window.replaceProject(Project::createEmpty(PROJECT_VERSION_AS2R));
+        auto *freehand = window.findChild<QAction *>("drawingMode5");
+        auto *select = window.findChild<QAction *>("drawingMode0");
+        auto *polyline = window.findChild<QAction *>("drawingMode1");
+        auto *eraser = window.findChild<QAction *>("drawingMode4");
+        QVERIFY(freehand && select && polyline && eraser);
+
+        // The Gore shelf offers the brush (Freehand) and the eraser only, like the Loot shelf.
+        window.chooseShelf(ShelfMode::Gore);
+        QVERIFY(window.viewport->isGoreCard());
+        QVERIFY(!window.viewport->isLootCard());
+        QCOMPARE(*window.viewport->goreKind, GoreKind::Bones);
+        QCOMPARE(window.viewport->mode, DrawingMode::Freehand);
+        QVERIFY(freehand->isVisible());
+        QVERIFY(eraser->isVisible());
+        QVERIFY(!select->isVisible());
+        QVERIFY(!polyline->isVisible());
+        QVERIFY(window.findChild<GoreBrushPropertiesWidget *>()->isVisible());
+        QVERIFY(!window.findChild<LootBrushPropertiesWidget *>()->isVisible());
+
+        // A drag paints bone piles with blood around them, all inside the map.
+        Viewport *canvas = window.viewport;
+        QPoint center = canvas->rect().center();
+        QTest::mousePress(canvas, Qt::LeftButton, {}, center);
+        for (int step = 1; step <= 10; ++step)
+            QTest::mouseMove(canvas, center + QPoint(step * 20, 0));
+        QTest::mouseRelease(canvas, Qt::LeftButton, {}, center + QPoint(200, 0));
+        int bones = 0;
+        for (const GoreItem &item : window.project.gore) {
+            QVERIFY(item.vid == GORE_VID_BONES || auto_mapper::core::is_gore_blood(item.vid));
+            if (item.vid == GORE_VID_BONES)
+                bones += 1;
+            QVERIFY(item.x >= 0 && item.y >= 0 && item.x <= window.project.width && item.y <= window.project.height);
+        }
+        QVERIFY(bones > 0);
+        QVERIFY(window.isDirty());
+        // Gore never avoids what is placed: clicking on the bone piles again lays more of them.
+        QTest::mouseClick(canvas, Qt::LeftButton, {}, center);
+        int bonesAgain = 0;
+        for (const GoreItem &item : window.project.gore) {
+            if (item.vid == GORE_VID_BONES)
+                bonesAgain += 1;
+        }
+        QVERIFY(bonesAgain > bones);
+        bones = bonesAgain;
+
+        // The blood pool card adds blood only; its eraser leaves the bone piles alone.
+        window.findChild<ThemeShelfPanel *>("setShelf")->setCurrentRow(3);
+        QCOMPARE(*window.viewport->goreKind, GoreKind::BloodPool);
+        QVERIFY(!window.findChild<QDoubleSpinBox *>("goreSpacing")->isVisible());
+        size_t before = window.project.gore.size();
+        QTest::mouseClick(canvas, Qt::LeftButton, {}, center + QPoint(0, 150));
+        QVERIFY(window.project.gore.size() > before);
+        window.activateMode(DrawingMode::Eraser);
+        QVERIFY(window.viewport->isGoreCard());
+        window.viewport->eraserSize = 40;
+        QTest::mouseClick(canvas, Qt::LeftButton, {}, center);
+        int bonesLeft = 0;
+        for (const GoreItem &item : window.project.gore) {
+            if (item.vid == GORE_VID_BONES)
+                bonesLeft += 1;
+        }
+        QCOMPARE(bonesLeft, bones);
+        window.viewport->eraserSize = 1;
+
+        // Picking a Loot Box card drops the Gore card, and the other way round.
+        window.chooseShelf(ShelfMode::Loot);
+        QVERIFY(window.viewport->isLootCard());
+        QVERIFY(!window.viewport->isGoreCard());
+        QVERIFY(!window.findChild<GoreBrushPropertiesWidget *>()->isVisible());
+
+        // Two rows of shelf buttons: Walls / Decorations, then Loot / Gore; AS1 hides the second row.
+        QPushButton *walls = nullptr;
+        QPushButton *decorations = nullptr;
+        QPushButton *loot = nullptr;
+        QPushButton *gore = nullptr;
+        for (auto *button : window.findChildren<QPushButton *>("shelfModeButton")) {
+            if (button->text() == window.locale.tr(TextKey::SHELF_MODE_WALL_SETS))
+                walls = button;
+            if (button->text() == window.locale.tr(TextKey::SHELF_MODE_DECORATION_SETS))
+                decorations = button;
+            if (button->text() == window.locale.tr(TextKey::SHELF_MODE_LOOT))
+                loot = button;
+            if (button->text() == window.locale.tr(TextKey::SHELF_MODE_GORE))
+                gore = button;
+        }
+        QVERIFY(walls && decorations && loot && gore);
+        QCOMPARE(walls->y(), decorations->y());
+        QCOMPARE(loot->y(), gore->y());
+        QVERIFY(loot->y() > walls->y());
+        QCOMPARE(loot->x(), walls->x());
+        window.replaceProject(Project::createEmpty(PROJECT_VERSION_AS1));
+        QVERIFY(!loot->isVisible());
+        QVERIFY(!gore->isVisible());
+        QVERIFY(!window.viewport->isGoreCard());
+
+        // AS2C is a project version of its own and paints Conscription corpses on the soldier card.
+        window.replaceProject(Project::createEmpty(PROJECT_VERSION_AS2C));
+        QCOMPARE(window.project.mapFormat(), auto_mapper::io::MapFormat::AS2C);
+        window.chooseShelf(ShelfMode::Gore);
+        window.findChild<ThemeShelfPanel *>("setShelf")->setCurrentRow(2);
+        QCOMPARE(*window.viewport->goreKind, GoreKind::Human);
+    }
     void lootTableDialogAndPresets() {
         Locale locale(LOCALE_EN_US);
         // A working-directory loot_presets.ini wins over the one beside the exe: use a temporary one.
@@ -925,7 +1045,7 @@ class EditorTest : public QObject {
     }
     void generateAllFormats() {
         QTemporaryDir directory;
-        for (const auto &version : {"AS1", "AS2", "AS2R", "AS2OE"}) {
+        for (const auto &version : {"AS1", "AS2", "AS2R", "AS2C", "AS2OE"}) {
             Project project;
             project.version = version;
             int type = 0;

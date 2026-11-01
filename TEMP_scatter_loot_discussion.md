@@ -1,13 +1,13 @@
 # 临时讨论记录：散布笔刷、Loot Box、灯光、尸体
 
-> 临时文档。**Loot Box 已实现**，规则已迁入 AGENTS.md“物资箱”和 CONTEXT.md“Loot Box”；
-> 本文件保留给还没做的灯光、尸体血迹等讨论，全部做完后删除。
+> 临时文档。**Loot Box 和尸体血迹（Gore）已实现**，规则已迁入 AGENTS.md“物资箱”“尸体血迹”和 CONTEXT.md“Loot Box”“Gore”；
+> 本文件保留给还没做的灯光讨论，全部做完后删除。
 > 数据来源：`E:\alien_shooter\Alien Shooter2 Conscription\Maps\Level_*.map`（AS2C）与 `Maps\!AS2R\Level_*.map`（AS2R），
 > 用 `_prepare/AS2/as2_map_unpack.py` 解析；VID 名称读自 `objects.res`。
 
 ## 决策
 
-- **优先级**：散布笔刷 + 掉落物先做；灯光、尸体随后。
+- **优先级**：散布笔刷 + 掉落物先做，尸体血迹随后（都已完成）；灯光还没做。
 - **新货架**：与 Wall Sets、Decoration Sets 平级的第三个货架，先放 Loot Box（木箱 / 金属箱 / 蛋），之后放灯光和尸体。
 - **箱子、尸体不做成传统 stamp**：要像笔刷一样随机，但也不能像阵列那样整齐；箱子可以叠放。
 - **掉落表是全局属性**：按 VID 绑定，整张地图上所有该 VID 的 sprite 都会带上，包括通过装饰物 stamp 放出来的成员。
@@ -102,14 +102,6 @@
 - **铺成密集的一片**，不成堆：和最近蛋的距离中位数 32–40。
 - scale 全部为 1，z 基本为 0。
 - 破损比例因关卡而异：AS2C L07 约 30%（297 / 999），L08 和 AS2R L14 为 0%。
-
-## 四、尸体与血迹
-
-- **纠正**：96% 的尸体（7,972 / 8,319）在 ±80 × ±60 范围内有血迹。尸体和血迹应该一起生成。
-- 尸体中 81% 是 1532“骨头堆”（6,776 个）。
-- 血迹由大量小 sprite 拼成一滩：120、154 多在 20 个以上的大簇里；110 常常单独出现。
-- 154 是“竖直血迹”，z 在 50–170，贴在墙上。
-- **笔刷单位**：“尸体 + 周围随机撒血”，另加一个纯血滩预设。和 Loot Box 共用同一个散布引擎。
 
 ## 五、灯光
 
@@ -405,7 +397,7 @@ loot_preset = egg|AS2C 蛋|100|Ammo_shotgun Ammo_minigun Ammo_rocket Bonus_healt
 
 前 3 步只动核心，每步都能单独跑测试；第 4–8 步是编辑器。
 
-### 需要审核的决定
+### 需要审核的决定（Loot Box，已定）
 
 1. **笔刷手感**：按住拖动、沿路径连续落笔（类似画笔），而不是先圈一个区域再一次性填满。
 2. **掉落每次导出都重新抽**：同一个项目每次导出，箱子里的文本条会不同；箱子的位置和方向是固定的。
@@ -417,3 +409,7 @@ loot_preset = egg|AS2C 蛋|100|Ammo_shotgun Ammo_minigun Ammo_rocket Bonus_healt
 
 `C:\Users\Feiyang\AppData\Local\Temp\claude\E--coding-projects-c-projects-auto-mapper\bcaf2b65-bd1f-40ad-be49-a78e0251c914\scratchpad\`
 下的 `box_r.py`（AS2R 原版箱子统计，用法：`box_r.py <scratchpad> <Maps 目录>`）、`stats.py`、`spatial.py`、`drops.py`、`names_drop.py`、`boxpile.py`、`eggs.py`、`blood.py`、`lightpair.py`、`walllamp.py`、`boxlight.py`；`names.py` 从 `objects.res` 导出 VID 名称表。
+
+尸体血迹统计（第九节）的脚本在
+`C:\Users\Feiyang\AppData\Local\Temp\claude\E--coding-projects-c-projects-auto-mapper--claude-worktrees-corpse-blood-brush-2006ad\ebc97523-4f73-4359-94a0-bb827b38f34f\scratchpad\`：
+`names.py`（`names.py <游戏目录> <输出 json>`）、`gore.py`（`gore.py <scratchpad> R|C`）、`gore2.py`（孤立尸体）、`extras.py`（AS2C 特有尸体出现在哪）。

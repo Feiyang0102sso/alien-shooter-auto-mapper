@@ -35,7 +35,8 @@ bool write_map(
         return detail::write_as2_map(sprites, output_path, map_size_x, map_size_y);
     }
 
-    if (format == MapFormat::AS2R) {
+    // AS2C maps are AS2R files; only the game's object set differs.
+    if (format == MapFormat::AS2R || format == MapFormat::AS2C) {
         return detail::write_as2r_map(sprites, output_path, map_size_x, map_size_y);
     }
 

@@ -18,7 +18,12 @@ Alien Shooter 2 legacy map format. Its empty map template uses map version `0x13
 
 ## AS2R
 
-Unified name for Alien Shooter 2 Reloaded, Alien Shooter 2 Conscription, and Zombie Shooter 2 compatible map format. Its empty map template uses map version `0x14`.
+Unified name for Alien Shooter 2 Reloaded and Zombie Shooter 2 compatible map format. Its empty map template uses map version `0x14`.
+
+## AS2C
+
+Alien Shooter 2 Conscription. Its maps are AS2R files byte for byte, but its objects.res knows extra
+objects (Conscription-only corpses) that an AS2R game lacks, so it is a Project Version of its own.
 
 ## AS2OE
 
@@ -27,7 +32,7 @@ but the outer resource kind is `LVL ` instead of `MAP `.
 
 ## AS2 Series
 
-The family of AS2, AS2R, and AS2OE map formats. The editor presents one AS2
+The family of AS2, AS2R, AS2C, and AS2OE map formats. The editor presents one AS2
 family entry while the project keeps the exact target format. AS2R is not an
 alias for the legacy AS2 map format.
 
@@ -176,6 +181,22 @@ Loot Box relationships:
 - Loot Boxes and Loot Texts exist only in the AS2 Series.
 - A Loot Box direction selects one of the container's visual variants; only the
   values the official maps use are drawn.
+
+## Gore
+
+Corpses and blood the editor scatters with a brush in the AS2 Series: a bone pile (1532), a monster
+corpse, or a soldier corpse with blood splashed around it, or a bare Blood Pool.
+
+_Avoid_: Gore Stamp, because a brush lays out new random corpses and blood every time.
+
+**Blood Pool**:
+Ground blood without a corpse: a few dried and spreading blood sprites in a small ellipse.
+
+Gore relationships:
+
+- Every brushed corpse gets its own blood; blood never keeps another corpse away.
+- Conscription-only corpses exist only in AS2C and AS2OE projects.
+- Gore exists only in the AS2 Series.
 
 ## Wall Set
 

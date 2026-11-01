@@ -20,6 +20,7 @@ add_library(auto_mapper_editor_ui STATIC
     ui/panels/as1_ceiling.h ui/panels/as1_ceiling.cpp
     ui/panels/inspector.h ui/panels/inspector.cpp
     ui/panels/loot_brush.h ui/panels/loot_brush.cpp
+    ui/panels/gore_brush.h ui/panels/gore_brush.cpp
     ui/panels/loot_table_dialog.h ui/panels/loot_table_dialog.cpp
     ui/panels/left_shelf.h ui/panels/left_shelf.cpp
     ui/panels/theme_shelf.h ui/panels/theme_shelf.cpp
