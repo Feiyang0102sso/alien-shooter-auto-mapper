@@ -6,6 +6,8 @@
 #include "editor/i18n/locale.h"
 #include "editor/project/project.h"
 #include "editor/ui/canvas/viewport.h"
+#include "editor/ui/panels/left_shelf.h"
+#include <map>
 #include <QFutureWatcher>
 #include <QHash>
 #include <QMainWindow>
@@ -17,7 +19,6 @@ namespace editor {
 
 class DrawingToolbar;
 class InspectorPanel;
-class LeftShelfPanel;
 class SpritePreviewDialog;
 
 // Result of one background map generation, translated on the UI thread.
@@ -43,11 +44,13 @@ class MainWindow : public QMainWindow {
     bool openProject(const QString &path);
     bool saveProject(const QString &path);
     bool exportMap(const QString &path);
-    void chooseShelf(bool decorations);
+    void chooseShelf(ShelfMode mode);
     void chooseSet(int index);
     void chooseItem(int index);
     // Inspector member count, sprite preview image and game folder notice of one stamp.
     void showStampDetails(const QString &stampId);
+    // Inspector box count and sample preview of the active Loot Box card.
+    void showLootDetails();
     void activateMode(DrawingMode mode);
     void showHotkeys();
     bool isDirty() const;
@@ -67,6 +70,8 @@ class MainWindow : public QMainWindow {
     void rebuildShelf();
     // Render each Decoration Stamp Series card's preview from the series' first stamp.
     void refreshStampSeriesPreviews();
+    // Render each Loot Box card's sample pile.
+    void refreshLootPreviews();
     void syncControls();
     void syncSelection();
     void syncMode();
@@ -88,6 +93,10 @@ class MainWindow : public QMainWindow {
     void toggleDoorsOpen(bool checked);
     void applyMapSize(double width, double height);
     void deleteSelectedDecoration();
+    // Edit the active Loot Box card's Loot Table in the project.
+    void editLootTable();
+    // Brush settings of one Loot Box card for this session, created with the defaults on first use.
+    auto_mapper::core::LootBrushSettings &lootBrushOf(LootBoxKind kind);
     void errorDialog(const QString &title, const QString &message);
 
     hotkeys::HotkeyManager hotkeys_;
@@ -104,7 +113,7 @@ class MainWindow : public QMainWindow {
     QFutureWatcher<ExportResult> exportWatcher_;
 
     bool dirty_ = false;
-    bool decorationShelf_ = false;
+    ShelfMode shelfMode_ = ShelfMode::Walls;
     QString projectPath_;
     QString outputPath_;
     // Cards currently on the shelf: wall set ids, or stamp series ids.
@@ -117,6 +126,9 @@ class MainWindow : public QMainWindow {
     QString currentSetKey_;
     QHash<QString, int> itemMemory_;
     int selectedStampSeries_ = 0;
+    // Row of the selected Loot Box card in LOOT_KINDS order.
+    int selectedLootKind_ = 0;
+    std::map<LootBoxKind, auto_mapper::core::LootBrushSettings> lootBrushes_;
     // Last wall type per game family ("AS1" / "AS2"), restored after a project switch.
     QHash<QString, int> rememberedWallTypes_;
     QString lastAS2Version_ = PROJECT_VERSION_AS2R;

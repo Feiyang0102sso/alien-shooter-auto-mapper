@@ -47,6 +47,11 @@ public:
      */
     static int get(std::span<const int> values);
 
+    /**
+     * @brief Return a random real number in the half-open [min_value, max_value) range.
+     */
+    static double get_real(double min_value, double max_value);
+
 private:
     static std::mt19937& engine();
 };

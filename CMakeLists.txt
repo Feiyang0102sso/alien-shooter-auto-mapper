@@ -35,6 +35,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog googletest)
 
+# SimpleIni (header only, MIT) is vendored in src/3rdparty/; the editor reads loot_presets.ini with it.
+add_library(simpleini INTERFACE)
+target_include_directories(simpleini INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty/simpleini")
+
 # Qt SDK location comes from CMAKE_PREFIX_PATH in CMakePresets.json.
 find_package(Qt6 6.11.1 REQUIRED COMPONENTS Widgets Concurrent Test)
 # Qt bin folder: windeployqt for the editor, DLL search path for the UI tests.

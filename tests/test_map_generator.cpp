@@ -133,6 +133,40 @@ TEST(MapGeneratorTest, As1StampsWriteAs1SpriteRecords) {
     EXPECT_EQ((spr_info_size - 4) / 28, 12u);
 }
 
+TEST(MapGeneratorTest, LootBoxesGetLootTextAndSkipAs1) {
+    const std::string text = "EMPTY Ammo_shotgun Obj_money3";
+    auto_mapper::core::LootTable wood;
+    wood.vids = {auto_mapper::core::LOOT_VID_WOOD_BOX};
+    wood.lines.push_back({text, 100.0});
+
+    MapRequest request = empty_request(MapFormat::AS2R);
+    request.loot_boxes.push_back({auto_mapper::core::LOOT_VID_WOOD_BOX, 200.0f, 200.0f, 0.0f, 0});
+    request.loot_boxes.push_back({auto_mapper::core::LOOT_VID_BROKEN_EGG, 260.0f, 200.0f, 0.0f, 0});
+    request.loot_tables.push_back(wood);
+    std::string output_file = get_test_output_path("loot_generator_output.map");
+    ASSERT_TRUE(auto_mapper::core::generate_map(request, output_file));
+
+    // Two SPR records, and the wood box's whole loot text sits in the SPRD block.
+    std::vector<uint8_t> data = load_generator_test_binary(output_file);
+    std::vector<uint8_t> tag = {'S', 'P', 'R', ' '};
+    auto found = std::search(data.begin(), data.end(), tag.begin(), tag.end());
+    ASSERT_NE(found, data.end());
+    std::size_t spr = static_cast<std::size_t>(found - data.begin());
+    EXPECT_EQ((read_generator_test_uint32(data, spr + 20) - 4) / 48, 2u);
+    EXPECT_NE(std::search(data.begin(), data.end(), text.begin(), text.end()), data.end());
+
+    // A table above 100% is refused.
+    request.loot_tables[0].lines.push_back({"Obj_money1", 1.0});
+    EXPECT_FALSE(auto_mapper::core::generate_map(request, output_file));
+
+    // AS1 has no loot box brush: the boxes are skipped and the map stays empty.
+    request = empty_request(MapFormat::AS1);
+    request.loot_boxes.push_back({auto_mapper::core::LOOT_VID_WOOD_BOX, 200.0f, 200.0f, 0.0f, 0});
+    output_file = get_test_output_path("loot_as1_generator_output.map");
+    ASSERT_TRUE(auto_mapper::core::generate_map(request, output_file));
+    EXPECT_EQ(load_generator_test_binary(output_file).size(), auto_mapper::io::templates::AS1_EMPTY_SIZE);
+}
+
 TEST(MapGeneratorTest, CurveWallsWriteAs2PiecesAndSkipAs1) {
     auto_mapper::core::CurveWall wall;
     wall.curve_wall_type = auto_mapper::core::CURVE_WALL_TYPE_ROCK;

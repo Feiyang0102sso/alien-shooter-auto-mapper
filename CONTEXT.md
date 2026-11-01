@@ -147,6 +147,36 @@ Curve Wall relationships:
 - With floors enabled, an area a Curve Wall encloses (alone or together with grid walls) takes that curve's floor: 1121 for rock, 510 for the alien nest, 512 for the cliff. Rooms enclosed by grid walls keep their own floor, and an open Curve Wall lays none.
 - A one-sided Curve Wall (the cliff) shows its layered face on the left of the drawing direction and its cracked face on the right; drawing the same curve the other way swaps them.
 
+## Loot Box
+
+A breakable AS2 Series container the editor scatters with a brush: the wood box
+(1225), the metal box (2332), or the alien egg (2750, optionally mixed with the
+lootless broken egg 2751). Boxes form loose piles, some stacked one level high;
+eggs form dense fields.
+
+_Avoid_: Loot Box Stamp, because a brush lays out new random piles every time
+instead of copying an authored composition.
+
+**Loot Text**:
+The whole space-separated item list written into a container's SPRD nameText,
+for example `EMPTY EMPTY Ammo_shotgun Ammo_minigun Obj_money3`. The game picks
+one entry when the container breaks, so a repeated name weighs more and `EMPTY`
+drops nothing. The editor never parses or validates item names.
+
+**Loot Table**:
+The lines of one Loot Box kind, each a whole Loot Text with a percent; the
+percents add up to at most 100 and the rest leaves the nameText empty. Each
+container rolls one line independently at generation time.
+
+Loot Box relationships:
+
+- A Loot Table applies to every container of its VID in the generated map,
+  Decoration Stamp members included.
+- The broken egg never receives a Loot Text.
+- Loot Boxes and Loot Texts exist only in the AS2 Series.
+- A Loot Box direction selects one of the container's visual variants; only the
+  values the official maps use are drawn.
+
 ## Wall Set
 
 A group of wall sprites that share the same physical grid step and visual style.

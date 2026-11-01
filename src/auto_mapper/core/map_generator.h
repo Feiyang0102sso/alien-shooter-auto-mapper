@@ -1,6 +1,6 @@
 /**
  * @file map_generator.h
- * @brief Whole-map pipeline: walls -> curve walls -> doors -> decorations -> .map file.
+ * @brief Whole-map pipeline: walls -> curve walls -> doors -> decorations -> loot boxes -> loot texts -> .map file.
  *
  * This is the single entry point the editor calls to generate a map.
  */
@@ -11,6 +11,8 @@
 #include "auto_mapper/core/door_builder/door_builder.h"
 #include "auto_mapper/core/indoor_decorations/desk_builder.h"
 #include "auto_mapper/core/indoor_decorations/incubator_builder.h"
+#include "auto_mapper/core/loot/loot_box_builder.h"
+#include "auto_mapper/core/loot/loot_table.h"
 #include "auto_mapper/core/wall_builder/curve_wall_builder.h"
 #include "auto_mapper/core/wall_builder/wall_builder.h"
 #include "auto_mapper/io/map_writer.h"
@@ -46,6 +48,10 @@ struct MapRequest {
     std::vector<StampPlacement> stamps;
     // Library that resolves `stamps` ids; may be null when there are no stamps.
     const decoration_builder::DecorationLibrary* decoration_library = nullptr;
+    // AS2 Series only: brushed loot containers, and the Loot Tables that fill the nameText of every
+    // sprite with a listed VID (stamp members included).
+    std::vector<LootBox> loot_boxes;
+    std::vector<LootTable> loot_tables;
     AS1CeilingLayerSettings as1_ceiling_layers = DEFAULT_AS1_CEILING_LAYER_SETTINGS;
     bool generate_floor = false;
     bool generate_ceiling = false;
@@ -54,7 +60,7 @@ struct MapRequest {
 
 /**
  * Build every sprite for the request and write the map file.
- * Returns false for invalid AS1 ceiling layer counts or when the file cannot be written.
+ * Returns false for invalid AS1 ceiling layer counts, a Loot Table above 100%, or when the file cannot be written.
  */
 bool generate_map(const MapRequest& request, const std::string& output_path);
 

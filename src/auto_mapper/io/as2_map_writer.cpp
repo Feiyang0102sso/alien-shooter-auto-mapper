@@ -94,13 +94,16 @@ void build_as2_spr_section(std::vector<uint8_t>& buffer, const std::vector<Sprit
 void build_as2_sprd_section(std::vector<uint8_t>& buffer, const std::vector<Sprite>& sprites) {
     std::vector<uint8_t> subs;
     uint32_t object_id = 1;
-    for (size_t i = 0; i < sprites.size(); ++i) {
-        append_uint32(subs, 17); // objectId + behavior + stackCount + itemCount + name terminator
+    for (const auto& spr : sprites) {
+        // objectId + behavior + stackCount + itemCount (16 bytes) + nameText + its terminator
+        uint32_t sub_size = 16 + static_cast<uint32_t>(spr.name_text.size()) + 1;
+        append_uint32(subs, sub_size);
         append_uint32(subs, object_id++);
         append_uint32(subs, 0); // behavior
         append_uint32(subs, 0); // stackCount
         append_uint32(subs, 0); // itemCount
-        subs.push_back(0);      // empty nameText terminator
+        subs.insert(subs.end(), spr.name_text.begin(), spr.name_text.end());
+        subs.push_back(0); // nameText terminator
     }
 
     append_uint32(subs, 4); // terminator subSize

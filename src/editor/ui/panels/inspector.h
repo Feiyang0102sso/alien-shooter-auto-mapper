@@ -3,6 +3,7 @@
 #include "editor/i18n/locale.h"
 #include "editor/project/project.h"
 #include "editor/ui/panels/as1_ceiling.h"
+#include "editor/ui/panels/loot_brush.h"
 #include "editor/ui/tools/eraser/eraser_properties.h"
 #include <QWidget>
 
@@ -22,6 +23,7 @@ class InspectorPanel : public QWidget {
     void setMapSize(double width, double height);
     AS1CeilingPropertiesWidget *ceiling() const;
     EraserPropertiesWidget *eraser() const;
+    LootBrushPropertiesWidget *lootBrush() const;
 
     // Component preview: the Editor Set title and its Editor Set Items.
     void setComponentSet(const QString &title, const QStringList &itemLabels, int selectedIndex);
@@ -32,6 +34,8 @@ class InspectorPanel : public QWidget {
     void showWallPart(const QString &imagePath, const QString &nvidText);
     // `spritesReady`: an AS2 game folder is loaded; `preview` is the composed stamp (may be null).
     void showStamp(int memberCount, bool spritesReady, const QImage &preview);
+    // Loot Box card: its sample sprite preview and how many boxes of it the map holds.
+    void showLoot(int boxCount, bool spritesReady, const QImage &preview);
     // Stamp notice: whether an AS2 game folder is loaded, so sprites render instead of crosses.
     void setSpritePreviewReady(bool ready);
 
@@ -47,6 +51,8 @@ class InspectorPanel : public QWidget {
   private:
     void showPreview(const QString &imagePath);
     void setPreviewNotConfigured(bool notConfigured);
+    // Shared by stamps and loot cards: a detail line, the game folder notice and a rendered sprite preview.
+    void showSpritePreview(const QString &detail, bool spritesReady, const QImage &preview);
 
     const Locale &locale_;
     QDoubleSpinBox *width_ = nullptr;
@@ -64,6 +70,7 @@ class InspectorPanel : public QWidget {
     QDoubleSpinBox *rowSpacing_ = nullptr;
     QPushButton *delete_ = nullptr;
     EraserPropertiesWidget *eraser_ = nullptr;
+    LootBrushPropertiesWidget *lootBrush_ = nullptr;
 };
 
 } // namespace editor

@@ -257,6 +257,39 @@ TEST(MapWriterTest, WritesAS2SpriteRecordsWithVersionTwoLayout) {
     EXPECT_EQ(read_magic_at(output, PLAY_OFFSET), "PLAY");
 }
 
+TEST(MapWriterTest, WritesAS2SpriteNameTextIntoSprd) {
+    // Two sprites: a loot box with its whole loot text, then a plain sprite with an empty name.
+    io::Sprite box;
+    box.vid = 1225;
+    box.army = 2;
+    box.name_text = "EMPTY Ammo_shotgun Obj_money3";
+    io::Sprite plain;
+    plain.vid = 601;
+
+    std::string output_file = get_test_output_path("name_text_as2_writer_output.map");
+    ASSERT_TRUE(io::write_map({box, plain}, output_file, io::MapFormat::AS2, 640.0f, 480.0f));
+    std::vector<uint8_t> output = load_binary_file(output_file);
+
+    // Same AS2 layout as the single-sprite test, with one more 48-byte SPR record.
+    constexpr size_t SPR_OFFSET = 104;
+    constexpr size_t SPRD_OFFSET = SPR_OFFSET + 8 + 68 + 48;
+    constexpr size_t FIRST_SUB_OFFSET = SPRD_OFFSET + 20;
+    const size_t name_size = box.name_text.size();
+    const size_t second_sub_offset = FIRST_SUB_OFFSET + 4 + 16 + name_size + 1;
+
+    ASSERT_EQ(read_magic_at(output, SPRD_OFFSET), "SPRD");
+    EXPECT_EQ(read_uint32_at(output, FIRST_SUB_OFFSET), 16u + name_size + 1);
+    std::string written(output.begin() + FIRST_SUB_OFFSET + 20, output.begin() + FIRST_SUB_OFFSET + 20 + name_size);
+    EXPECT_EQ(written, box.name_text);
+    EXPECT_EQ(output[FIRST_SUB_OFFSET + 20 + name_size], 0u);
+
+    // The plain sprite keeps the old 17-byte empty-name sub record.
+    EXPECT_EQ(read_uint32_at(output, second_sub_offset), 17u);
+    EXPECT_EQ(read_uint32_at(output, second_sub_offset + 4), 2u);
+    // SPRD size covers header (12) + both subs + the terminator sub (8).
+    EXPECT_EQ(read_uint32_at(output, SPRD_OFFSET + 4), 12u + (4 + 16 + name_size + 1) + (4 + 17) + 8u);
+}
+
 TEST(MapWriterTest, WritesAS2SpriteGammaIntoSpriteRecord) {
     io::Sprite sprite;
     sprite.vid = 1785;

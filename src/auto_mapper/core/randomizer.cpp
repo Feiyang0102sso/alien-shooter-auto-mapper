@@ -22,6 +22,12 @@ int Random::get(int min_value, int max_value) {
     return distribution(engine());
 }
 
+double Random::get_real(double min_value, double max_value) {
+    std::uniform_real_distribution<double> distribution(min_value, max_value);
+
+    return distribution(engine());
+}
+
 int Random::get(const std::vector<int>& values) {
     return get(std::span<const int>(values));
 }

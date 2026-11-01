@@ -46,14 +46,16 @@ LeftShelfPanel::LeftShelfPanel(const Catalog &catalog, QWidget *parent) : QWidge
     connect(as2Format_, &QComboBox::currentTextChanged, this, &LeftShelfPanel::as2FormatRequested);
     layout->addLayout(family);
 
-    // Shelf mode row: Wall Sets / Decoration Sets.
+    // Shelf mode row: Wall Sets / Decoration Sets / Loot Boxes (AS2 Series only).
     auto *modes = new QHBoxLayout;
     modes->setSpacing(8);
     auto *modeGroup = new QButtonGroup(this);
     wallsButton_ = new QPushButton(locale.tr(TextKey::SHELF_MODE_WALL_SETS));
     decorationsButton_ = new QPushButton(locale.tr(TextKey::SHELF_MODE_DECORATION_SETS));
     decorationsButton_->setToolTip(locale.tr(TextKey::TOOLTIP_DECORATION_SETS));
-    for (QPushButton *button : {wallsButton_, decorationsButton_}) {
+    lootButton_ = new QPushButton(locale.tr(TextKey::SHELF_MODE_LOOT));
+    lootButton_->setToolTip(locale.tr(TextKey::TOOLTIP_LOOT));
+    for (QPushButton *button : {wallsButton_, decorationsButton_, lootButton_}) {
         button->setObjectName("shelfModeButton");
         button->setCheckable(true);
         modes->addWidget(button);
@@ -61,10 +63,13 @@ LeftShelfPanel::LeftShelfPanel(const Catalog &catalog, QWidget *parent) : QWidge
     }
     layout->addLayout(modes);
     connect(wallsButton_, &QPushButton::clicked, this, [this] {
-        emit shelfModeRequested(false);
+        emit shelfModeRequested(ShelfMode::Walls);
     });
     connect(decorationsButton_, &QPushButton::clicked, this, [this] {
-        emit shelfModeRequested(true);
+        emit shelfModeRequested(ShelfMode::Decorations);
+    });
+    connect(lootButton_, &QPushButton::clicked, this, [this] {
+        emit shelfModeRequested(ShelfMode::Loot);
     });
 
     shelf_ = new ThemeShelfPanel(locale);
@@ -81,11 +86,14 @@ void LeftShelfPanel::setProjectVersion(const QString &version) {
     as2Format_->setVisible(!isAS1);
     as1Button_->setChecked(isAS1);
     as2Button_->setChecked(!isAS1);
+    // The Loot Box brush writes AS2 nameText only.
+    lootButton_->setVisible(!isAS1);
 }
 
-void LeftShelfPanel::setDecorationShelf(bool decorations) {
-    wallsButton_->setChecked(!decorations);
-    decorationsButton_->setChecked(decorations);
+void LeftShelfPanel::setShelfMode(ShelfMode mode) {
+    wallsButton_->setChecked(mode == ShelfMode::Walls);
+    decorationsButton_->setChecked(mode == ShelfMode::Decorations);
+    lootButton_->setChecked(mode == ShelfMode::Loot);
 }
 
 void LeftShelfPanel::showWallSets(const QList<int> &setIds) {
@@ -119,6 +127,22 @@ void LeftShelfPanel::showStampSeries(bool as1, const QStringList &seriesIds) {
         int variantCount = catalog_.seriesVariants(as1, seriesId).size();
         card.detail = catalog_.locale.tr(TextKey::LABEL_STAMP_VARIANT_COUNT,
                                          {{"variant_count", QString::number(variantCount)}});
+        cards.append(card);
+    }
+    QSignalBlocker blocker(shelf_);
+    shelf_->setCards(cards, true);
+}
+
+void LeftShelfPanel::showLootKinds() {
+    const Locale &locale = catalog_.locale;
+    QList<ShelfCard> cards;
+    for (LootBoxKind kind : LOOT_KINDS) {
+        // No preview images: MainWindow renders a sample pile from the game sprites into the box.
+        QString id = lootKindId(kind);
+        ShelfCard card;
+        card.spritePreview = true;
+        card.title = locale.tr(QString("loot.%1.label").arg(id));
+        card.description = locale.tr(QString("loot.%1.description").arg(id));
         cards.append(card);
     }
     QSignalBlocker blocker(shelf_);

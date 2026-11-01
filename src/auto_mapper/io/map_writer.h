@@ -33,6 +33,10 @@ struct Sprite {
     core::VidGamma gamma{};
     core::VidScale scale{};
 
+    // AS2 only: SPRD nameText, written verbatim. Loot containers keep their whole loot text here
+    // (space separated item names, the game picks one); empty for every other sprite.
+    std::string name_text;
+
     Sprite() = default;
     Sprite(int32_t v, float x, float y, float z = 0.0f, uint32_t dir = 32)
         : vid(v), posX(x), posY(y), posZ(z), direction(dir), army(0) {}

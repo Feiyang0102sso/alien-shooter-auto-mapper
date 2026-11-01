@@ -62,6 +62,23 @@ double defaultMapSize(const QString &version) {
     return AS2_DEFAULT_MAP_SIZE;
 }
 
+QString lootKindId(LootBoxKind kind) {
+    if (kind == LootBoxKind::Metal)
+        return LOOT_KIND_METAL;
+    if (kind == LootBoxKind::Egg)
+        return LOOT_KIND_EGG;
+    return LOOT_KIND_WOOD;
+}
+
+LootBoxKind lootKindFromId(const QString &id) {
+    for (LootBoxKind kind : LOOT_KINDS) {
+        if (lootKindId(kind) == id)
+            return kind;
+    }
+    fail("Unknown loot box kind: " + id);
+    return LootBoxKind::Wood;
+}
+
 bool supportsGlobalDoorState(const QString &version) {
     return version == PROJECT_VERSION_AS1;
 }
@@ -79,7 +96,7 @@ bool Project::isAS1() const {
     return version == PROJECT_VERSION_AS1;
 }
 bool Project::empty() const {
-    return segments.empty() && doors.empty() && curveWalls.empty() && decorations.empty();
+    return segments.empty() && doors.empty() && curveWalls.empty() && decorations.empty() && lootBoxes.empty();
 }
 
 auto_mapper::io::MapFormat Project::mapFormat() const {
@@ -140,6 +157,25 @@ QJsonObject Project::toJson() const {
     // Older readers ignore unknown keys, so the key is only written when there is something to keep.
     if (!curveWalls.empty())
         result["curve_walls"] = curveWallItems;
+    if (!lootBoxes.empty()) {
+        QJsonArray lootBoxItems;
+        for (const auto &box : lootBoxes) {
+            lootBoxItems.append(QJsonObject{{"vid", box.vid}, {"x", box.x}, {"y", box.y}, {"z", box.z},
+                                            {"direction", static_cast<int>(box.direction)}});
+        }
+        result["loot_boxes"] = lootBoxItems;
+    }
+    QJsonObject lootTableItems;
+    for (const auto &[kind, lines] : lootTables) {
+        if (lines.empty())
+            continue;
+        QJsonArray lineItems;
+        for (const auto &line : lines)
+            lineItems.append(QJsonObject{{"text", QString::fromStdString(line.text)}, {"percent", line.percent}});
+        lootTableItems[lootKindId(kind)] = lineItems;
+    }
+    if (!lootTableItems.isEmpty())
+        result["loot_tables"] = lootTableItems;
     if (isAS1()) {
         result["is_door_open"] = doorsOpen;
         if (standardLayers > 0)
@@ -256,6 +292,41 @@ Project Project::fromJson(const QJsonObject &obj) {
         }
         result.decorations.push_back(decoration);
     }
+    for (const auto &value : arrayValue(obj.value("loot_boxes"))) {
+        auto item = objectValue(value);
+        LootBox box;
+        box.vid = integer(item, "vid");
+        box.x = static_cast<float>(number(item, "x"));
+        box.y = static_cast<float>(number(item, "y"));
+        box.z = static_cast<float>(number(item, "z"));
+        box.direction = static_cast<uint32_t>(integer(item, "direction"));
+        bool known = false;
+        for (LootBoxKind kind : LOOT_KINDS) {
+            if (auto_mapper::core::loot_box_belongs_to(box.vid, kind))
+                known = true;
+        }
+        if (!known)
+            fail("Unsupported loot box vid.");
+        // The Loot Box brush and nameText exist only in the AS2 Series.
+        if (result.isAS1())
+            fail("Loot boxes need an AS2 Series project.");
+        result.lootBoxes.push_back(box);
+    }
+    QJsonObject lootTableItems = objectValue(obj.value("loot_tables"));
+    for (auto entry = lootTableItems.begin(); entry != lootTableItems.end(); ++entry) {
+        LootBoxKind kind = lootKindFromId(entry.key());
+        auto_mapper::core::LootTable table;
+        for (const auto &lineValue : arrayValue(entry.value())) {
+            auto lineItem = objectValue(lineValue);
+            LootLine line;
+            line.text = lineItem.value("text").toString().toStdString();
+            line.percent = number(lineItem, "percent");
+            table.lines.push_back(line);
+        }
+        if (!auto_mapper::core::is_valid_loot_table(table))
+            fail("Loot table percents must be 0..100 and add up to at most 100.");
+        result.lootTables[kind] = table.lines;
+    }
     return result;
 }
 
@@ -307,6 +378,13 @@ bool Project::generate(const QString &path, bool floor, bool ceiling, bool rando
     request.generate_ceiling = ceiling;
     request.random_direction = random;
     request.decoration_library = decorationLibrary;
+    request.loot_boxes = lootBoxes;
+    for (const auto &[kind, lines] : lootTables) {
+        auto_mapper::core::LootTable table;
+        table.vids = auto_mapper::core::loot_table_vids(kind);
+        table.lines = lines;
+        request.loot_tables.push_back(table);
+    }
 
     for (const auto &d : decorations) {
         if (d.type == DECORATION_TYPE_ROOM_STAMP) {

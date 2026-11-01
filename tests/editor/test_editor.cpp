@@ -1,12 +1,16 @@
 // Native interaction and project compatibility regression tests.
 #include "editor/config.h"
+#include "editor/loot_presets.h"
 #include "editor/hotkeys/hotkey_config.h"
 #include "editor/i18n/text_keys.h"
 #include "editor/ui/main_window.h"
 #include "editor/ui/panels/inspector.h"
+#include "editor/ui/panels/loot_table_dialog.h"
 #include "editor/ui/panels/sprite_preview_dialog.h"
 #include "editor/ui/panels/theme_shelf.h"
 #include "editor/ui/tools/eraser/eraser_geometry.h"
+#include <QJsonArray>
+#include <QScopeGuard>
 #include <QtTest>
 #include <QtWidgets>
 #include <QTemporaryDir>
@@ -91,7 +95,7 @@ class EditorTest : public QObject {
         placed.origin = {1500, 1500};
         project.decorations.push_back(placed);
         window.replaceProject(project);
-        window.chooseShelf(true);
+        window.chooseShelf(ShelfMode::Decorations);
         QCOMPARE(window.findChild<QComboBox *>("as2FormatCombo")->currentText(), QString("AS2R"));
         QVERIFY(window.viewport->isPlacing());
         QVERIFY(!window.findChild<QAction *>("drawingMode0")->isChecked());
@@ -147,11 +151,25 @@ class EditorTest : public QObject {
             stamp.profileId = "01dorm:1";
             stamp.origin = {430, 290};
             project.decorations.push_back(stamp);
+            project.lootTables[LootBoxKind::Wood] = {{"EMPTY Ammo_shotgun Obj_money3", 40.5}, {"Obj_money1", 9.5}};
+            // Loot boxes exist only in the AS2 Series.
+            if (!project.isAS1())
+                project.lootBoxes.push_back({auto_mapper::core::LOOT_VID_WOOD_BOX, 300.5f, 410.0f, 25.0f, 28});
             auto json = project.toJson();
             auto copy = Project::fromJson(json);
             QCOMPARE(copy.toJson(), json);
             QCOMPARE(json.contains("is_door_open"), project.isAS1());
+            QCOMPARE(json.contains("loot_boxes"), !project.isAS1());
         }
+        QJsonObject as1Loot{{"loot_boxes", QJsonArray{QJsonObject{{"vid", 1225}, {"x", 1}, {"y", 1}}}}};
+        QVERIFY_EXCEPTION_THROWN(Project::fromJson(as1Loot), std::runtime_error);
+        QJsonObject unknownLootVid{{"version", "AS2R"},
+                                   {"loot_boxes", QJsonArray{QJsonObject{{"vid", 601}, {"x", 1}, {"y", 1}}}}};
+        QVERIFY_EXCEPTION_THROWN(Project::fromJson(unknownLootVid), std::runtime_error);
+        QJsonArray overfullLines{QJsonObject{{"text", "Obj_money1"}, {"percent", 60}},
+                                 QJsonObject{{"text", "Obj_money2"}, {"percent", 41}}};
+        QJsonObject overfullTable{{"version", "AS2R"}, {"loot_tables", QJsonObject{{"wood", overfullLines}}}};
+        QVERIFY_EXCEPTION_THROWN(Project::fromJson(overfullTable), std::runtime_error);
         QVERIFY_EXCEPTION_THROWN(Project::fromJson({{"version", "AS3"}}), std::runtime_error);
         QVERIFY_EXCEPTION_THROWN(Project::fromJson({{"as1_lab_ceiling_layer_count", 2.5}}),
                                  std::runtime_error);
@@ -447,7 +465,7 @@ class EditorTest : public QObject {
         project.height = 3000;
         window.replaceProject(project);
         // The decoration shelf opens for AS1 and arms the first AS1 library stamp.
-        window.chooseShelf(true);
+        window.chooseShelf(ShelfMode::Decorations);
         QVERIFY(window.viewport->isPlacing());
         QVERIFY2(window.viewport->activeStamp.startsWith("01office:"), qPrintable(window.viewport->activeStamp));
 
@@ -654,6 +672,178 @@ class EditorTest : public QObject {
         QVERIFY(!freehand->isVisible());
         QVERIFY(polyline->isVisible());
     }
+    void lootBoxBrushEraserAndTable() {
+        using auto_mapper::core::LOOT_VID_EGG;
+        using auto_mapper::core::LOOT_VID_WOOD_BOX;
+        MainWindow window(LOCALE_EN_US);
+        window.resize(1400, 900);
+        window.show();
+        QApplication::processEvents();
+        window.replaceProject(Project::createEmpty(PROJECT_VERSION_AS2R));
+        auto *freehand = window.findChild<QAction *>("drawingMode5");
+        auto *select = window.findChild<QAction *>("drawingMode0");
+        auto *polyline = window.findChild<QAction *>("drawingMode1");
+        auto *eraser = window.findChild<QAction *>("drawingMode4");
+        QVERIFY(freehand && select && polyline && eraser);
+
+        // The Loot shelf offers the brush (Freehand) and the eraser only.
+        window.chooseShelf(ShelfMode::Loot);
+        QVERIFY(window.viewport->isLootCard());
+        QCOMPARE(*window.viewport->lootKind, LootBoxKind::Wood);
+        QCOMPARE(window.viewport->mode, DrawingMode::Freehand);
+        QVERIFY(freehand->isVisible());
+        QVERIFY(eraser->isVisible());
+        QVERIFY(!select->isVisible());
+        QVERIFY(!polyline->isVisible());
+        window.activateMode(DrawingMode::Polyline);
+        QCOMPARE(window.viewport->mode, DrawingMode::Freehand);
+        QVERIFY(window.findChild<LootBrushPropertiesWidget *>()->isVisible());
+
+        // A drag paints wood box piles inside the map.
+        Viewport *canvas = window.viewport;
+        QPoint center = canvas->rect().center();
+        QTest::mousePress(canvas, Qt::LeftButton, {}, center);
+        for (int step = 1; step <= 10; ++step)
+            QTest::mouseMove(canvas, center + QPoint(step * 20, 0));
+        QTest::mouseRelease(canvas, Qt::LeftButton, {}, center + QPoint(200, 0));
+        QVERIFY(!window.project.lootBoxes.empty());
+        for (const LootBox &box : window.project.lootBoxes) {
+            QCOMPARE(box.vid, LOOT_VID_WOOD_BOX);
+            QVERIFY(box.x >= 0 && box.y >= 0 && box.x <= window.project.width && box.y <= window.project.height);
+        }
+        QVERIFY(window.isDirty());
+
+        // The egg card paints eggs; its eraser leaves the wood boxes alone.
+        window.findChild<ThemeShelfPanel *>("setShelf")->setCurrentRow(2);
+        QCOMPARE(*window.viewport->lootKind, LootBoxKind::Egg);
+        size_t woodCount = window.project.lootBoxes.size();
+        QTest::mouseClick(canvas, Qt::LeftButton, {}, center);
+        QVERIFY(window.project.lootBoxes.size() > woodCount);
+        window.activateMode(DrawingMode::Eraser);
+        QVERIFY(window.viewport->isLootCard());
+        window.viewport->eraserSize = 20;
+        QTest::mouseClick(canvas, Qt::LeftButton, {}, center);
+        QCOMPARE(window.project.lootBoxes.size(), woodCount);
+        for (const LootBox &box : window.project.lootBoxes)
+            QVERIFY(box.vid != LOOT_VID_EGG);
+        window.viewport->eraserSize = 1;
+
+        // Leaving the Loot shelf drops the card; AS1 projects hide the Loot shelf button.
+        window.chooseShelf(ShelfMode::Walls);
+        QVERIFY(!window.viewport->isLootCard());
+        QVERIFY(polyline->isVisible());
+        window.replaceProject(Project::createEmpty(PROJECT_VERSION_AS1));
+        bool lootButtonVisible = false;
+        for (auto *button : window.findChildren<QPushButton *>("shelfModeButton")) {
+            if (button->text() == window.locale.tr(TextKey::SHELF_MODE_LOOT))
+                lootButtonVisible = button->isVisible();
+        }
+        QVERIFY(!lootButtonVisible);
+    }
+    void lootTableDialogAndPresets() {
+        Locale locale(LOCALE_EN_US);
+        // A working-directory loot_presets.ini wins over the one beside the exe: use a temporary one.
+        QTemporaryDir directory;
+        QString previous = QDir::currentPath();
+        // Go back even when a check fails midway, or the temporary directory stays locked.
+        auto restoreCurrent = qScopeGuard([previous] {
+            QDir::setCurrent(previous);
+        });
+        QVERIFY(QDir::setCurrent(directory.path()));
+        QFile seed(directory.filePath("loot_presets.ini"));
+        QVERIFY(seed.open(QIODevice::WriteOnly));
+        // Hand-written: a comment, rows out of order with a gap, "%" optional, one row without a percent.
+        seed.write("; shared loot presets\n"
+                   "[drop_egg]\n"
+                   "item3 = Bonus_health10\n"
+                   "item3_p = 25\n"
+                   "item1 = Ammo_shotgun Ammo_minigun EMPTY\n"
+                   "item1_p = 70.5%\n"
+                   "item4 = Obj_money1\n"
+                   "\n"
+                   "[\xe6\xb5\x8b\xe8\xaf\x95]\n"
+                   "item1 = Obj_money2\n"
+                   "item1_p = 10%\n");
+        seed.close();
+        QCOMPARE(lootPresetsPath(), directory.filePath("loot_presets.ini"));
+
+        QList<LootPreset> loaded = loadLootPresets();
+        QCOMPARE(loaded.size(), 2);
+        QCOMPARE(loaded[0].name, QString("drop_egg"));
+        QCOMPARE(loaded[0].lines.size(), size_t(2));
+        QCOMPARE(QString::fromStdString(loaded[0].lines[0].text), QString("Ammo_shotgun Ammo_minigun EMPTY"));
+        QCOMPARE(loaded[0].lines[0].percent, 70.5);
+        QCOMPARE(loaded[0].lines[1].percent, 25.0);
+        QCOMPARE(loaded[1].name, QString::fromUtf8("\xe6\xb5\x8b\xe8\xaf\x95"));
+        QVERIFY(!isValidLootPresetName("a]b"));
+        QVERIFY(!isValidLootPresetName("  "));
+
+        LootPreset preset;
+        preset.name = "mine";
+        preset.lines = {{"EMPTY Ammo_shotgun Obj_money3", 40}, {"Obj_money1", 10}};
+        saveLootPreset(preset);
+        QList<LootPreset> saved = loadLootPresets();
+        QCOMPARE(saved.size(), 3);
+        QCOMPARE(saved[2].name, QString("mine"));
+        QCOMPARE(saved[2].lines.size(), size_t(2));
+        QCOMPARE(QString::fromStdString(saved[2].lines[0].text), QString("EMPTY Ammo_shotgun Obj_money3"));
+        QCOMPARE(saved[2].lines[0].percent, 40.0);
+        // Re-saving an existing preset keeps its place and the file comment; rows are renumbered with "%".
+        LootPreset egg = saved[0];
+        egg.lines.pop_back();
+        saveLootPreset(egg);
+        saved = loadLootPresets();
+        QCOMPARE(saved[0].name, QString("drop_egg"));
+        QCOMPARE(saved[0].lines.size(), size_t(1));
+        QFile written(lootPresetsPath());
+        QVERIFY(written.open(QIODevice::ReadOnly));
+        QByteArray content = written.readAll();
+        written.close();
+        QVERIFY(content.contains("; shared loot presets"));
+        QVERIFY(content.contains("item1_p = 70.5%"));
+
+        // The dialog edits whole lines and refuses a total above 100%.
+        LootTableDialog dialog(locale, "Wood", preset.lines);
+        dialog.show();
+        QApplication::processEvents();
+        auto *ok = dialog.findChild<QPushButton *>("lootTableOk");
+        QVERIFY(ok->isEnabled());
+        dialog.findChild<QPushButton *>("lootAddLine")->click();
+        auto texts = dialog.findChildren<QPlainTextEdit *>("lootText");
+        auto percents = dialog.findChildren<QDoubleSpinBox *>("lootPercent");
+        QCOMPARE(texts.size(), 3);
+        texts[2]->setPlainText("Ammo_rocket Ammo_rocket EMPTY");
+        percents[2]->setValue(60);
+        QVERIFY(!ok->isEnabled());
+        percents[2]->setValue(50);
+        QVERIFY(ok->isEnabled());
+        QCOMPARE(dialog.lines().size(), size_t(3));
+        QCOMPARE(QString::fromStdString(dialog.lines()[2].text), QString("Ammo_rocket Ammo_rocket EMPTY"));
+        // A long text wraps and its box grows downwards; a pasted line break turns into a space.
+        int oneLine = texts[2]->height();
+        texts[2]->setPlainText(QString("Ammo_shotgun ").repeated(40));
+        QApplication::processEvents();
+        QVERIFY(texts[2]->height() > oneLine);
+        QCOMPARE(texts[2]->width(), texts[0]->width());
+        texts[1]->setPlainText("Obj_money1\nObj_money2");
+        QCOMPARE(texts[1]->toPlainText(), QString("Obj_money1 Obj_money2"));
+
+        deleteLootPreset("mine");
+        QCOMPARE(loadLootPresets().size(), 2);
+
+        // The shipped template is user data: only check that it parses into usable tables, not what it holds.
+        QString templatePath = QString(AUTO_MAPPER_SOURCE_DIR) + "/loot_presets.ini";
+        QVERIFY(QFile::remove(directory.filePath("loot_presets.ini")));
+        QVERIFY(QFile::copy(templatePath, directory.filePath("loot_presets.ini")));
+        QList<LootPreset> shipped = loadLootPresets();
+        QVERIFY(!shipped.isEmpty());
+        for (const LootPreset &template_ : shipped) {
+            auto_mapper::core::LootTable table;
+            table.lines = template_.lines;
+            QVERIFY2(!template_.lines.empty(), qPrintable(template_.name));
+            QVERIFY2(auto_mapper::core::is_valid_loot_table(table), qPrintable(template_.name));
+        }
+    }
     void windowNavigationAndPersistence() {
         MainWindow window("zh_CN");
         window.show();
@@ -674,11 +864,11 @@ class EditorTest : public QObject {
         shelf->setCurrentRow(1);
         shelf->setCurrentRow(0);
         QCOMPARE(combo->currentIndex(), 2);
-        window.chooseShelf(true);
+        window.chooseShelf(ShelfMode::Decorations);
         QVERIFY(window.viewport->isPlacing());
         window.activateMode(DrawingMode::Select);
         QVERIFY(window.viewport->isEditing());
-        window.chooseShelf(false);
+        window.chooseShelf(ShelfMode::Walls);
         QCOMPARE(window.viewport->part, QString("wall_body"));
         window.findChild<QComboBox *>("as2FormatCombo")->setCurrentText("AS2OE");
         QCOMPARE(window.project.version, QString("AS2OE"));

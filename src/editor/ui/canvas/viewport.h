@@ -7,6 +7,9 @@
 //
 // Curve Walls: while the Curve Wall card is active (isCurveWallCard()), Freehand draws a stroke in Map
 // Coordinates and Eraser removes whole curves; the grid tools are hidden.
+//
+// Loot Boxes: while a Loot Box card is active (isLootCard()), Freehand is the brush (each dab calls the core
+// scatter) and Eraser removes that card's boxes; Select and the grid tools are hidden.
 #pragma once
 #include "editor/catalog/catalog.h"
 #include "editor/config.h"
@@ -30,6 +33,10 @@ class Viewport : public QWidget {
     // Curve Wall type the Freehand tool draws, or -1 while a grid wall card is active.
     // Unlike `part`, tool switches keep it, so Eraser and Freehand can alternate on the same card.
     int curveWallType = -1;
+    // Loot Box card the brush and eraser act on, empty off the Loot shelf. Like curveWallType, tool switches keep it.
+    std::optional<LootBoxKind> lootKind;
+    // Brush parameters of the active Loot Box card; MainWindow keeps one copy per card.
+    auto_mapper::core::LootBrushSettings lootBrush;
     int selectedDecoration = -1;
     int eraserSize = 1;
     double zoom = 1;
@@ -43,11 +50,13 @@ class Viewport : public QWidget {
     bool isPlacing() const;
     bool isEditing() const;
     bool isCurveWallCard() const;
+    bool isLootCard() const;
     void setMode(DrawingMode value);
     void setWall(int type, const QString &partId = PART_WALL_BODY);
     void armStamp(const QString &id);
     void armArray(const QString &type);
     void armCurveWall(int type);
+    void armLoot(LootBoxKind kind);
     void resetInteraction();
     // Right click / Esc: drop the pending wall start, or leave placing mode.
     void cancel();
@@ -67,6 +76,9 @@ class Viewport : public QWidget {
     bool hasGameFolder() const;
     // Whole stamp drawn from game sprites for the inspector; null without a game folder.
     QImage renderStampPreview(const QString &stampId);
+    // A small sample pile (or egg patch) of one Loot Box card for its shelf card and the inspector; null without
+    // a game folder.
+    QImage renderLootPreview(LootBoxKind kind);
 
   signals:
     void projectChanged();
@@ -80,6 +92,9 @@ class Viewport : public QWidget {
     void segmentCreated(int x1, int y1, int x2, int y2, int count);
     void doorCreated(QPoint grid, int count);
     void curveWallCreated(int count, int pieceCount);
+    // A brush dab or an eraser stroke changed the loot boxes; `changed` is how many were added or removed.
+    void lootBoxesPainted(int changed, int total);
+    void lootBoxesErased(int changed, int total);
     void decorationCreated(int count);
     void stampPlaced(const QString &stampId, bool outside);
     void decorationSelected();
@@ -107,6 +122,9 @@ class Viewport : public QWidget {
     std::vector<QPointF> stroke_;
     bool panning_ = false;
     bool erasing_ = false;
+    // Loot brush: held left button, and the Map Coordinate of the last dab.
+    bool brushing_ = false;
+    QPointF lastDab_;
     QPointF dragStart_;
     QPointF panStart_;
     // "move" or one of the array edges "left" / "right" / "top" / "bottom"; empty when idle.
@@ -128,6 +146,9 @@ class Viewport : public QWidget {
     // True when releasing now would close the stroke into a loop (its end is back near its start).
     bool strokeCloses(const std::vector<QPointF> &stroke) const;
     void finishStroke();
+    // One loot brush dab at a Map Coordinate; boxes landing outside the map are dropped.
+    void lootDab(const QPointF &center);
+    void eraseLoot(const QPointF &center);
     QPoint constrainedEnd(QPoint point) const;
     std::vector<Segment> pendingSegments(QPoint point) const;
     void wallClick(const QPoint &point);
@@ -146,6 +167,11 @@ class Viewport : public QWidget {
     // Stamp members placed around `center` (Map Coordinates): game sprites when a game folder is open,
     // green crosses for members without a decoded frame (or for every member with stampCrossesWithSprites).
     void drawStampMembers(QPainter &painter, const QString &stampId, const QPointF &center, double opacity);
+    // Shared by stamps and loot boxes: members around `center`, sprites in stampDrawOrder() then crosses.
+    void drawMembers(QPainter &painter, const auto_mapper::core::decoration_builder::DecorationStamp &stamp,
+                     const QPointF &center, double opacity);
+    // Every loot box as members of one stamp at the origin, so stacking and opacity follow the stamp rules.
+    void drawLootBoxes(QPainter &painter);
     void drawIncubatorUnits(QPainter &painter, const Decoration &decoration);
     void drawStampGhost(QPainter &painter, const QPointF &center);
     void drawArrayPreview(QPainter &painter, const Decoration &preview);

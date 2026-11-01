@@ -22,6 +22,7 @@ Agent 修改代码时，先判断改动属于哪一层。坐标、VID、墙体�
 - 装饰物 stamp 由 `core/decoration_builder/decoration_library.*` 在启动时从库地图注册（AS2 系列按 region，AS1 按固定网格），见下文“装饰物 Stamp”。
 - 墙体生成核心是 `src/auto_mapper/core/wall_builder.*`。
 - 曲线墙（Curve Wall）核心是 `core/wall_builder/curve_wall_builder.*`，见下文“曲线墙”。
+- 物资箱（Loot Box）笔刷与掉落表在 `core/loot/`，见下文“物资箱”。
 - 门生成核心是 `src/auto_mapper/core/door_builder.*`。
 - 地图写出逻辑是 `src/auto_mapper/io/map_writer.*`。
 - 室内装饰物在 `src/auto_mapper/core/indoor_decorations/`。
@@ -43,7 +44,7 @@ Agent 修改代码时，先判断改动属于哪一层。坐标、VID、墙体�
 | `ui/main_window.*` | 组装面板、画布、快捷键，执行编辑器命令 |
 | `ui/canvas/viewport.*` | 画布：坐标换算、绘制、鼠标交互 |
 | `ui/canvas/stamp_sprites.*` | 装饰物成员贴图缓存（经 `game_assets` 解码，叠加库地图 gamma） |
-| `ui/panels/` | 左侧货架（`left_shelf`、`theme_shelf`）、右侧属性面板（`inspector`、`as1_ceiling`）、贴图预览小窗口（`sprite_preview_dialog`） |
+| `ui/panels/` | 左侧货架（`left_shelf`、`theme_shelf`）、右侧属性面板（`inspector`、`as1_ceiling`、`loot_brush`）、贴图预览小窗口（`sprite_preview_dialog`）、掉落表对话框（`loot_table_dialog`） |
 | `ui/tools/` | 绘制模式、左侧工具栏、橡皮擦几何与属性 |
 | `resources/` | `catalog.json`、`i18n/*.json`、`styles/*.qss`，编译进 exe |
 
@@ -235,6 +236,8 @@ UI 画布规则：
   - 网格墙卡：显示折线 / 直线 / 矩形，隐藏手绘。
   - 曲线墙卡（`Viewport::isCurveWallCard()`）：只显示手绘和橡皮，`activateMode()` 拒绝网格工具。
 - Decoration Sets 货架：显示 Select，隐藏橡皮和手绘。
+- Loot 货架（物资箱，只在 AS2 系列工程显示）：只显示手绘（即笔刷）和橡皮，`activateMode()` 拒绝 Select 和网格工具。
+  货架模式是 `ShelfMode`（`left_shelf.h`）三态：Walls / Decorations / Loot。
 - 每个可隐藏的工具在 `DrawingToolbar::separators_` 里绑定了自己的分隔线，`setModeVisible()` 一起显隐。
 
 隐藏当前选中的工具会留下一个死状态，所以 `chooseShelf()` 必须同时换到
@@ -273,6 +276,46 @@ AS2 系列专用的“曲线墙”卡（`catalog.json` 里 id `100`，条目 `id
 - 画布：曲线墙属于墙体，和网格墙一样只画线（同一个 `WALL_LINE_WIDTH`，绘制中的笔迹用网格墙预览的黄色虚线），
   另加每片的锚点小圆点，不画游戏贴图。编辑器预览与生成共用核心函数，不在 UI 里重写采样。
 
+## 物资箱（Loot Box）
+
+AS2 系列专用的第三个货架，三张卡：木箱 1225、金属箱 2332、异形蛋 2750（可混入破损蛋 2751）。
+数据来自 AS2R 原版地图（`AlienShooter2 Reloaded\Maps`，AS2C 目录下的地图删过箱子，不可信）和 AS2C 的蛋。
+
+- 掉落文本：写在 SPRD 每条记录末尾的 nameText（`io::Sprite::name_text`，writer 原样写出，空串时输出与以前逐字节相同）。
+  一行是空格分隔的道具名（`EMPTY` 表示不掉），箱子被打碎时由游戏从这一行里随机挑一个；
+  重复的名字就是权重。工具不读 `Weapon.cfg`、不解析也不校验道具名。AS2R 的蛋 nameText 是 quest 标记 `m1`，不是掉落。
+- 掉落表（`core/loot/loot_table.*`）：每张卡一张表，每行是“一整条文本 + 概率”，概率之和 ≤ 100%，剩下的不写。
+  `generate_map()` 在最后一步按 VID 对**所有**输出 sprite 抽一行写入，所以装饰物 stamp 里的箱子也会带上；破损蛋不在表里。
+  超过 100% 的表直接让生成失败。每次导出重新抽，没有种子。
+- 摆放（`core/loot/loot_box_builder.*`）：编辑器每落一笔调用 `scatter_loot_boxes()`，项目里存的是具体实例（`loot_boxes`）。
+  - 一笔就是一堆：笔刷圆心先放一个，再把圆内的随机点按离圆心由近到远逐个尝试，离已放的（含已有的）≥ 间距才保留，
+    所以箱子和蛋都从中心向外长出一团。参数只有笔刷半径、间距、叠放概率（箱子）、破损概率（蛋）；
+    默认箱子半径 80、间距 45（官方相邻箱子 38–53），蛋半径 150、间距 35（`default_loot_brush()`）。
+  - 每个地面箱子按叠放概率再叠一层（木箱 +25、金属箱 +30，水平偏移 ≤ 30）。默认叠放 15%（官方箱子叠箱子只有 1.4%，
+    这里有意多一点），蛋默认 10% 破损。
+  - 方向只取官方地图出现过的值：木箱 9 个、金属箱 8 个（`LOOT_*_BOX_DIRECTIONS`）。这些方向其实是**不同款式**的箱子，
+    不是旋转；2332 的 objects.res 写着 10 方向，但 204 / 230 没有帧，所以不能按 `noDir` 推算。蛋用满 0..255。
+  - army：箱子和活蛋 2，破损蛋 0（`vid_armies_as2.h` 里没有这几个 VID，由 builder 写）。
+- 编辑器：`Viewport::lootKind` 非空即 Loot 卡，手绘拖动时每移动半个笔刷半径落一笔，落到地图外的箱子丢掉；
+  橡皮按橡皮圆删当前卡的箱子（蛋卡连破损蛋一起删）。`lootKind` 和 `curveWallType` 一样不在 `resetInteraction()` 里清，
+  由 `setWall()` / `armStamp()` / `armArray()` / `armCurveWall()` / `chooseShelf()` 清。
+  画布把所有箱子当成一个 stamp 的成员交给 `drawMembers()`，叠放顺序、半透明、贴图和叉号都与装饰物一致。
+- 笔刷参数每张卡一份，只在本次会话里记住（`MainWindow::lootBrushes_`）。
+  掉落表对话框是暗色的（`#lootTableDialog` QSS），文本列放宽，长文本在框内换行、框向下长高，不横向拉长；
+  粘贴进来的换行会变成空格（nameText 只能是一行）。掉落表存在项目 JSON 的 `loot_tables`
+  （`wood` / `metal` / `egg` → `[{text, percent}]`）。
+- 掉落预设（`editor/loot_presets.*`）存在 exe 旁的 `loot_presets.ini`（工作目录里有同名文件时优先，同 `AutoMapper.cfg`），
+  用 SimpleIni 读写。预设不分卡片、只按节名区分，任何卡都能载入。
+  仓库里的模板是根目录的 `loot_presets.ini`（`[初期]` / `[中期]` / `[后期]` 取自 AS2R 第 1–5 / 6–10 / 11–15 关
+  官方木箱、金属箱最常用的整条文本，只保留钞票 `Obj_money1-3`（不含金条 `Obj_money4`）、弹药和血量拾取物，概率按比例放大到
+  官方空箱率；`[异形蛋]` 是 AS2C 蛋的那一行，节名可以随意改）。每次构建都用 `copy_if_different` 同步到 exe 旁（会覆盖存进构建目录那份的预设），
+  `install()` 把它装到打包目录的 exe 旁。文件不存在时没有预设，第一次保存时创建。改模板只改这个 ini，不写进 C++。
+  注意工作目录优先：以仓库根目录为工作目录运行编辑器时，读写的就是仓库里这份模板。
+  格式：`[预设名]` 下 `itemN = 整条文本`、`itemN_p = 24.3%`（`%` 可省），按 N 排序、编号可断；缺文本或概率的行跳过并打 warning。
+  保存只重写这一节（保留位置和注释、`item1..N` 连续编号），其他节和注释不动；节名不能含 `[` `]`。
+  文件经 QFile 读、QSaveFile 写，不用 SimpleIni 的 `LoadFile()`（`fopen` 打不开中文路径）。
+- 项目 JSON：`loot_boxes`（`vid`、`x`、`y`、`z`、`direction`）和 `loot_tables` 只在非空时写；AS1 工程出现 `loot_boxes` 直接报错。
+
 ## 测试与 Golden 文件
 
 核心测试在 `tests/test_*.cpp`，编辑器测试在 `tests/editor/test_editor.cpp`（交互、旧 JSON 兼容、四种输出、中文路径、
@@ -286,6 +329,7 @@ AS2 系列专用的“曲线墙”卡（`catalog.json` 里 id `100`，条目 `id
 - `tests/test_wall_builder.cpp`
 - `tests/test_door_builder.cpp`
 - `tests/test_map_writer.cpp`
+- `tests/test_loot.cpp`
 
 Golden 文件在 `tests/golden/`。改动导致 golden 输出变化时，必须能解释是预期行为变化，不要静默更新。
 
@@ -300,7 +344,8 @@ Golden 文件在 `tests/golden/`。改动导致 golden 输出变化时，必须�
 编辑器使用 MSVC + Qt 6.11.1（Qt Base、Qt Image Formats）。
 只维护 `msvc-release` 一个预设；Qt SDK 路径在 `CMakePresets.json` 的 `CMAKE_PREFIX_PATH`。
 
-CMake 分四个文件：根 `CMakeLists.txt` 只放全局设置、依赖（spdlog、gtest、Qt）和三个 `add_subdirectory`；
+CMake 分四个文件：根 `CMakeLists.txt` 只放全局设置、依赖（spdlog、gtest、Qt，以及 `src/3rdparty/simpleini/` 里随仓库提交的
+SimpleIni v4.22 头文件，INTERFACE 库 `simpleini`，只有编辑器链接）和三个 `add_subdirectory`；
 `src/auto_mapper/` 放核心静态库，`src/editor/` 放编辑器、exe、部署与打包，`tests/` 放核心测试、编辑器测试和 golden 导出工具。
 所有 exe 都输出到 `build/msvc-release/` 同一目录，共用 Qt DLL 和 `assets/`。
 `builder.bat` 构建并运行核心与原生 UI 测试；

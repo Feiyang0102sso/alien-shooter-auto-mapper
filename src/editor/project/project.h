@@ -5,6 +5,7 @@
 #include <QPoint>
 #include <QPointF>
 #include <QString>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -15,6 +16,16 @@ using auto_mapper::core::DoorInstance;
 using auto_mapper::core::Segment;
 // Curve Walls use the core type directly too, but in Map Coordinates.
 using auto_mapper::core::CurveWall;
+// Loot Boxes (Map Coordinates) and Loot Table rows use the core types directly.
+using auto_mapper::core::LootBox;
+using auto_mapper::core::LootBoxKind;
+using auto_mapper::core::LootLine;
+
+// The three Loot Box cards in shelf order; their ids key project JSON and AutoMapper.cfg presets.
+inline constexpr LootBoxKind LOOT_KINDS[] = {LootBoxKind::Wood, LootBoxKind::Metal, LootBoxKind::Egg};
+inline constexpr const char *LOOT_KIND_WOOD = "wood";
+inline constexpr const char *LOOT_KIND_METAL = "metal";
+inline constexpr const char *LOOT_KIND_EGG = "egg";
 
 // Project Version names stored in project JSON.
 inline constexpr const char *PROJECT_VERSION_AS1 = "AS1";
@@ -57,6 +68,10 @@ struct Project {
     // AS2 Series only.
     std::vector<CurveWall> curveWalls;
     std::vector<Decoration> decorations;
+    // AS2 Series only. Brushed loot containers, and each card's Loot Table rows; a table applies to every
+    // container of its card in the generated map, stamp members included.
+    std::vector<LootBox> lootBoxes;
+    std::map<LootBoxKind, std::vector<LootLine>> lootTables;
 
     bool isAS1() const;
     bool empty() const;
@@ -73,6 +88,9 @@ struct Project {
 };
 
 double defaultMapSize(const QString &version);
+// "wood" / "metal" / "egg"; lootKindFromId() throws std::runtime_error for anything else.
+QString lootKindId(LootBoxKind kind);
+LootBoxKind lootKindFromId(const QString &id);
 // The Global Door State Override exists only in AS1.
 bool supportsGlobalDoorState(const QString &version);
 // Door positions address grid edges; drawing and erasing work on the two end vertices.

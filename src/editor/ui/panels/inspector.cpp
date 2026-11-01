@@ -113,9 +113,12 @@ InspectorPanel::InspectorPanel(const Locale &locale, QWidget *parent) : QWidget(
     groupLayout(selectionGroup_)->addWidget(delete_);
     layout->addWidget(selectionGroup_);
 
-    // Tool properties (eraser size).
+    // Tool properties (eraser size, Loot Box brush).
     eraser_ = new EraserPropertiesWidget(locale);
     layout->addWidget(eraser_);
+    lootBrush_ = new LootBrushPropertiesWidget(locale);
+    lootBrush_->setVisible(false);
+    layout->addWidget(lootBrush_);
     layout->addStretch();
 }
 
@@ -130,6 +133,10 @@ AS1CeilingPropertiesWidget *InspectorPanel::ceiling() const {
 
 EraserPropertiesWidget *InspectorPanel::eraser() const {
     return eraser_;
+}
+
+LootBrushPropertiesWidget *InspectorPanel::lootBrush() const {
+    return lootBrush_;
 }
 
 void InspectorPanel::setComponentSet(const QString &title, const QStringList &itemLabels, int selectedIndex) {
@@ -177,7 +184,17 @@ void InspectorPanel::setSpritePreviewReady(bool ready) {
 }
 
 void InspectorPanel::showStamp(int memberCount, bool spritesReady, const QImage &preview) {
-    stampDetails_->setText(locale_.tr(TextKey::LABEL_STAMP_MEMBER_COUNT, {{"member_count", QString::number(memberCount)}}));
+    showSpritePreview(locale_.tr(TextKey::LABEL_STAMP_MEMBER_COUNT, {{"member_count", QString::number(memberCount)}}),
+                      spritesReady, preview);
+}
+
+void InspectorPanel::showLoot(int boxCount, bool spritesReady, const QImage &preview) {
+    showSpritePreview(locale_.tr(TextKey::LABEL_LOOT_BOX_COUNT, {{"count", QString::number(boxCount)}}), spritesReady,
+                      preview);
+}
+
+void InspectorPanel::showSpritePreview(const QString &detail, bool spritesReady, const QImage &preview) {
+    stampDetails_->setText(detail);
     stampDetails_->setVisible(true);
     notice_->setVisible(true);
     nvid_->setVisible(false);

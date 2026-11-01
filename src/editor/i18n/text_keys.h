@@ -146,4 +146,34 @@ inline constexpr const char *STATUS_MAP_TOO_SMALL_FOR_STAMP = "status.map_too_sm
 inline constexpr const char *LANGUAGE_NAME_ENGLISH = "language_name.english";
 inline constexpr const char *LANGUAGE_NAME_CHINESE = "language_name.chinese";
 
+// Loot Box shelf, brush and Loot Table dialog.
+inline constexpr const char *SHELF_MODE_LOOT = "shelf.mode.loot";
+inline constexpr const char *TOOLTIP_LOOT = "tooltip.loot";
+inline constexpr const char *LABEL_LOOT_BOX_COUNT = "label.loot_box_count";
+inline constexpr const char *STATUS_LOOT_KIND_SELECTED = "status.loot_kind_selected";
+inline constexpr const char *STATUS_LOOT_PAINTED = "status.loot_painted";
+inline constexpr const char *STATUS_LOOT_ERASED = "status.loot_erased";
+inline constexpr const char *GROUP_LOOT_BRUSH = "group.loot_brush";
+inline constexpr const char *LABEL_LOOT_RADIUS = "label.loot_radius";
+inline constexpr const char *LABEL_LOOT_SPACING = "label.loot_spacing";
+inline constexpr const char *LABEL_LOOT_STACK_CHANCE = "label.loot_stack_chance";
+inline constexpr const char *LABEL_LOOT_EGG_BROKEN = "label.loot_egg_broken_chance";
+inline constexpr const char *BUTTON_LOOT_TABLE = "button.loot_table";
+inline constexpr const char *DIALOG_LOOT_TABLE = "dialog.loot_table";
+inline constexpr const char *LABEL_LOOT_TABLE_HINT = "label.loot_table_hint";
+inline constexpr const char *LABEL_LOOT_TEXT = "label.loot_text";
+inline constexpr const char *LABEL_LOOT_PERCENT = "label.loot_percent";
+inline constexpr const char *BUTTON_LOOT_ADD_LINE = "button.loot_add_line";
+inline constexpr const char *BUTTON_LOOT_REMOVE_LINE = "button.loot_remove_line";
+inline constexpr const char *LABEL_LOOT_REMAINDER = "label.loot_remainder";
+inline constexpr const char *LABEL_LOOT_OVERFULL = "label.loot_overfull";
+inline constexpr const char *LABEL_LOOT_PRESET = "label.loot_preset";
+inline constexpr const char *BUTTON_LOOT_PRESET_LOAD = "button.loot_preset_load";
+inline constexpr const char *BUTTON_LOOT_PRESET_SAVE = "button.loot_preset_save";
+inline constexpr const char *BUTTON_LOOT_PRESET_DELETE = "button.loot_preset_delete";
+inline constexpr const char *DIALOG_LOOT_PRESET_NAME = "dialog.loot_preset_name";
+inline constexpr const char *MESSAGE_LOOT_PRESET_NAME_INVALID = "message.loot_preset_name_invalid";
+inline constexpr const char *BUTTON_OK = "button.ok";
+inline constexpr const char *BUTTON_CANCEL = "button.cancel";
+
 } // namespace editor::TextKey

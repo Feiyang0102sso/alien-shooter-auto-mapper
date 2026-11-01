@@ -64,6 +64,13 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
         return false;
     }
 
+    for (const LootTable& table : request.loot_tables) {
+        if (!is_valid_loot_table(table)) {
+            Logger::error("Invalid loot table: percents must be 0..100 and add up to at most 100");
+            return false;
+        }
+    }
+
     std::vector<DoorInstance> doors;
     doors.reserve(request.doors.size());
     std::vector<DoorExcavation> excavations;
@@ -151,6 +158,19 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
     // 4. Merge sprites
     sprites.insert(sprites.end(), door_sprites.begin(), door_sprites.end());
     sprites.insert(sprites.end(), decoration_sprites.begin(), decoration_sprites.end());
+
+    // 5. Loot boxes, then loot texts for every listed container (stamp members too).
+    //    AS1 sprite records carry no nameText, and AS1 has no Loot Box brush.
+    if (request.format == io::MapFormat::AS1) {
+        if (!request.loot_boxes.empty()) {
+            Logger::warning("AS1 has no loot box brush, skipped {} loot box(es)", request.loot_boxes.size());
+        }
+    } else {
+        std::vector<io::Sprite> loot_sprites = build_loot_boxes(request.loot_boxes);
+        sprites.insert(sprites.end(), loot_sprites.begin(), loot_sprites.end());
+        Logger::info("Loot boxes: {}", loot_sprites.size());
+        assign_loot_text(sprites, request.loot_tables);
+    }
 
     return io::write_map(sprites, output_path, request.format, request.map_size_x, request.map_size_y);
 }

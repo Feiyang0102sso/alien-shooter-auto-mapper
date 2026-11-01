@@ -223,6 +223,46 @@ QDockWidget::title {
     color: #69f0ae;
 }
 
+/* Loot Table dialog: dark like the sprite preview window; loot texts wrap in boxes styled like the spin boxes. */
+#lootTableDialog,
+#lootRowsViewport,
+#lootRowsWidget {
+    background: #172126;
+}
+
+#lootRowsScroll {
+    background: #172126;
+    border: 1px solid #263740;
+    border-radius: 6px;
+}
+
+#lootTableDialog QLabel {
+    color: #d9e8e2;
+}
+
+#lootTableDialog QPlainTextEdit {
+    background: #182329;
+    border: 1px solid #36505d;
+    border-radius: 6px;
+    color: #d9e8e2;
+    padding: 2px 4px;
+    selection-background-color: #2a3d47;
+    selection-color: #ffffff;
+}
+
+#lootTableDialog QPlainTextEdit:focus {
+    border-color: #4f7fbf;
+}
+
+/* Remainder line, red once the percents pass 100%. */
+#lootTableDialog QLabel#lootTotalLabel {
+    color: #9fb7ae;
+}
+
+#lootTableDialog QLabel#lootTotalLabel[overfull="true"] {
+    color: #ff6b6b;
+}
+
 QPushButton {
     background: #24353e;
     border: 1px solid #3c5b68;

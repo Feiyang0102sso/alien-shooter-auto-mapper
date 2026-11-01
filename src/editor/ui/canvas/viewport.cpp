@@ -10,6 +10,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QVector3D>
 #include <QWheelEvent>
 #include <algorithm>
 #include <cmath>
@@ -34,6 +35,8 @@ constexpr double STROKE_MIN_STEP_PIXELS = 3.0;
 constexpr double STROKE_CLOSE_PIXELS = 14.0;
 constexpr double STROKE_TOLERANCE_PIXELS = 5.0;
 constexpr double STROKE_MIN_LENGTH_PIXELS = 10.0;
+// Loot brush: a drag dabs again after the cursor moves this fraction of the brush radius.
+constexpr double LOOT_DAB_STEP_RADIUS_RATIO = 0.5;
 // Wall lines in screen pixels, shared by grid walls and Curve Walls: placed walls and the pending preview.
 constexpr double WALL_LINE_WIDTH = 4.0;
 constexpr double WALL_PREVIEW_LINE_WIDTH = 3.0;
@@ -151,6 +154,10 @@ bool Viewport::isCurveWallCard() const {
     return curveWallType >= 0;
 }
 
+bool Viewport::isLootCard() const {
+    return lootKind.has_value();
+}
+
 void Viewport::resetInteraction() {
     start_.reset();
     selectedGridPoint_.reset();
@@ -163,6 +170,7 @@ void Viewport::resetInteraction() {
     selectedDecoration = -1;
     dragMode_.clear();
     erasing_ = false;
+    brushing_ = false;
     emit selectionChanged();
     update();
 }
@@ -178,6 +186,7 @@ void Viewport::setWall(int type, const QString &partId) {
     wallType = type;
     part = partId;
     curveWallType = -1;
+    lootKind.reset();
     if (mode == DrawingMode::Select || mode == DrawingMode::Freehand)
         mode = DrawingMode::Polyline;
     emit modeChanged();
@@ -188,6 +197,7 @@ void Viewport::armStamp(const QString &id) {
     activeStamp = id;
     part.clear();
     curveWallType = -1;
+    lootKind.reset();
     mode = DrawingMode::Select;
     emit modeChanged();
 }
@@ -197,6 +207,7 @@ void Viewport::armArray(const QString &type) {
     activeArray = type;
     part.clear();
     curveWallType = -1;
+    lootKind.reset();
     mode = DrawingMode::Rectangle;
     emit modeChanged();
 }
@@ -204,7 +215,18 @@ void Viewport::armArray(const QString &type) {
 void Viewport::armCurveWall(int type) {
     resetInteraction();
     curveWallType = type;
+    lootKind.reset();
     // The card offers Freehand and Eraser only; keep the eraser if it is already in hand.
+    if (mode != DrawingMode::Eraser)
+        mode = DrawingMode::Freehand;
+    emit modeChanged();
+}
+
+void Viewport::armLoot(LootBoxKind kind) {
+    resetInteraction();
+    lootKind = kind;
+    curveWallType = -1;
+    // Like the Curve Wall card: Freehand is the brush, and an eraser already in hand stays.
     if (mode != DrawingMode::Eraser)
         mode = DrawingMode::Freehand;
     emit modeChanged();
@@ -636,15 +658,21 @@ void Viewport::mousePressEvent(QMouseEvent *event) {
         } else if (mode == DrawingMode::Eraser) {
             erasing_ = true;
             bool erased = false;
-            if (isCurveWallCard())
+            if (isLootCard())
+                eraseLoot(physical);
+            else if (isCurveWallCard())
                 erased = eraseCurveWallsAround(project_.curveWalls, physical, eraserRadius(), curveWallType);
             else
                 erased = eraseAround(project_.segments, project_.doors, snapToGrid(event->position()), eraserSize, wallType);
             if (erased)
                 emit projectChanged();
         } else if (mode == DrawingMode::Freehand) {
-            if (isCurveWallCard())
+            if (isLootCard()) {
+                brushing_ = true;
+                lootDab(physical);
+            } else if (isCurveWallCard()) {
                 stroke_ = {physical};
+            }
         } else {
             wallClick(snapToGrid(event->position()));
         }
@@ -661,13 +689,20 @@ void Viewport::mouseMoveEvent(QMouseEvent *event) {
         dragDecoration(screenToMap(event->position()));
     } else if (erasing_) {
         bool erased = false;
-        if (isCurveWallCard())
+        if (isLootCard())
+            eraseLoot(screenToMap(event->position()));
+        else if (isCurveWallCard())
             erased = eraseCurveWallsAround(project_.curveWalls, screenToMap(event->position()), eraserRadius(),
                                            curveWallType);
         else
             erased = eraseAround(project_.segments, project_.doors, snapToGrid(event->position()), eraserSize, wallType);
         if (erased)
             emit projectChanged();
+    } else if (brushing_) {
+        // Dab again once the cursor has moved half a brush radius, so a drag paints a continuous band.
+        QPointF physical = screenToMap(event->position());
+        if (length(physical - lastDab_) >= lootBrush.radius * LOOT_DAB_STEP_RADIUS_RATIO)
+            lootDab(physical);
     } else if (!stroke_.empty()) {
         QPointF physical = screenToMap(event->position());
         if (length(physical - stroke_.back()) * zoom >= STROKE_MIN_STEP_PIXELS)
@@ -694,6 +729,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent *event) {
     }
     if (event->button() == Qt::LeftButton) {
         erasing_ = false;
+        brushing_ = false;
         dragMode_.clear();
         if (!stroke_.empty())
             finishStroke();
@@ -798,13 +834,17 @@ void Viewport::drawGrid(QPainter &painter) {
 }
 
 void Viewport::drawStampMembers(QPainter &painter, const QString &stampId, const QPointF &center, double opacity) {
-    using namespace auto_mapper::core::decoration_builder;
     const auto *stamp = catalog_.stamp(project_.isAS1(), stampId);
     if (stamp == nullptr)
         return;
+    drawMembers(painter, *stamp, center, opacity);
+}
 
+void Viewport::drawMembers(QPainter &painter, const auto_mapper::core::decoration_builder::DecorationStamp &stamp,
+                           const QPointF &center, double opacity) {
+    using namespace auto_mapper::core::decoration_builder;
     auto_mapper::io::MapFormat format = project_.mapFormat();
-    std::vector<const DecorationMember *> members = stampDrawOrder(*stamp, format);
+    std::vector<const DecorationMember *> members = stampDrawOrder(stamp, format);
 
     // Screen rectangles of the decoded sprites, in paint order.
     std::vector<std::pair<QRectF, const QImage *>> spriteTargets;
@@ -872,6 +912,85 @@ QImage Viewport::renderStampPreview(const QString &stampId) {
     if (stamp == nullptr)
         return {};
     return stampSprites().render(*stamp, project_.mapFormat());
+}
+
+QImage Viewport::renderLootPreview(LootBoxKind kind) {
+    using auto_mapper::core::decoration_builder::DecorationMember;
+    using auto_mapper::core::decoration_builder::DecorationStamp;
+    // Fixed sample so the card never changes between refreshes: a stacked box pile, or four eggs (one broken).
+    DecorationStamp sample;
+    std::vector<QVector3D> spots = {{0, 0, 0}, {48, 10, 0}, {12, 44, 0}, {6, 6, 25}};
+    int32_t vid = auto_mapper::core::LOOT_VID_WOOD_BOX;
+    if (kind == LootBoxKind::Metal) {
+        vid = auto_mapper::core::LOOT_VID_METAL_BOX;
+        spots[3].setZ(auto_mapper::core::LOOT_METAL_BOX_STACK_HEIGHT);
+    }
+    if (kind == LootBoxKind::Egg) {
+        vid = auto_mapper::core::LOOT_VID_EGG;
+        spots = {{0, 0, 0}, {36, 8, 0}, {10, 34, 0}, {44, 42, 0}};
+    }
+    for (int i = 0; i < static_cast<int>(spots.size()); ++i) {
+        DecorationMember member;
+        member.vid = vid;
+        if (kind == LootBoxKind::Egg && i == 3)
+            member.vid = auto_mapper::core::LOOT_VID_BROKEN_EGG;
+        member.offset_x = spots[i].x();
+        member.offset_y = spots[i].y();
+        member.pos_z = spots[i].z();
+        member.direction = static_cast<uint32_t>(i * 28);
+        sample.members.push_back(member);
+    }
+    return stampSprites().render(sample, project_.mapFormat());
+}
+
+void Viewport::lootDab(const QPointF &center) {
+    lastDab_ = center;
+    auto_mapper::core::LootBrushSettings settings = lootBrush;
+    settings.kind = *lootKind;
+    std::vector<LootBox> added = auto_mapper::core::scatter_loot_boxes(
+        settings, static_cast<float>(center.x()), static_cast<float>(center.y()), project_.lootBoxes);
+    int kept = 0;
+    for (const LootBox &box : added) {
+        // A dab near the edge may spill out; such boxes would land outside the playable map.
+        bool inside = box.x >= 0 && box.y >= 0 && box.x <= project_.width && box.y <= project_.height;
+        if (!inside)
+            continue;
+        project_.lootBoxes.push_back(box);
+        kept += 1;
+    }
+    if (kept == 0)
+        return;
+    qInfo() << "Loot brush dab:" << kept << "added, total" << project_.lootBoxes.size();
+    emit projectChanged();
+    emit lootBoxesPainted(kept, static_cast<int>(project_.lootBoxes.size()));
+}
+
+void Viewport::eraseLoot(const QPointF &center) {
+    int erased = auto_mapper::core::erase_loot_boxes(project_.lootBoxes, static_cast<float>(center.x()),
+                                                     static_cast<float>(center.y()),
+                                                     static_cast<float>(eraserRadius()), *lootKind);
+    if (erased == 0)
+        return;
+    qInfo() << "Loot boxes erased:" << erased << "left" << project_.lootBoxes.size();
+    emit projectChanged();
+    emit lootBoxesErased(erased, static_cast<int>(project_.lootBoxes.size()));
+}
+
+void Viewport::drawLootBoxes(QPainter &painter) {
+    if (project_.lootBoxes.empty())
+        return;
+    auto_mapper::core::decoration_builder::DecorationStamp all;
+    all.members.reserve(project_.lootBoxes.size());
+    for (const LootBox &box : project_.lootBoxes) {
+        auto_mapper::core::decoration_builder::DecorationMember member;
+        member.vid = box.vid;
+        member.offset_x = box.x;
+        member.offset_y = box.y;
+        member.pos_z = box.z;
+        member.direction = box.direction;
+        all.members.push_back(member);
+    }
+    drawMembers(painter, all, QPointF(0, 0), STAMP_PREVIEW_OPACITY);
 }
 
 StampSprites &Viewport::stampSprites() {
@@ -1140,6 +1259,7 @@ void Viewport::paintEvent(QPaintEvent *) {
         bool selected = isEditing() && selectedDecoration == i;
         drawDecoration(painter, project_.decorations[i], selected);
     }
+    drawLootBoxes(painter);
     for (const auto &segment : project_.segments) {
         painter.setPen(cosmeticPen(colors::wallColor(segment.wall_type), WALL_LINE_WIDTH));
         QPointF start(segment.start.x, segment.start.y);
@@ -1158,6 +1278,11 @@ void Viewport::paintEvent(QPaintEvent *) {
             double radius = eraserRadius() * zoom;
             painter.setPen(cosmeticPen(QColor(colors::ERASER_PREVIEW_COLOR), 2, Qt::DashLine));
             painter.setBrush(colors::withAlpha(colors::ERASER_PREVIEW_COLOR, colors::ERASER_PREVIEW_ALPHA));
+            painter.drawEllipse(*cursor_, radius, radius);
+        } else if (isLootCard() && mode == DrawingMode::Freehand) {
+            double radius = lootBrush.radius * zoom;
+            painter.setPen(cosmeticPen(QColor(colors::LOOT_BRUSH_PREVIEW_COLOR), 2, Qt::DashLine));
+            painter.setBrush(colors::withAlpha(colors::LOOT_BRUSH_PREVIEW_COLOR, colors::LOOT_BRUSH_PREVIEW_ALPHA));
             painter.drawEllipse(*cursor_, radius, radius);
         } else if (!isEditing() && !isPlacing() && mode != DrawingMode::Freehand) {
             painter.setPen(cosmeticPen(QColor(colors::CANVAS_PREVIEW_SEGMENT), WALL_PREVIEW_LINE_WIDTH, Qt::DashLine));

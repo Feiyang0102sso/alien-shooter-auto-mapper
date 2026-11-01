@@ -55,23 +55,33 @@ QString loadConfigValue(const char *key) {
     return {};
 }
 
+// Every line of the cfg file without trailing blank lines (so repeated saves do not grow it);
+// a missing file starts from the header.
+QStringList readConfigLines() {
+    QStringList lines;
+    QFile source(configPath());
+    if (source.open(QIODevice::ReadOnly))
+        lines = QString::fromUtf8(source.readAll()).split('\n');
+    else
+        lines = QString(CONFIG_HEADER).split('\n');
+    while (!lines.isEmpty() && lines.last().trimmed().isEmpty())
+        lines.removeLast();
+    return lines;
+}
+
+void writeConfigLines(const QStringList &lines) {
+    QSaveFile target(configPath());
+    if (!target.open(QIODevice::WriteOnly))
+        throw std::runtime_error(target.errorString().toStdString());
+    QByteArray bytes = (lines.join('\n') + '\n').toUtf8();
+    if (target.write(bytes) != bytes.size() || !target.commit())
+        throw std::runtime_error(target.errorString().toStdString());
+}
+
 // Replace or append one "key = value" line, keeping every other line and comment.
 void saveConfigValue(const char *key, const QString &value) {
     QString valueLine = QString("%1 = %2").arg(key, value);
-
-    QString path = configPath();
-    QStringList lines;
-    QFile source(path);
-    if (source.open(QIODevice::ReadOnly)) {
-        lines = QString::fromUtf8(source.readAll()).split('\n');
-        source.close();
-    } else {
-        lines = QString(CONFIG_HEADER).split('\n');
-    }
-    // Drop trailing blank lines so repeated saves do not grow the file.
-    while (!lines.isEmpty() && lines.last().trimmed().isEmpty())
-        lines.removeLast();
-
+    QStringList lines = readConfigLines();
     bool replaced = false;
     for (QString &line : lines) {
         if (lineKey(line) == key) {
@@ -81,14 +91,9 @@ void saveConfigValue(const char *key, const QString &value) {
     }
     if (!replaced)
         lines.append(valueLine);
-
-    QSaveFile target(path);
-    if (!target.open(QIODevice::WriteOnly))
-        throw std::runtime_error(target.errorString().toStdString());
-    QByteArray bytes = (lines.join('\n') + '\n').toUtf8();
-    if (target.write(bytes) != bytes.size() || !target.commit())
-        throw std::runtime_error(target.errorString().toStdString());
+    writeConfigLines(lines);
 }
+
 } // namespace
 
 void initEditorResources() {

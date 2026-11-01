@@ -89,6 +89,9 @@ inline constexpr int INCUBATOR_PREVIEW_FILL_ALPHA = 120;           // Make footp
 // Eraser preview colors.
 inline constexpr const char *ERASER_PREVIEW_COLOR = "#ff6b6b";
 inline constexpr int ERASER_PREVIEW_ALPHA = 80;
+// Loot Box brush circle under the cursor.
+inline constexpr const char *LOOT_BRUSH_PREVIEW_COLOR = "#7ed957";
+inline constexpr int LOOT_BRUSH_PREVIEW_ALPHA = 40;
 
 // Build a translucent QColor from a hex constant and an alpha value.
 inline QColor withAlpha(const char *hex, int alpha) {

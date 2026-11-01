@@ -4,6 +4,7 @@ set(CMAKE_AUTOMOC ON)
 # Layout follows the former Python editor package: config/logger, i18n, catalog, project, hotkeys, ui/.
 add_library(auto_mapper_editor_ui STATIC
     config.h config.cpp
+    loot_presets.h loot_presets.cpp
     logger.h logger.cpp
     i18n/locale.h i18n/locale.cpp i18n/text_keys.h
     catalog/catalog.h catalog/catalog.cpp
@@ -18,6 +19,8 @@ add_library(auto_mapper_editor_ui STATIC
     ui/canvas/stamp_sprites.h ui/canvas/stamp_sprites.cpp
     ui/panels/as1_ceiling.h ui/panels/as1_ceiling.cpp
     ui/panels/inspector.h ui/panels/inspector.cpp
+    ui/panels/loot_brush.h ui/panels/loot_brush.cpp
+    ui/panels/loot_table_dialog.h ui/panels/loot_table_dialog.cpp
     ui/panels/left_shelf.h ui/panels/left_shelf.cpp
     ui/panels/theme_shelf.h ui/panels/theme_shelf.cpp
     ui/panels/sprite_preview_dialog.h ui/panels/sprite_preview_dialog.cpp
@@ -27,6 +30,7 @@ add_library(auto_mapper_editor_ui STATIC
     ui/tools/eraser/eraser_properties.h ui/tools/eraser/eraser_properties.cpp
 )
 target_link_libraries(auto_mapper_editor_ui PUBLIC auto_mapper_core auto_mapper_game_assets Qt6::Widgets Qt6::Concurrent)
+target_link_libraries(auto_mapper_editor_ui PRIVATE simpleini)
 # Keep file/line in Release Qt messages so AutoMapper.log can point at the source.
 target_compile_definitions(auto_mapper_editor_ui PUBLIC QT_MESSAGELOGCONTEXT)
 
@@ -53,7 +57,11 @@ add_custom_target(auto_mapper_editor_assets
         "${CMAKE_SOURCE_DIR}/assets/preview" "$<TARGET_FILE_DIR:auto_mapper_editor>/assets/preview"
     COMMAND "${CMAKE_COMMAND}" -E copy_directory_if_different
         "${CMAKE_SOURCE_DIR}/assets/decoration_maps" "$<TARGET_FILE_DIR:auto_mapper_editor>/assets/decoration_maps"
-    COMMENT "Syncing preview images and decoration library maps into the build directory"
+    # loot_presets.ini sits beside the exe. The repository-root copy is the source: a build overwrites presets
+    # saved into the build-directory copy (run with the repository root as working directory to edit the source).
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/loot_presets.ini" "$<TARGET_FILE_DIR:auto_mapper_editor>/loot_presets.ini"
+    COMMENT "Syncing preview images, decoration library maps and loot presets into the build directory"
 )
 add_dependencies(auto_mapper_editor auto_mapper_editor_assets)
 
@@ -72,6 +80,7 @@ add_custom_command(TARGET auto_mapper_editor POST_BUILD
 install(TARGETS auto_mapper_editor RUNTIME DESTINATION . COMPONENT NativeEditor)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/preview" DESTINATION assets COMPONENT NativeEditor)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/decoration_maps" DESTINATION assets COMPONENT NativeEditor)
+install(FILES "${CMAKE_SOURCE_DIR}/loot_presets.ini" DESTINATION . COMPONENT NativeEditor)
 install(CODE "set(QT_DEPLOY_BIN_DIR .)" COMPONENT NativeEditor)
 qt_generate_deploy_app_script(TARGET auto_mapper_editor OUTPUT_SCRIPT EDITOR_DEPLOY_SCRIPT NO_TRANSLATIONS
     DEPLOY_TOOL_OPTIONS --no-compiler-runtime --no-system-d3d-compiler --no-system-dxc-compiler

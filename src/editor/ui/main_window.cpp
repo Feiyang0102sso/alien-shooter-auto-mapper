@@ -5,6 +5,7 @@
 #include "editor/i18n/text_keys.h"
 #include "editor/ui/panels/inspector.h"
 #include "editor/ui/panels/left_shelf.h"
+#include "editor/ui/panels/loot_table_dialog.h"
 #include "editor/ui/panels/sprite_preview_dialog.h"
 #include "editor/ui/tools/drawing_toolbar.h"
 #include "editor/ui/widget_helpers.h"
@@ -294,6 +295,16 @@ void MainWindow::buildDocks() {
         qInfo() << "Eraser size changed:" << size;
         showStatus(locale.tr(TextKey::STATUS_ERASER_SIZE, {{"size", QString::number(size)}}));
     });
+    connect(inspector_->lootBrush(), &LootBrushPropertiesWidget::settingsChanged, this,
+            [this](const auto_mapper::core::LootBrushSettings &settings) {
+                if (!viewport->lootKind)
+                    return;
+                lootBrushOf(*viewport->lootKind) = settings;
+                viewport->lootBrush = settings;
+                viewport->update();
+                qInfo() << "Loot brush settings changed: radius" << settings.radius;
+            });
+    connect(inspector_->lootBrush(), &LootBrushPropertiesWidget::lootTableRequested, this, &MainWindow::editLootTable);
     QScrollArea *scroll = scrolled(inspector_, "inspectorScrollArea");
     scroll->viewport()->setObjectName("inspectorScrollViewport");
     auto *rightDock = new QDockWidget(this);
@@ -337,6 +348,16 @@ void MainWindow::connectViewport() {
     connect(viewport, &Viewport::curveWallCreated, this, [this](int count, int pieceCount) {
         showStatus(locale.tr(TextKey::STATUS_CURVE_WALL_CREATED,
                              {{"count", QString::number(count)}, {"piece_count", QString::number(pieceCount)}}));
+    });
+    connect(viewport, &Viewport::lootBoxesPainted, this, [this](int changed, int total) {
+        showStatus(locale.tr(TextKey::STATUS_LOOT_PAINTED,
+                             {{"count", QString::number(changed)}, {"total", QString::number(total)}}));
+        showLootDetails();
+    });
+    connect(viewport, &Viewport::lootBoxesErased, this, [this](int changed, int total) {
+        showStatus(locale.tr(TextKey::STATUS_LOOT_ERASED,
+                             {{"count", QString::number(changed)}, {"total", QString::number(total)}}));
+        showLootDetails();
     });
     connect(viewport, &Viewport::decorationCreated, this, [this](int count) {
         showStatus(locale.tr(TextKey::STATUS_DECORATION_CREATED, {{"count", QString::number(count)}}));
@@ -436,17 +457,19 @@ void MainWindow::configureHotkeys() {
 // Shelf, items and tools
 // ---------------------------------------------------------------------------------------------
 
-void MainWindow::chooseShelf(bool decorations) {
-    decorationShelf_ = decorations;
+void MainWindow::chooseShelf(ShelfMode mode) {
+    shelfMode_ = mode;
     viewport->resetInteraction();
     // The shelf reselects a card below; a grid card is the safe default until then.
     viewport->curveWallType = -1;
-    // Leave a tool the new shelf hides: Eraser and Freehand live on the wall shelf, Select on the decoration shelf.
+    viewport->lootKind.reset();
+    // Leave a tool the new shelf hides: Select lives on the decoration shelf only, Eraser and Freehand never there.
+    bool decorations = mode == ShelfMode::Decorations;
     if (decorations && (viewport->mode == DrawingMode::Eraser || viewport->mode == DrawingMode::Freehand))
         viewport->mode = DrawingMode::Select;
     if (!decorations && viewport->mode == DrawingMode::Select)
         viewport->mode = DrawingMode::Polyline;
-    qInfo() << "Shelf mode changed, decorations:" << decorations;
+    qInfo() << "Shelf mode changed:" << static_cast<int>(mode);
     rebuildShelf();
 }
 
@@ -454,12 +477,16 @@ void MainWindow::rebuildShelf() {
     int index = 0;
     visibleWallSets_.clear();
     visibleSeries_.clear();
-    if (decorationShelf_) {
+    if (shelfMode_ == ShelfMode::Decorations) {
         // AS1 and AS2 projects each show their own family's library maps.
         visibleSeries_ = catalog.stampSeries(project.isAS1());
         leftShelf_->showStampSeries(project.isAS1(), visibleSeries_);
         refreshStampSeriesPreviews();
         index = std::clamp(selectedStampSeries_, 0, std::max(0, int(visibleSeries_.size()) - 1));
+    } else if (shelfMode_ == ShelfMode::Loot) {
+        leftShelf_->showLootKinds();
+        refreshLootPreviews();
+        index = selectedLootKind_;
     } else {
         visibleWallSets_ = catalog.wallSetOrder(project.isAS1());
         leftShelf_->showWallSets(visibleWallSets_);
@@ -470,7 +497,7 @@ void MainWindow::rebuildShelf() {
                 index = row;
         }
     }
-    leftShelf_->setDecorationShelf(decorationShelf_);
+    leftShelf_->setShelfMode(shelfMode_);
     {
         QSignalBlocker blocker(leftShelf_->shelf());
         leftShelf_->shelf()->setCurrentRow(index, false);
@@ -480,7 +507,7 @@ void MainWindow::rebuildShelf() {
 }
 
 void MainWindow::refreshStampSeriesPreviews() {
-    if (!decorationShelf_)
+    if (shelfMode_ != ShelfMode::Decorations)
         return;
     bool spritesReady = viewport->hasGameFolder();
     for (int row = 0; row < visibleSeries_.size(); ++row) {
@@ -491,10 +518,33 @@ void MainWindow::refreshStampSeriesPreviews() {
     }
 }
 
+void MainWindow::refreshLootPreviews() {
+    if (shelfMode_ != ShelfMode::Loot)
+        return;
+    bool spritesReady = viewport->hasGameFolder();
+    int row = 0;
+    for (LootBoxKind kind : LOOT_KINDS) {
+        QImage preview;
+        if (spritesReady)
+            preview = viewport->renderLootPreview(kind);
+        leftShelf_->shelf()->setCardPreview(row, spritesReady, preview);
+        row += 1;
+    }
+}
+
 void MainWindow::chooseSet(int index) {
     QString title;
     QStringList labels;
-    if (decorationShelf_) {
+    if (shelfMode_ == ShelfMode::Loot) {
+        if (index < 0 || index >= static_cast<int>(std::size(LOOT_KINDS)))
+            return;
+        selectedLootKind_ = index;
+        QString kindId = lootKindId(LOOT_KINDS[index]);
+        currentSetKey_ = "loot:" + kindId;
+        // One card, one brush: the item list only names it.
+        title = locale.tr(QString("loot.%1.label").arg(kindId));
+        labels.append(title);
+    } else if (shelfMode_ == ShelfMode::Decorations) {
         if (index < 0 || index >= visibleSeries_.size())
             return;
         selectedStampSeries_ = index;
@@ -520,7 +570,9 @@ void MainWindow::chooseSet(int index) {
     inspector_->setComponentSet(title, labels, selected);
     chooseItem(selected);
     qInfo() << "Editor Set selected:" << currentSetKey_;
-    if (decorationShelf_)
+    if (shelfMode_ == ShelfMode::Loot)
+        showStatus(locale.tr(TextKey::STATUS_LOOT_KIND_SELECTED, {{"loot_name", title}}));
+    else if (shelfMode_ == ShelfMode::Decorations)
         showStatus(locale.tr(TextKey::STATUS_DECORATION_TOOL_SELECTED, {{"decoration_name", title}}));
     else
         showStatus(locale.tr(TextKey::STATUS_WALL_SET_SELECTED, {{"wall_name", title}}));
@@ -531,8 +583,39 @@ void MainWindow::showStampDetails(const QString &stampId) {
     inspector_->showStamp(memberCount, viewport->hasGameFolder(), viewport->renderStampPreview(stampId));
 }
 
+void MainWindow::showLootDetails() {
+    if (!viewport->lootKind)
+        return;
+    LootBoxKind kind = *viewport->lootKind;
+    int count = 0;
+    for (const LootBox &box : project.lootBoxes) {
+        if (auto_mapper::core::loot_box_belongs_to(box.vid, kind))
+            count += 1;
+    }
+    inspector_->showLoot(count, viewport->hasGameFolder(), viewport->renderLootPreview(kind));
+}
+
+auto_mapper::core::LootBrushSettings &MainWindow::lootBrushOf(LootBoxKind kind) {
+    auto found = lootBrushes_.find(kind);
+    if (found != lootBrushes_.end())
+        return found->second;
+    lootBrushes_[kind] = auto_mapper::core::default_loot_brush(kind);
+    return lootBrushes_[kind];
+}
+
 void MainWindow::chooseItem(int index) {
-    if (decorationShelf_) {
+    if (shelfMode_ == ShelfMode::Loot) {
+        LootBoxKind kind = LOOT_KINDS[selectedLootKind_];
+        itemMemory_[currentSetKey_] = 0;
+        viewport->lootBrush = lootBrushOf(kind);
+        viewport->armLoot(kind);
+        inspector_->lootBrush()->setSettings(viewport->lootBrush);
+        showLootDetails();
+        qInfo() << "Loot box card selected:" << lootKindId(kind);
+        syncMode();
+        return;
+    }
+    if (shelfMode_ == ShelfMode::Decorations) {
         if (index < 0 || index >= visibleStamps_.size())
             return;
         itemMemory_[currentSetKey_] = index;
@@ -567,17 +650,17 @@ void MainWindow::chooseItem(int index) {
 }
 
 void MainWindow::activateMode(DrawingMode mode) {
-    // Select only acts on decorations and Eraser only on walls; each is hidden on the other shelf.
-    if (mode == DrawingMode::Select && !decorationShelf_)
+    // Select only acts on decorations and Eraser on walls and loot boxes; each is hidden on the other shelves.
+    if (mode == DrawingMode::Select && shelfMode_ != ShelfMode::Decorations)
         return;
-    if (mode == DrawingMode::Eraser && decorationShelf_)
+    if (mode == DrawingMode::Eraser && shelfMode_ == ShelfMode::Decorations)
         return;
-    // The Curve Wall card swaps the grid tools for Freehand.
-    bool curveCard = viewport->isCurveWallCard();
-    if (mode == DrawingMode::Freehand && !curveCard)
+    // The Curve Wall and Loot Box cards swap the grid tools for Freehand (the loot brush).
+    bool freehandCard = viewport->isCurveWallCard() || viewport->isLootCard();
+    if (mode == DrawingMode::Freehand && !freehandCard)
         return;
     bool gridTool = mode == DrawingMode::Polyline || mode == DrawingMode::Straight || mode == DrawingMode::Rectangle;
-    if (gridTool && curveCard)
+    if (gridTool && freehandCard)
         return;
     viewport->setMode(mode);
     qInfo() << "Drawing mode changed:" << static_cast<int>(mode);
@@ -615,14 +698,16 @@ void MainWindow::syncSelection() {
 void MainWindow::syncMode() {
     // Placing owns the left button, so no drawing tool stays checked.
     drawingToolbar_->setCheckedMode(viewport->mode, !viewport->isPlacing());
-    drawingToolbar_->setModeVisible(DrawingMode::Select, decorationShelf_);
-    drawingToolbar_->setModeVisible(DrawingMode::Eraser, !decorationShelf_);
-    bool curveCard = viewport->isCurveWallCard();
-    drawingToolbar_->setModeVisible(DrawingMode::Freehand, curveCard);
-    drawingToolbar_->setModeVisible(DrawingMode::Polyline, !curveCard);
-    drawingToolbar_->setModeVisible(DrawingMode::Straight, !curveCard);
-    drawingToolbar_->setModeVisible(DrawingMode::Rectangle, !curveCard);
+    bool decorations = shelfMode_ == ShelfMode::Decorations;
+    drawingToolbar_->setModeVisible(DrawingMode::Select, decorations);
+    drawingToolbar_->setModeVisible(DrawingMode::Eraser, !decorations);
+    bool freehandCard = viewport->isCurveWallCard() || viewport->isLootCard();
+    drawingToolbar_->setModeVisible(DrawingMode::Freehand, freehandCard);
+    drawingToolbar_->setModeVisible(DrawingMode::Polyline, !freehandCard);
+    drawingToolbar_->setModeVisible(DrawingMode::Straight, !freehandCard);
+    drawingToolbar_->setModeVisible(DrawingMode::Rectangle, !freehandCard);
     inspector_->eraser()->setVisible(viewport->mode == DrawingMode::Eraser);
+    inspector_->lootBrush()->setVisible(viewport->isLootCard());
     syncSelection();
 }
 
@@ -647,7 +732,7 @@ void MainWindow::replaceProject(const Project &value) {
         viewport->wallType = rememberedWallTypes_.value(FAMILY_AS1, catalog.wallSetOrder(true).first());
     else
         viewport->wallType = rememberedWallTypes_.value(FAMILY_AS2, catalog.wallSetOrder(false).first());
-    decorationShelf_ = false;
+    shelfMode_ = ShelfMode::Walls;
     // The game family may have changed, and each family has its own sprite preview folder.
     inspector_->setSpritePreviewReady(viewport->hasGameFolder());
     // Generation options are per session and start off for every loaded project.
@@ -729,8 +814,10 @@ void MainWindow::chooseGameFolder(GameFamily family) {
     refreshStampSeriesPreviews();
     // Redraw the inspector preview of the stamp on show with the new sprites.
     int shownStamp = inspector_->componentIndex();
-    if (decorationShelf_ && shownStamp >= 0 && shownStamp < visibleStamps_.size())
+    if (shelfMode_ == ShelfMode::Decorations && shownStamp >= 0 && shownStamp < visibleStamps_.size())
         showStampDetails(visibleStamps_[shownStamp]);
+    refreshLootPreviews();
+    showLootDetails();
     showStatus(locale.tr(TextKey::STATUS_GAME_FOLDER_OPENED, {{"path", QDir::toNativeSeparators(path)}}),
                STATUS_SHORT_MS);
 }
@@ -745,6 +832,27 @@ void MainWindow::showSpritePreview() {
     spritePreview_->show();
     spritePreview_->raise();
     spritePreview_->activateWindow();
+}
+
+void MainWindow::editLootTable() {
+    if (!viewport->lootKind)
+        return;
+    LootBoxKind kind = *viewport->lootKind;
+    QString kindId = lootKindId(kind);
+    std::vector<LootLine> current;
+    auto found = project.lootTables.find(kind);
+    if (found != project.lootTables.end())
+        current = found->second;
+    LootTableDialog dialog(locale, locale.tr(QString("loot.%1.label").arg(kindId)), current, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    std::vector<LootLine> lines = dialog.lines();
+    if (lines.empty())
+        project.lootTables.erase(kind);
+    else
+        project.lootTables[kind] = lines;
+    markChanged();
+    qInfo() << "Loot table changed:" << kindId << "lines" << lines.size();
 }
 
 void MainWindow::errorDialog(const QString &title, const QString &message) {

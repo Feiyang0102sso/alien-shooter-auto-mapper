@@ -33,6 +33,8 @@ set(CORE_SOURCES
     core/indoor_decorations/array_layout.cpp
     core/indoor_decorations/desk_builder.cpp
     core/indoor_decorations/incubator_builder.cpp
+    core/loot/loot_box_builder.cpp
+    core/loot/loot_table.cpp
     core/map_generator.cpp
 )
 add_library(auto_mapper_core STATIC ${CORE_SOURCES})
