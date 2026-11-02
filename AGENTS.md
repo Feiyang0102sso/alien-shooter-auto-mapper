@@ -134,7 +134,7 @@ Stamp 不再有手写 profile 和预览图，全部来自库地图：`assets/dec
 - `decoration_builder.*`：`build_stamp()` 只做平移。army 用库地图里的值，因为血迹等贴花在 `vid_armies_as2.h` 里没有绑定。
 - `placeholder_vids.*`：画布占位符黑名单（血迹、阴影、`TERRAIN:` 类、书本等密集杂物），
   没有游戏目录读不到 objects.res，所以 nvid 写死在这里；AS1 与 AS2 系列各有一套完整名单（nvid 相同也分开列），
-  三个查询函数都按 `io::MapFormat` 选名单，AS2/AS2R/AS2C/AS2OE 共用 AS2 名单；AS1 的血迹、弹壳、碎片、428 小物品不画 X，尸体照画；`lies_on_ground()` 标出贴地类，贴图预览先画它们；
+  三个查询函数都按 `io::MapFormat` 选名单，AS2/AS2R/AS2OE 共用 AS2 名单；AS1 的血迹、弹壳、碎片、428 小物品不画 X，尸体照画；`lies_on_ground()` 标出贴地类，贴图预览先画它们；
   `is_invisible_block()` 标出 `BLOCK:` 空气墙，`stampDrawOrder()` 直接滤掉，既不画贴图也不画 X，生成的 `.map` 仍保留。
 - 工具栏“贴图预览”打开一个非模态小窗口（`ui/panels/sprite_preview_dialog.*`），设置都写进 `AutoMapper.cfg`：
   `as2_path` / `as1_path`（AS2 / AS1 游戏目录，各自驱动本游戏族的装饰物贴图；画布持有两份 `StampSprites`，按项目游戏族取用）、
@@ -328,10 +328,14 @@ AS2 系列专用的第四个货架，四张卡：骨头堆 1532、怪物尸体�
 - 尸体池（`core/scatter/gore/gore_builder.h` 开头的常量）：怪物 23 个、人类 5 个，池内等概率抽；
   Boss、女王、机械、坦克、具名 NPC、碎片、`HIDE:` 版士兵（1157，与 MAPEDIT 版 1159 同贴图）不收。
   每个 VID 都在两个游戏目录里解码核对过有帧。
-- **AS2C 特有尸体**：Conscription 的 objects.res 比 AS2R 多 4019 / 4023 / 4025 / 4029 / 4033 / 4035 / 4039 / 4041（怪物）
-  和 3959 / 3968 / 3971（士兵）。3968 在 objects.res 里叫“Монстр1”，贴图却是拿加特林的重甲兵，所以归士兵。AS2R 游戏里没有这些对象，所以只有 `MapFormat::AS2C` / `AS2OE` 的工程才抽得到（`gore_corpse_vids()`）。
-  AS2C 地图在文件格式上与 AS2R 完全相同，所以单独加了 Project Version `AS2C`（`io::MapFormat::AS2C`，writer 按 AS2R 写，逐字节相同）。
-  AS2C 工程改成 AS2R 后，读项目不报错，`generate_map()` 遇到特有尸体时报错返回 false（`gore_vid_available()`），提示用橡皮擦掉。
+- **Conscription 特有尸体**：Conscription 的 objects.res 比 AS2R 多 4019 / 4023 / 4025 / 4029 / 4033 / 4035 / 4039 / 4041（怪物）
+  和 3959 / 3968 / 3971（士兵）。3968 在 objects.res 里叫“Монстр1”，贴图却是拿加特林的重甲兵，所以归士兵。
+  **尸体池跟着 AS2 游戏目录（cfg 的 `as2_path`）走**，不看 Project Version（AS2C 地图在格式上就是 AS2R，objects.res 也能随便改）：
+  `Viewport::openGameFolder()` 打开 AS2 目录时，用 `VidLibrary::defines()`（objects.res 有定义且 vid 文件存在，不读文件内容）
+  把 `gore_corpse_candidates()` 过一遍，结果存成 `goreGameVids_`；`gore_corpse_vids()` 只抽其中有的。
+  选 Conscription 目录时特有尸体自动进池，选 AS2R 目录时不进；没有游戏目录（或目录里一个都没有）时用共享池。
+  objects.res 本来每次打开目录就完整读一遍（约 40 ms），这里只是多查几十个 VID，不额外读盘。
+  曾经有过的 Project Version `"AS2C"` 已撤掉，旧工程读进来当 AS2R。
 - 一笔（`scatter_gore()`）：尸体卡用物资箱的 `fill_from_center()` 从圆心向外放尸体，只有同一笔里的尸体互相保持间距；
   **不避让地图上已有的任何东西**，尸体和血可以随便叠，同一处再点一下就再多一组（物资箱仍会避让已有箱子）；
   每具尸体在半轴 80 × 60 的椭圆里均匀撒血（官方 |dx| / |dy| 的 p90）。
@@ -357,7 +361,7 @@ AS2 系列专用的第四个货架，四张卡：骨头堆 1532、怪物尸体�
 ## 测试与 Golden 文件
 
 核心测试在 `tests/test_*.cpp`，编辑器测试在 `tests/editor/test_editor.cpp`（交互、旧 JSON 兼容、四种输出、中文路径、
-多语言 key 集合、快捷键分发）；五种 Project Version（AS1 / AS2 / AS2R / AS2C / AS2OE）都要能生成。
+多语言 key 集合、快捷键分发）；四种 Project Version（AS1 / AS2 / AS2R / AS2OE）都要能生成。
 
 重点测试：
 

@@ -9,7 +9,6 @@
 #include <vector>
 
 using namespace auto_mapper::core;
-using auto_mapper::io::MapFormat;
 using auto_mapper::io::Sprite;
 
 namespace {
@@ -37,10 +36,10 @@ bool in_set(const std::vector<int32_t>& vids, int32_t vid) {
 TEST(GoreBuilderTest, CorpsesKeepSpacingAndComeFromTheirPool) {
     GoreBrushSettings settings = default_gore_brush(GoreKind::Monster);
     settings.radius = 200.0f;
-    std::vector<int32_t> pool = gore_corpse_vids(GoreKind::Monster, MapFormat::AS2R);
+    std::vector<int32_t> pool = gore_corpse_vids(GoreKind::Monster, nullptr);
 
     for (int repeat = 0; repeat < RANDOM_REPEATS; ++repeat) {
-        std::vector<GoreItem> corpses = corpses_of(scatter_gore(settings, MapFormat::AS2R, CENTER, CENTER));
+        std::vector<GoreItem> corpses = corpses_of(scatter_gore(settings, nullptr, CENTER, CENTER));
         ASSERT_FALSE(corpses.empty());
         for (size_t i = 0; i < corpses.size(); ++i) {
             EXPECT_TRUE(in_set(pool, corpses[i].vid)) << corpses[i].vid;
@@ -54,22 +53,32 @@ TEST(GoreBuilderTest, CorpsesKeepSpacingAndComeFromTheirPool) {
     }
 }
 
-TEST(GoreBuilderTest, ConscriptionCorpsesOnlyInConscriptionFormats) {
+TEST(GoreBuilderTest, CorpsePoolFollowsTheGameFolder) {
+    // No game folder: the shared pool only.
     for (int32_t vid : GORE_HUMAN_VIDS_AS2C) {
-        EXPECT_FALSE(in_set(gore_corpse_vids(GoreKind::Human, MapFormat::AS2R), vid));
-        EXPECT_TRUE(in_set(gore_corpse_vids(GoreKind::Human, MapFormat::AS2C), vid));
-        EXPECT_TRUE(in_set(gore_corpse_vids(GoreKind::Human, MapFormat::AS2OE), vid));
-        EXPECT_FALSE(gore_vid_available(vid, MapFormat::AS2));
-        EXPECT_FALSE(gore_vid_available(vid, MapFormat::AS2R));
-        EXPECT_TRUE(gore_vid_available(vid, MapFormat::AS2C));
+        EXPECT_FALSE(in_set(gore_corpse_vids(GoreKind::Human, nullptr), vid));
+    }
+    // A Conscription folder defines every candidate: its own corpses join.
+    std::vector<int32_t> candidates = gore_corpse_candidates();
+    std::set<int32_t> conscription(candidates.begin(), candidates.end());
+    for (int32_t vid : GORE_HUMAN_VIDS_AS2C) {
+        EXPECT_TRUE(in_set(gore_corpse_vids(GoreKind::Human, &conscription), vid));
     }
     for (int32_t vid : GORE_MONSTER_VIDS_AS2C) {
-        EXPECT_FALSE(in_set(gore_corpse_vids(GoreKind::Monster, MapFormat::AS2), vid));
-        EXPECT_TRUE(in_set(gore_corpse_vids(GoreKind::Monster, MapFormat::AS2OE), vid));
+        EXPECT_TRUE(in_set(gore_corpse_vids(GoreKind::Monster, &conscription), vid));
     }
-    // Shared corpses and blood exist in every AS2 Series game.
-    EXPECT_TRUE(gore_vid_available(GORE_VID_BONES, MapFormat::AS2R));
-    EXPECT_TRUE(gore_vid_available(GORE_VID_BLOOD, MapFormat::AS2));
+    // An AS2R folder lacks them: they stay out.
+    std::set<int32_t> reloaded(std::begin(GORE_HUMAN_VIDS), std::end(GORE_HUMAN_VIDS));
+    reloaded.insert(std::begin(GORE_MONSTER_VIDS), std::end(GORE_MONSTER_VIDS));
+    for (int32_t vid : GORE_HUMAN_VIDS_AS2C) {
+        EXPECT_FALSE(in_set(gore_corpse_vids(GoreKind::Human, &reloaded), vid));
+    }
+    // A corpse the game lacks leaves the shared pool too; a folder with none of them keeps the shared pool.
+    std::set<int32_t> soldier_only = {GORE_HUMAN_VIDS[0]};
+    EXPECT_EQ(gore_corpse_vids(GoreKind::Human, &soldier_only), std::vector<int32_t>{GORE_HUMAN_VIDS[0]});
+    std::set<int32_t> none;
+    EXPECT_EQ(gore_corpse_vids(GoreKind::Human, &none).size(), std::size(GORE_HUMAN_VIDS));
+    EXPECT_TRUE(gore_corpse_vids(GoreKind::BloodPool, &conscription).empty());
 }
 
 TEST(GoreBuilderTest, BloodStaysInTheEllipseOverTheCorpse) {
@@ -78,7 +87,7 @@ TEST(GoreBuilderTest, BloodStaysInTheEllipseOverTheCorpse) {
     std::set<int32_t> allowed_blood = {GORE_VID_BLOOD, GORE_VID_BLOOD_SMALL, GORE_VID_BLOOD_SPREADING, GORE_VID_GIBS};
 
     for (int repeat = 0; repeat < RANDOM_REPEATS; ++repeat) {
-        std::vector<GoreItem> items = scatter_gore(settings, MapFormat::AS2R, CENTER, CENTER);
+        std::vector<GoreItem> items = scatter_gore(settings, nullptr, CENTER, CENTER);
         // One lone corpse at the center: the radius is smaller than the spacing.
         std::vector<GoreItem> corpses = corpses_of(items);
         ASSERT_EQ(corpses.size(), 1u);
@@ -109,7 +118,7 @@ TEST(GoreBuilderTest, BloodStaysInTheEllipseOverTheCorpse) {
 TEST(GoreBuilderTest, BonePileBloodStaysOnTheFloor) {
     GoreBrushSettings settings = default_gore_brush(GoreKind::Bones);
     for (int repeat = 0; repeat < RANDOM_REPEATS; ++repeat) {
-        for (const GoreItem& item : scatter_gore(settings, MapFormat::AS2R, CENTER, CENTER)) {
+        for (const GoreItem& item : scatter_gore(settings, nullptr, CENTER, CENTER)) {
             if (item.vid == GORE_VID_BLOOD_SPREADING) {
                 EXPECT_EQ(item.z, GORE_SPREADING_BLOOD_Z);
             } else {
@@ -122,14 +131,16 @@ TEST(GoreBuilderTest, BonePileBloodStaysOnTheFloor) {
 TEST(GoreBuilderTest, HeavyArmourSoldierIsHuman) {
     EXPECT_TRUE(gore_item_belongs_to(3968, GoreKind::Human));
     EXPECT_FALSE(gore_item_belongs_to(3968, GoreKind::Monster));
-    std::vector<int32_t> soldiers = gore_corpse_vids(GoreKind::Human, MapFormat::AS2C);
+    std::vector<int32_t> candidates = gore_corpse_candidates();
+    std::set<int32_t> conscription(candidates.begin(), candidates.end());
+    std::vector<int32_t> soldiers = gore_corpse_vids(GoreKind::Human, &conscription);
     EXPECT_TRUE(in_set(soldiers, 3968));
 }
 
 TEST(GoreBuilderTest, BloodPoolHasNoCorpseAndStaysInItsEllipse) {
     GoreBrushSettings settings = default_gore_brush(GoreKind::BloodPool);
     for (int repeat = 0; repeat < RANDOM_REPEATS; ++repeat) {
-        std::vector<GoreItem> items = scatter_gore(settings, MapFormat::AS2R, CENTER, CENTER);
+        std::vector<GoreItem> items = scatter_gore(settings, nullptr, CENTER, CENTER);
         ASSERT_FALSE(items.empty());
         for (const GoreItem& item : items) {
             EXPECT_TRUE(is_gore_blood(item.vid));
@@ -152,7 +163,7 @@ TEST(GoreBuilderTest, SecondDabOnTheSameSpotAddsMoreCorpses) {
     // Gore never avoids what is already placed: a second click on a lone corpse lays another one.
     GoreBrushSettings lone = default_gore_brush(GoreKind::Human);
     for (int repeat = 0; repeat < RANDOM_REPEATS; ++repeat) {
-        EXPECT_EQ(corpses_of(scatter_gore(lone, MapFormat::AS2R, CENTER, CENTER)).size(), 1u);
+        EXPECT_EQ(corpses_of(scatter_gore(lone, nullptr, CENTER, CENTER)).size(), 1u);
     }
 }
 
@@ -164,11 +175,11 @@ TEST(GoreBuilderTest, SameSeedGivesTheSameDab) {
     std::vector<GoreItem> placed;
     {
         RandomSeedScope seed(12345);
-        ghost = scatter_gore(settings, MapFormat::AS2R, CENTER, CENTER);
+        ghost = scatter_gore(settings, nullptr, CENTER, CENTER);
     }
     {
         RandomSeedScope seed(12345);
-        placed = scatter_gore(settings, MapFormat::AS2R, CENTER, CENTER);
+        placed = scatter_gore(settings, nullptr, CENTER, CENTER);
     }
     ASSERT_EQ(ghost.size(), placed.size());
     for (size_t i = 0; i < ghost.size(); ++i) {

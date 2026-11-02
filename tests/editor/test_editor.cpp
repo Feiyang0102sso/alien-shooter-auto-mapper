@@ -139,7 +139,7 @@ class EditorTest : public QObject {
     void legacyJsonRoundTrip() {
         Project legacy = Project::fromJson({});
         QCOMPARE(legacy.version, QString("AS1"));
-        for (const auto &version : {"AS1", "AS2", "AS2R", "AS2C", "AS2OE"}) {
+        for (const auto &version : {"AS1", "AS2", "AS2R", "AS2OE"}) {
             Project project;
             project.version = version;
             project.doorsOpen = true;
@@ -853,12 +853,8 @@ class EditorTest : public QObject {
         QVERIFY(!gore->isVisible());
         QVERIFY(!window.viewport->isGoreCard());
 
-        // AS2C is a project version of its own and paints Conscription corpses on the soldier card.
-        window.replaceProject(Project::createEmpty(PROJECT_VERSION_AS2C));
-        QCOMPARE(window.project.mapFormat(), auto_mapper::io::MapFormat::AS2C);
-        window.chooseShelf(ShelfMode::Gore);
-        window.findChild<ThemeShelfPanel *>("setShelf")->setCurrentRow(2);
-        QCOMPARE(*window.viewport->goreKind, GoreKind::Human);
+        // The short-lived "AS2C" Project Version loads as AS2R: the corpse pool follows the game folder now.
+        QCOMPARE(Project::fromJson({{"version", "AS2C"}}).version, QString(PROJECT_VERSION_AS2R));
     }
     void lootTableDialogAndPresets() {
         Locale locale(LOCALE_EN_US);
@@ -1045,7 +1041,7 @@ class EditorTest : public QObject {
     }
     void generateAllFormats() {
         QTemporaryDir directory;
-        for (const auto &version : {"AS1", "AS2", "AS2R", "AS2C", "AS2OE"}) {
+        for (const auto &version : {"AS1", "AS2", "AS2R", "AS2OE"}) {
             Project project;
             project.version = version;
             int type = 0;

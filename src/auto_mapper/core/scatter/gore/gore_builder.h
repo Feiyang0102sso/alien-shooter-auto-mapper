@@ -19,6 +19,7 @@
 #include "auto_mapper/io/map_writer.h"
 
 #include <cstdint>
+#include <set>
 #include <vector>
 
 namespace auto_mapper::core {
@@ -32,6 +33,7 @@ inline constexpr int32_t GORE_MONSTER_VIDS[] = {1027, 1029, 1031, 1036, 1039, 10
                                                 1832, 1834, 1842, 1844, 1855, 1863, 1872};
 inline constexpr int32_t GORE_HUMAN_VIDS[] = {430, 431, 1159, 1167, 1172};
 // Corpses only Conscription's objects.res (shared by AS2OE) knows; AS2 / AS2R games have no such objects.
+// They join a card's pool only when the configured AS2 game folder defines them (see gore_corpse_vids()).
 // objects.res calls 3968 "Монстр1", but its frame is the heavy armour soldier with a minigun, so it is human.
 inline constexpr int32_t GORE_MONSTER_VIDS_AS2C[] = {4019, 4023, 4025, 4029, 4033, 4035, 4039, 4041};
 inline constexpr int32_t GORE_HUMAN_VIDS_AS2C[] = {3959, 3968, 3971};
@@ -94,14 +96,18 @@ GoreBrushSettings default_gore_brush(GoreKind kind);
 bool is_gore_blood(int32_t vid);
 
 /**
- * Corpse pool of a card for a Map Format: AS2C and AS2OE add the Conscription-only corpses. Empty for the pool card.
+ * Every corpse VID any card may use: the shared pools plus the Conscription-only ones. The editor checks these
+ * against the AS2 game folder once, when the folder opens.
  */
-std::vector<int32_t> gore_corpse_vids(GoreKind kind, io::MapFormat format);
+std::vector<int32_t> gore_corpse_candidates();
 
 /**
- * False for a Conscription-only corpse in an AS2 / AS2R map, whose game has no such object.
+ * Corpse pool of a card. `game_vids` holds the candidates the configured AS2 game folder defines; the pool is
+ * the card's candidates found in it, so a Conscription folder adds its own corpses and an AS2R folder does not.
+ * Null (no game folder), or a set holding none of the card's candidates, gives the shared pool every AS2 Series
+ * game has. Empty for the blood pool card.
  */
-bool gore_vid_available(int32_t vid, io::MapFormat format);
+std::vector<int32_t> gore_corpse_vids(GoreKind kind, const std::set<int32_t>* game_vids);
 
 /**
  * VIDs a card owns: its corpses (from any game), plus all blood on every card.
@@ -110,10 +116,11 @@ bool gore_item_belongs_to(int32_t vid, GoreKind kind);
 
 /**
  * One brush dab around (center_x, center_y). Corpses of one dab keep `spacing` from each other, but nothing
- * already on the map blocks a dab: corpses and blood may pile up freely. `format` picks the corpse pool.
+ * already on the map blocks a dab: corpses and blood may pile up freely. `game_vids` picks the corpse pool
+ * (see gore_corpse_vids()).
  */
-std::vector<GoreItem> scatter_gore(const GoreBrushSettings& settings, io::MapFormat format, float center_x,
-                                   float center_y);
+std::vector<GoreItem> scatter_gore(const GoreBrushSettings& settings, const std::set<int32_t>* game_vids,
+                                   float center_x, float center_y);
 
 /**
  * Remove the items `kind` owns whose anchor lies within `radius` of the center. Returns how many went.

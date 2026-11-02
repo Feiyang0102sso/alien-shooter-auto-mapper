@@ -36,8 +36,6 @@ inline constexpr GoreKind GORE_KINDS[] = {GoreKind::Bones, GoreKind::Monster, Go
 inline constexpr const char *PROJECT_VERSION_AS1 = "AS1";
 inline constexpr const char *PROJECT_VERSION_AS2 = "AS2";
 inline constexpr const char *PROJECT_VERSION_AS2R = "AS2R";
-// Conscription: writes the same file as AS2R, but its game has extra corpses the Gore brush may use.
-inline constexpr const char *PROJECT_VERSION_AS2C = "AS2C";
 inline constexpr const char *PROJECT_VERSION_AS2OE = "AS2OE";
 
 // Default Map Coordinate size of a new project.

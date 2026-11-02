@@ -21,6 +21,7 @@
 #include "editor/ui/tools/drawing_modes.h"
 #include <QWidget>
 #include <optional>
+#include <set>
 
 namespace editor {
 
@@ -142,6 +143,10 @@ class Viewport : public QWidget {
     QPointF lastDab_;
     // Seed of the next brush dab (see the header comment).
     uint32_t scatterSeed_ = 0;
+    // Gore corpse candidates the open AS2 game folder defines; empty without one (the shared pool then).
+    std::optional<std::set<int32_t>> goreGameVids_;
+    // Null when no AS2 game folder is open, for the core's gore_corpse_vids().
+    const std::set<int32_t> *goreGameVids() const;
     QPointF dragStart_;
     QPointF panStart_;
     // "move" or one of the array edges "left" / "right" / "top" / "bottom"; empty when idle.

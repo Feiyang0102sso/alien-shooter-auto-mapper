@@ -857,7 +857,7 @@ void MainWindow::selectVersion(const QString &version) {
         return;
     bool familyChanged = (version == PROJECT_VERSION_AS1) != project.isAS1();
     if (!familyChanged) {
-        // AS2 / AS2R / AS2C / AS2OE share geometry: only the output format changes.
+        // AS2 / AS2R / AS2OE share geometry: only the output format changes.
         project.version = version;
         lastAS2Version_ = version;
         markChanged();

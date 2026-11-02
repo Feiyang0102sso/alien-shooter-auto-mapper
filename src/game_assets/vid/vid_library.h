@@ -32,6 +32,8 @@ class VidLibrary {
 
     // Decoded frame of one map sprite, or nullptr for unknown nvids and unsupported vids.
     const VidImage *frame(int nvid, std::uint32_t direction);
+    // True when objects.res defines the nvid and its vid file exists. Reads nothing but the file's directory entry.
+    bool defines(int nvid) const;
 
   private:
     // Parsed vid file for an objects.res path; nullptr is cached for missing / unsupported files.

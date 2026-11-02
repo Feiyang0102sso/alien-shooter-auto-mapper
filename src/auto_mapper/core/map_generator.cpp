@@ -71,14 +71,6 @@ bool generate_map(const MapRequest& request, const std::string& output_path) {
         }
     }
 
-    // A Conscription-only corpse (an AS2C project switched to AS2R, say) would be an unknown object in the game.
-    for (const GoreItem& item : request.gore_items) {
-        if (request.format != io::MapFormat::AS1 && !gore_vid_available(item.vid, request.format)) {
-            Logger::error("Corpse VID {} does not exist in this map format's game; erase it first", item.vid);
-            return false;
-        }
-    }
-
     std::vector<DoorInstance> doors;
     doors.reserve(request.doors.size());
     std::vector<DoorExcavation> excavations;

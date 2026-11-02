@@ -41,6 +41,18 @@ bool VidLibrary::open(const std::filesystem::path &game_root, GameFamily family)
     return open_;
 }
 
+bool VidLibrary::defines(int nvid) const {
+    if (!open_) {
+        return false;
+    }
+    const ObjectEntry *object = objects_.find(nvid);
+    if (object == nullptr) {
+        return false;
+    }
+    std::filesystem::path path = root_ / std::filesystem::path(normalized_vid_path(object->vid_path));
+    return std::filesystem::exists(path);
+}
+
 const VidImage *VidLibrary::frame(int nvid, std::uint32_t direction) {
     if (!open_) {
         return nullptr;

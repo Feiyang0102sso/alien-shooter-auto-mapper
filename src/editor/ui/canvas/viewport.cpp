@@ -1025,7 +1025,7 @@ std::vector<GoreItem> Viewport::rollGore(const QPointF &center) const {
     std::vector<GoreItem> added;
     {
         auto_mapper::core::RandomSeedScope seed(scatterSeed_);
-        added = auto_mapper::core::scatter_gore(settings, project_.mapFormat(), static_cast<float>(center.x()),
+        added = auto_mapper::core::scatter_gore(settings, goreGameVids(), static_cast<float>(center.x()),
                                                 static_cast<float>(center.y()));
     }
     std::vector<GoreItem> kept;
@@ -1114,7 +1114,7 @@ QImage Viewport::renderGorePreview(GoreKind kind) {
         member.direction = static_cast<uint32_t>(i * 64);
         sample.members.push_back(member);
     }
-    std::vector<int32_t> corpses = auto_mapper::core::gore_corpse_vids(kind, project_.mapFormat());
+    std::vector<int32_t> corpses = auto_mapper::core::gore_corpse_vids(kind, goreGameVids());
     if (!corpses.empty()) {
         DecorationMember corpse;
         corpse.vid = corpses.front();
@@ -1212,12 +1212,32 @@ bool Viewport::hasGameFolder() const {
 
 bool Viewport::openGameFolder(GameFamily family, const QString &gameRoot) {
     bool opened = false;
-    if (family == GameFamily::AS1)
+    if (family == GameFamily::AS1) {
         opened = stampSpritesAS1_.open(gameRoot, family);
-    else
+    } else {
         opened = stampSpritesAS2_.open(gameRoot, family);
+        // The Gore corpse pool follows this folder: only corpses its objects.res and Vid/ define (Conscription
+        // adds its own). objects.res is already loaded, so this is a handful of lookups, not another read.
+        goreGameVids_.reset();
+        if (opened) {
+            std::set<int32_t> defined;
+            for (int32_t vid : auto_mapper::core::gore_corpse_candidates()) {
+                if (stampSpritesAS2_.defines(vid))
+                    defined.insert(vid);
+            }
+            goreGameVids_ = defined;
+            qInfo() << "Gore corpses defined by the AS2 game folder:" << defined.size() << "of"
+                    << auto_mapper::core::gore_corpse_candidates().size();
+        }
+    }
     update();
     return opened;
+}
+
+const std::set<int32_t> *Viewport::goreGameVids() const {
+    if (!goreGameVids_)
+        return nullptr;
+    return &*goreGameVids_;
 }
 
 void Viewport::drawIncubatorUnits(QPainter &painter, const Decoration &decoration) {

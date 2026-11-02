@@ -50,6 +50,10 @@ QJsonObject point(double x, double y) {
     return {{"x", x}, {"y", y}};
 }
 
+// A short-lived Project Version for Conscription. Its maps were AS2R files, and the Gore corpse pool now follows
+// the AS2 game folder instead, so such projects load as AS2R.
+constexpr const char *LEGACY_PROJECT_VERSION_AS2C = "AS2C";
+
 void validateLayers(int count) {
     if (count < auto_mapper::core::AS1_CEILING_LAYER_COUNT_MIN || count > auto_mapper::core::AS1_CEILING_LAYER_COUNT_MAX)
         fail("Invalid ceiling layer count.");
@@ -118,8 +122,6 @@ auto_mapper::io::MapFormat Project::mapFormat() const {
         return MapFormat::AS2;
     if (version == PROJECT_VERSION_AS2R)
         return MapFormat::AS2R;
-    if (version == PROJECT_VERSION_AS2C)
-        return MapFormat::AS2C;
     if (version == PROJECT_VERSION_AS2OE)
         return MapFormat::AS2OE;
     fail("Unsupported project version: " + version);
@@ -213,6 +215,8 @@ Project Project::fromJson(const QJsonObject &obj) {
     result.version = obj.value("version").toString(PROJECT_VERSION_AS1);
     if (obj.contains("version") && !obj.value("version").isString())
         fail("Invalid project version.");
+    if (result.version == LEGACY_PROJECT_VERSION_AS2C)
+        result.version = PROJECT_VERSION_AS2R;
     result.mapFormat();
     double defaultSize = defaultMapSize(result.version);
     result.width = number(obj, "map_size_x", defaultSize);
@@ -348,8 +352,7 @@ Project Project::fromJson(const QJsonObject &obj) {
         }
         if (!known)
             fail("Unsupported gore vid.");
-        // The Gore brush exists only in the AS2 Series. Conscription-only corpses are checked at generation,
-        // so a project switched from AS2C to AS2R still opens and can be cleaned up with the eraser.
+        // The Gore brush exists only in the AS2 Series.
         if (result.isAS1())
             fail("Corpses and blood need an AS2 Series project.");
         result.gore.push_back(gore);

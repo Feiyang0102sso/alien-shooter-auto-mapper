@@ -58,10 +58,6 @@ bool contains(std::span<const int32_t> vids, int32_t vid) {
     return std::find(vids.begin(), vids.end(), vid) != vids.end();
 }
 
-bool uses_conscription_objects(io::MapFormat format) {
-    return format == io::MapFormat::AS2C || format == io::MapFormat::AS2OE;
-}
-
 uint32_t random_direction() {
     return static_cast<uint32_t>(Random::get(0, FULL_DIRECTION_RANGE - 1));
 }
@@ -135,31 +131,51 @@ bool is_gore_blood(int32_t vid) {
            vid == GORE_VID_GIBS;
 }
 
-std::vector<int32_t> gore_corpse_vids(GoreKind kind, io::MapFormat format) {
+std::vector<int32_t> gore_corpse_candidates() {
     std::vector<int32_t> vids;
-    if (kind == GoreKind::Bones) {
-        vids.push_back(GORE_VID_BONES);
-    }
-    if (kind == GoreKind::Monster) {
-        vids.assign(std::begin(GORE_MONSTER_VIDS), std::end(GORE_MONSTER_VIDS));
-        if (uses_conscription_objects(format)) {
-            vids.insert(vids.end(), std::begin(GORE_MONSTER_VIDS_AS2C), std::end(GORE_MONSTER_VIDS_AS2C));
-        }
-    }
-    if (kind == GoreKind::Human) {
-        vids.assign(std::begin(GORE_HUMAN_VIDS), std::end(GORE_HUMAN_VIDS));
-        if (uses_conscription_objects(format)) {
-            vids.insert(vids.end(), std::begin(GORE_HUMAN_VIDS_AS2C), std::end(GORE_HUMAN_VIDS_AS2C));
-        }
-    }
+    vids.push_back(GORE_VID_BONES);
+    vids.insert(vids.end(), std::begin(GORE_MONSTER_VIDS), std::end(GORE_MONSTER_VIDS));
+    vids.insert(vids.end(), std::begin(GORE_MONSTER_VIDS_AS2C), std::end(GORE_MONSTER_VIDS_AS2C));
+    vids.insert(vids.end(), std::begin(GORE_HUMAN_VIDS), std::end(GORE_HUMAN_VIDS));
+    vids.insert(vids.end(), std::begin(GORE_HUMAN_VIDS_AS2C), std::end(GORE_HUMAN_VIDS_AS2C));
     return vids;
 }
 
-bool gore_vid_available(int32_t vid, io::MapFormat format) {
-    if (uses_conscription_objects(format)) {
-        return true;
+std::vector<int32_t> gore_corpse_vids(GoreKind kind, const std::set<int32_t>* game_vids) {
+    // The shared pool every AS2 Series game has, and the Conscription-only extras.
+    std::vector<int32_t> shared;
+    std::vector<int32_t> extras;
+    if (kind == GoreKind::Bones) {
+        shared.push_back(GORE_VID_BONES);
     }
-    return !contains(GORE_MONSTER_VIDS_AS2C, vid) && !contains(GORE_HUMAN_VIDS_AS2C, vid);
+    if (kind == GoreKind::Monster) {
+        shared.assign(std::begin(GORE_MONSTER_VIDS), std::end(GORE_MONSTER_VIDS));
+        extras.assign(std::begin(GORE_MONSTER_VIDS_AS2C), std::end(GORE_MONSTER_VIDS_AS2C));
+    }
+    if (kind == GoreKind::Human) {
+        shared.assign(std::begin(GORE_HUMAN_VIDS), std::end(GORE_HUMAN_VIDS));
+        extras.assign(std::begin(GORE_HUMAN_VIDS_AS2C), std::end(GORE_HUMAN_VIDS_AS2C));
+    }
+    if (game_vids == nullptr) {
+        return shared;
+    }
+
+    std::vector<int32_t> pool;
+    for (int32_t vid : shared) {
+        if (game_vids->count(vid) > 0) {
+            pool.push_back(vid);
+        }
+    }
+    for (int32_t vid : extras) {
+        if (game_vids->count(vid) > 0) {
+            pool.push_back(vid);
+        }
+    }
+    // A game folder without any of the card's corpses (a broken install, a strange mod) keeps the shared pool.
+    if (pool.empty()) {
+        return shared;
+    }
+    return pool;
 }
 
 bool gore_item_belongs_to(int32_t vid, GoreKind kind) {
@@ -178,8 +194,8 @@ bool gore_item_belongs_to(int32_t vid, GoreKind kind) {
     return false;
 }
 
-std::vector<GoreItem> scatter_gore(const GoreBrushSettings& settings, io::MapFormat format, float center_x,
-                                   float center_y) {
+std::vector<GoreItem> scatter_gore(const GoreBrushSettings& settings, const std::set<int32_t>* game_vids,
+                                   float center_x, float center_y) {
     std::vector<GoreItem> result;
     if (settings.kind == GoreKind::BloodPool) {
         float radius = std::max(1.0f, settings.radius);
@@ -188,7 +204,7 @@ std::vector<GoreItem> scatter_gore(const GoreBrushSettings& settings, io::MapFor
         return result;
     }
 
-    std::vector<int32_t> pool = gore_corpse_vids(settings.kind, format);
+    std::vector<int32_t> pool = gore_corpse_vids(settings.kind, game_vids);
     float spacing = std::max(1.0f, settings.spacing);
     // Only this dab's own corpses keep apart: gore may land on top of anything already placed.
     std::vector<ScatterPoint> occupied;

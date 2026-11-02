@@ -40,7 +40,7 @@ LeftShelfPanel::LeftShelfPanel(const Catalog &catalog, QWidget *parent) : QWidge
     });
     as2Format_ = new QComboBox;
     as2Format_->setObjectName("as2FormatCombo");
-    as2Format_->addItems({PROJECT_VERSION_AS2, PROJECT_VERSION_AS2R, PROJECT_VERSION_AS2C, PROJECT_VERSION_AS2OE});
+    as2Format_->addItems({PROJECT_VERSION_AS2, PROJECT_VERSION_AS2R, PROJECT_VERSION_AS2OE});
     // AS2R is the default target when the user first switches to the AS2 family.
     as2Format_->setCurrentText(PROJECT_VERSION_AS2R);
     family->addWidget(as2Format_);

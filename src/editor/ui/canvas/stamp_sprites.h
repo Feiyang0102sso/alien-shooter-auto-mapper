@@ -32,6 +32,8 @@ class StampSprites {
     // Open <gameRoot>/objects.res and Vid/ with that family's OBJ layout; false keeps the placeholder preview.
     bool open(const QString &gameRoot, auto_mapper::game_assets::GameFamily family);
     bool isOpen() const;
+    // True when the open game folder defines the nvid (objects.res entry and vid file).
+    bool defines(int vid) const;
     // Frame with the OBJ and map sprite gamma applied, or nullptr when it cannot be decoded.
     const StampSprite *sprite(const auto_mapper::core::decoration_builder::DecorationMember &member);
     // Every decoded member drawn into one transparent image at 1 pixel per map unit, cropped to the sprites.

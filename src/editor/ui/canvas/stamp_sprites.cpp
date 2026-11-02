@@ -111,6 +111,10 @@ bool StampSprites::isOpen() const {
     return library_.is_open();
 }
 
+bool StampSprites::defines(int vid) const {
+    return library_.defines(vid);
+}
+
 const StampSprite *StampSprites::sprite(const auto_mapper::core::decoration_builder::DecorationMember &member) {
     if (!library_.is_open())
         return nullptr;

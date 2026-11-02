@@ -167,7 +167,7 @@ TEST(MapGeneratorTest, LootBoxesGetLootTextAndSkipAs1) {
     EXPECT_EQ(load_generator_test_binary(output_file).size(), auto_mapper::io::templates::AS1_EMPTY_SIZE);
 }
 
-TEST(MapGeneratorTest, GoreWritesSpritesAndRejectsConscriptionCorpsesInAs2r) {
+TEST(MapGeneratorTest, GoreWritesSpritesAndSkipsAs1) {
     using namespace auto_mapper::core;
     MapRequest request = empty_request(MapFormat::AS2R);
     request.gore_items.push_back({GORE_VID_BONES, 200.0f, 200.0f, 0.0f, 85});
@@ -181,12 +181,6 @@ TEST(MapGeneratorTest, GoreWritesSpritesAndRejectsConscriptionCorpsesInAs2r) {
     ASSERT_NE(found, data.end());
     std::size_t spr = static_cast<std::size_t>(found - data.begin());
     EXPECT_EQ((read_generator_test_uint32(data, spr + 20) - 4) / 48, 2u);
-
-    // The AS2R game has no Conscription-only corpse; the AS2C game does.
-    request.gore_items.push_back({GORE_HUMAN_VIDS_AS2C[0], 300.0f, 200.0f, 0.0f, 0});
-    EXPECT_FALSE(generate_map(request, output_file));
-    request.format = MapFormat::AS2C;
-    EXPECT_TRUE(generate_map(request, output_file));
 
     // AS1 has no gore brush: the sprites are skipped and the map stays empty.
     request = empty_request(MapFormat::AS1);

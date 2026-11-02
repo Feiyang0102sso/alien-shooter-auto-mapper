@@ -149,20 +149,6 @@ TEST(MapWriterTest, WritesEmptyAS2RMapFromSelectedFormat) {
     EXPECT_EQ(read_magic_at(output, 196), "PLAY");
 }
 
-TEST(MapWriterTest, WritesAS2CExactlyLikeAS2R) {
-    // Conscription maps are AS2R files; the format only picks the game's object set.
-    std::vector<io::Sprite> sprites;
-    io::Sprite sprite(1532, 400.0f, 300.0f, 0.0f, 85);
-    sprite.army = 2;
-    sprites.push_back(sprite);
-    std::string as2r_file = get_test_output_path("as2c_compare_as2r.map");
-    std::string as2c_file = get_test_output_path("as2c_compare_as2c.map");
-    ASSERT_TRUE(io::write_map(sprites, as2r_file, io::MapFormat::AS2R, 640.0f, 480.0f));
-    ASSERT_TRUE(io::write_map(sprites, as2c_file, io::MapFormat::AS2C, 640.0f, 480.0f));
-
-    EXPECT_EQ(load_binary_file(as2c_file), load_binary_file(as2r_file));
-}
-
 TEST(MapWriterTest, WritesAS2OEWithLevelResourceKindAndVersionFourteen) {
     std::string output_file = get_test_output_path("empty_as2oe_writer_output.map");
 
