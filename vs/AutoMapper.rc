@@ -7,8 +7,8 @@
 //   - pack_release.bat reads AUTO_MAPPER_VERSION_TEXT to name the package.
 // Keep the two lines in step when bumping the version.
 // =====================================================================
-#define AUTO_MAPPER_VERSION_TEXT "1.1.0"
-#define AUTO_MAPPER_VERSION_NUMBER 1,1,0,0
+#define AUTO_MAPPER_VERSION_TEXT "2.0.0"
+#define AUTO_MAPPER_VERSION_NUMBER 2,0,0,0
 
 IDI_ICON1 ICON "../assets/logo.ico"
 

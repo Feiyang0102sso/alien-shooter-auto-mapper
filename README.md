@@ -1,106 +1,98 @@
-# Auto Mapper v1.0
+# Auto Mapper v2.0.0
 
-🌍 **Language / 语言**
+**English** | [中文](README_CN.md)
 
-- [🇺🇸 English Version](#english-version)
-- [🇨🇳 中文版](#chinese-version)
+Auto Mapper is an automatic map layout tool for Alien Shooter. You draw walls, place decorations, and brush in loot boxes and corpses on a canvas; it turns them into objects in the game's `.map` file, ready for you to verify and refine in the map editor.
 
----
+## Features
 
-<a id="english-version"></a>
-## 🇺🇸 English Version
+- **Walls**: draw walls on the grid with polyline, straight line, and rectangle tools; walls, doors, floors, and ceilings are laid out automatically.
+- **Curve walls** (AS2 series): drag freely to fill a curve with rock, alien nest, or cliff pieces; enclosed areas can get a matching floor automatically.
+- **Decoration sets**: 21 ready-made indoor sets for the AS2 series and 10 for AS1; pick one and click on the canvas to place it.
+- **Loot boxes** (AS2 series): wood box, metal box, and alien egg brushes that drop a whole pile per stroke; loot tables are editable and can be saved as reusable presets.
+- **Gore** (AS2 series): bone pile, monster corpse, soldier corpse, and blood pool brushes, with blood scattered around each corpse.
+- **Sprite preview**: once a game folder is set, the canvas shows decorations, loot boxes, and corpses with the game's own sprites.
+- **Project files**: projects are saved as JSON and can be imported later to keep editing.
+- **Game versions**: map formats and wall sets for AS1 and the AS2 series (AS2, AS2R/C, AS2OE).
+- **Interface**: English / Chinese, with keyboard shortcuts for common actions.
 
-Auto Mapper is an Alien Shooter map layout generator. It aim to help build a map quickly, then verify and refine
-the result in a map editor.
-
-### features
-
-- Automatic placement of walls, doors, floors, and ceilings.
-- Decoration presets for quickly placing common indoor decorations.
-- Freehand curve walls for the AS2 series: drag any curve and it fills with 360-direction rock or alien nest pieces.
-- Editor preview and project save/load support.
-- Support for AS1 and the AS2 series (AS2, AS2R/C, and AS2OE) map formats and wall sets.
-
-### Important warning
+## Important warning
 
 > [!WARNING]
 > Auto Mapper's algorithms cannot be guaranteed to be perfect in every map or
 > layout. Always treat the generated result as a starting point and verify it
 > in your map editor. The map editor is the final authority.
 
-Decorations have an additional limitation: the canvas previews them with the
-game's own sprites only after the **Sprite Preview** window points
-at an AS2 install (the folder with `objects.res` and `Vid`). Without it, each object is marked with a green
-cross inside the stamp frame. The preview only approximates the game's draw
-order, so use the map editor to confirm every decoration.
+A few more limitations of the preview:
 
-### Recommended workflow
+- The canvas shows game sprites only after a game folder (the one containing `objects.res` and `Vid`) is set in the **Sprite Preview** (F9) window;
+  otherwise objects are marked with green crosses. The AS1 and AS2 folders are set separately.
+- The sprite draw order is only an approximation; trust what the map editor shows.
+- Walls, doors, and floors are drawn as outlines, not sprites.
+- Loot tables are rolled again every time a map is generated, so two exports of the same project will not drop exactly the same items.
+
+## Recommended workflow
 
 Auto Mapper currently cannot edit an existing map. The recommended workflow is:
 
 1. Create or prepare the map in Auto Mapper.
-2. Finish and verify all automatic parts first: walls, doors, floors, and
-   ceilings.
-3. Open the generated map in your map editor and confirm that the automatic
-   layout is correct before starting extensive manual editing.
-4. For decorations especially, adjust a small part at a time and verify it in
-   the map editor as you go.
+2. Finish and verify all automatic parts first: walls, doors, floors, and ceilings.
+3. Open the generated map in your map editor and confirm that the automatic layout is correct before starting extensive manual editing.
+4. For decorations especially, adjust a small part at a time and verify it in the map editor as you go.
 
-### Changelog
+## Getting started
 
+1. Unzip the release package and run `AutoMapper.exe`. On first launch you will be asked to choose the interface language.
+2. Choose the game on the left (AS1 / AS2 series and its version) and set the map size in the right panel. Switching between AS1 and the AS2 series starts a new project.
+3. Pick a shelf on the left: **Wall Sets**, **Decoration Sets**, and, in AS2 series projects, **Loot Boxes** and **Gore**.
+4. Draw on the canvas and tune the current tool in the right panel. F1 clears the canvas to start over.
+5. **Generate Map** (F4) writes the `.map` file; **Export JSON** (F3) saves the project so you can keep editing later.
+
+The `assets/` folder next to `AutoMapper.exe` holds the decoration library maps and previews. Do not delete it.
+
+## Keyboard shortcuts
+
+| Group | Key | Action |
+|---|---|---|
+| Functions | F1 / F2 / F3 | New / Import JSON / Export JSON |
+| | F4 | Generate Map |
+| | F5 / F6 | Toggle Floor / Ceiling |
+| | F7 / F8 | Door State / Random Direction |
+| | F9 | Sprite Preview |
+| Set navigation | Q / E | Previous / Next Set |
+| | - / + | Previous / Next item in the set |
+| Tools | 0 | Select Decorations |
+| | 1 / 2 / 3 | Polyline / Straight Line / Rectangle |
+| | 4 | Eraser |
+| | 5 | Freehand (curve walls, loot boxes, gore) |
+| | Del | Delete Selected Decoration |
+
+The **Shortcuts** button in the app shows the same table. Shortcuts are ignored while an input field has focus.
+
+## Building from source
+
+Requires Visual Studio 2026 (MSVC v145) and Qt 6.11.1 (Qt Base, Qt Image Formats, x64). No CMake needed.
+
+- Open `vs/AutoMapper.sln` in Visual Studio and build. The Qt path defaults to `vs/qt.props` and can be overridden with the `QTDIR` environment variable.
+- Or run `builder.bat` to build Release from the command line and run all tests.
+- After building, run `pack_release.bat` to create the release folder and zip.
+
+Output goes to `bin/x64/<Configuration>/`.
+
+## Changelog
+
+- **v2.0.0 (2026-11-13):**
+  - Reworked decoration sets: previews are rendered directly from the game's Vid files, and AS1 decoration sets are now supported.
+  - AS1 / AS2 game folders can be added to the sprite preview settings.
+  - Added curve walls (AS2 series): freehand rock, alien nest, and cliff, with matching floors laid automatically.
+  - Added the Loot Boxes shelf (AS2 series): wood box, metal box, and alien egg brushes, with loot tables and loot presets (`loot_presets.ini`).
+  - Added the Gore shelf (AS2 series): bone pile, monster corpse, soldier corpse, and blood pool brushes.
 - **v1.1.0 (2026-10-12):**
   - Rewrote the UI in C++ / Qt.
-- **v1.0（2026-09-06）:**
+- **v1.0 (2026-09-06):**
   - Added the ceiling generation algorithm.
   - Added decoration presets.
   - Added keyboard shortcuts.
   - Added support for the three AS2 variants: AS2, AS2R/C, and AS2OE.
 - **v0.1.0 (2026-08-11):**
   - Initial pre-release.
-
----
-
-<a id="chinese-version"></a>
-## 🇨🇳 中文版
-
-Auto Mapper 是一款 Alien Shooter 地图自动铺设工具。他旨在帮助你快速完成地图布局，再交由地图编辑器进行
-校验和细化。
-
-### 功能
-
-- 自动铺设墙壁、门、地板和天花板。
-- 提供常见室内装饰物的装饰预设，支持快速放置。
-- AS2 系列支持手绘曲线墙：按住鼠标画出任意曲线，自动铺满 360 度山体或异形巢穴。
-- 提供编辑器预览以及项目保存和加载功能。
-- 支持 AS1 以及 AS2 系列（AS2、AS2R/C、AS2OE）的地图格式和墙体组。
-
-### 重要警告
-
-> [!WARNING]
-> Auto Mapper 的算法不能保证在所有地图和布局下都完美无瑕。生成结果
-> 始终只应作为起点，必须在地图编辑器中进行校验；最终以地图编辑器为准。
-
-装饰物还有额外限制：只有在工具栏“贴图预览”窗口里指定 AS2 游戏目录（含 `objects.res` 和 `Vid`）后，
-画布才用游戏贴图预览装饰物；未指定时只在装饰框内用绿色叉号标出物件位置。
-贴图的前后遮挡只是近似，一切装饰物结果仍应以地图编辑器中的实际显示为准。
-
-### 推荐工作流
-
-鉴于目前 Auto Mapper 还不具备编辑现有地图的能力，推荐按以下流程使用：
-
-1. 先在 Auto Mapper 中创建或准备地图。
-2. 优先完成并确认自动铺设部分没有问题，包括墙壁、门、地板和天花板。
-3. 将生成的地图交给地图编辑器，确认自动布局正确后，再开始进一步的手动编辑。
-4. 尤其是装饰部分，推荐每次调整一小部分，并在调整过程中持续回到地图编辑器验证。
-
-### 更新日志
-
-- **v1.1.0（2026-10-12）：**
-  - 用 C++ / Qt 重写界面。
-- **v1.0 （2026-09-06）：**
-  - 新增天花板算法。
-  - 新增装饰预设。
-  - 新增快捷键。
-  - 支持 AS2 的三个变体：AS2、AS2R/C、AS2OE。
-- **v0.1.0（2026-08-11）：**
-  - 首个预发布版本。
