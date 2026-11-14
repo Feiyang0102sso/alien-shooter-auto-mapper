@@ -190,14 +190,17 @@ Desk 关键常量：
 
 ## UI 与项目数据
 
-项目数据当前保持简单 JSON 兼容结构：
+项目 JSON 的读写只在 `project/project.cpp`（`toJson()` / `fromJson()`），顶层键按写出顺序：
 
-- `segments`
-- `doors`
-- `decorations`
-- `map_size_x`
-- `map_size_y`
-- `is_door_open`
+- 头部：`version`、`map_size_x`、`map_size_y`
+- AS1 专有：`is_door_open`（总写）、`as1_standard_ceiling_layer_count` / `as1_lab_ceiling_layer_count`（> 0 才写）
+- 两个游戏族都有：`segments`、`doors`、`decorations`，空的也写 `[]`
+- AS2 系列专有：`curve_walls`、`loot_boxes`、`gore`，空的也写 `[]`；`loot_tables` 是对象，非空才写
+
+`save()` 不用 `QJsonDocument::Indented`（它按字母排键、一个点占 4 行），而是 `blockText()` 手动排版：
+键顺序取文件开头的 `PROJECT_KEY_ORDER`（新增键要加进去，不在表里的排在后面按字母序）；
+不含数组的对象（点、墙段、门、箱子、血迹、装饰物、掉落行）写成一行，数组和含数组的对象逐项展开。
+读取对键序和空数组无要求，旧工程（含 `floor_type`、键按字母排的）照常能读。
 
 `IncubatorDecoration` 存的是物理坐标区域：
 

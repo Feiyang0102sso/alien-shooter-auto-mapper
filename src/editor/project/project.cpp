@@ -5,11 +5,28 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSaveFile>
+#include <QStringList>
 #include <cmath>
 #include <stdexcept>
 
 namespace editor {
 namespace {
+// Key order of saved project JSON, shared by every nesting level; unlisted keys follow alphabetically.
+// QJsonObject sorts keys alphabetically, which puts "version" last and "end" before "start".
+const QStringList PROJECT_KEY_ORDER = {
+    // Header and AS1 settings
+    "version", "map_size_x", "map_size_y", "is_door_open", "as1_standard_ceiling_layer_count",
+    "as1_lab_ceiling_layer_count",
+    // Sections
+    "segments", "doors", "curve_walls", "decorations", "loot_boxes", "loot_tables", "gore",
+    // Loot table kinds
+    "wood", "metal", "egg",
+    // Item fields
+    "type", "profile_id", "curve_wall_type", "wall_type", "vid", "closed", "pos", "center", "start", "end", "points",
+    "x", "y", "z", "direction_type", "direction", "size", "door_state", "light_state", "z_offset", "row_length",
+    "column_length", "item_spacing_scale", "row_spacing_scale", "text", "percent"};
+constexpr int JSON_INDENT_WIDTH = 4;
+
 void fail(const QString &message) {
     throw std::runtime_error(message.toStdString());
 }
@@ -48,6 +65,72 @@ int integer(const QJsonObject &obj, const QString &key, int fallback = 0) {
 
 QJsonObject point(double x, double y) {
     return {{"x", x}, {"y", y}};
+}
+
+// True when the value holds no array at any depth; such values are written on one line.
+bool fitsOnOneLine(const QJsonValue &value) {
+    if (value.isArray())
+        return false;
+    if (!value.isObject())
+        return true;
+    const QJsonObject object = value.toObject();
+    for (auto entry = object.begin(); entry != object.end(); ++entry) {
+        if (!fitsOnOneLine(entry.value()))
+            return false;
+    }
+    return true;
+}
+
+QStringList orderedKeys(const QJsonObject &object) {
+    QStringList keys;
+    for (const QString &key : PROJECT_KEY_ORDER) {
+        if (object.contains(key))
+            keys.append(key);
+    }
+    // QJsonObject::keys() is already alphabetical.
+    for (const QString &key : object.keys()) {
+        if (!keys.contains(key))
+            keys.append(key);
+    }
+    return keys;
+}
+
+// Numbers and strings go through Qt, so formatting and escaping match QJsonDocument.
+QString scalarText(const QJsonValue &value) {
+    QByteArray text = QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact);
+    // Compact text of a one-item array is "[value]".
+    return QString::fromUtf8(text.mid(1, text.size() - 2));
+}
+
+QString inlineText(const QJsonValue &value) {
+    if (!value.isObject())
+        return scalarText(value);
+    const QJsonObject object = value.toObject();
+    QStringList fields;
+    for (const QString &key : orderedKeys(object))
+        fields.append(scalarText(key) + ": " + inlineText(object.value(key)));
+    return "{" + fields.join(", ") + "}";
+}
+
+// Arrays list one item per line; objects holding an array list one key per line; the rest stay on one line.
+QString blockText(const QJsonValue &value, int depth) {
+    if (fitsOnOneLine(value))
+        return inlineText(value);
+    QString indent(JSON_INDENT_WIDTH * (depth + 1), ' ');
+    QString closingIndent(JSON_INDENT_WIDTH * depth, ' ');
+    QStringList lines;
+    if (value.isArray()) {
+        const QJsonArray array = value.toArray();
+        if (array.isEmpty())
+            return "[]";
+        for (const auto &item : array)
+            lines.append(indent + blockText(item, depth + 1));
+        return "[\n" + lines.join(",\n") + "\n" + closingIndent + "]";
+    }
+    const QJsonObject object = value.toObject();
+    for (const QString &key : orderedKeys(object))
+        lines.append(indent + scalarText(key) + ": " + blockText(object.value(key), depth + 1));
+    return "{\n" + lines.join(",\n") + "\n" + closingIndent + "}";
 }
 
 // A short-lived Project Version for Conscription. Its maps were AS2R files, and the Gore corpse pool now follows
@@ -133,8 +216,7 @@ QJsonObject Project::toJson() const {
     for (const auto &segment : segments) {
         walls.append(QJsonObject{{"start", point(segment.start.x, segment.start.y)},
                                  {"end", point(segment.end.x, segment.end.y)},
-                                 {"wall_type", segment.wall_type},
-                                 {"floor_type", 0}});
+                                 {"wall_type", segment.wall_type}});
     }
     for (const auto &door : doors) {
         doorItems.append(QJsonObject{{"pos", point(door.pos.x, door.pos.y)},
@@ -169,23 +251,21 @@ QJsonObject Project::toJson() const {
     }
     QJsonObject result{{"version", version}, {"map_size_x", width}, {"map_size_y", height},
                        {"segments", walls},  {"doors", doorItems},  {"decorations", decorationItems}};
-    // Older readers ignore unknown keys, so the key is only written when there is something to keep.
-    if (!curveWalls.empty())
-        result["curve_walls"] = curveWallItems;
-    if (!lootBoxes.empty()) {
+    // Every section the game family supports is written, empty or not, so a saved file shows the whole layout.
+    // AS1 projects cannot hold curve walls, loot boxes or gore.
+    if (!isAS1()) {
         QJsonArray lootBoxItems;
         for (const auto &box : lootBoxes) {
             lootBoxItems.append(QJsonObject{{"vid", box.vid}, {"x", box.x}, {"y", box.y}, {"z", box.z},
                                             {"direction", static_cast<int>(box.direction)}});
         }
-        result["loot_boxes"] = lootBoxItems;
-    }
-    if (!gore.empty()) {
         QJsonArray goreItems;
         for (const auto &item : gore) {
             goreItems.append(QJsonObject{{"vid", item.vid}, {"x", item.x}, {"y", item.y}, {"z", item.z},
                                          {"direction", static_cast<int>(item.direction)}});
         }
+        result["curve_walls"] = curveWallItems;
+        result["loot_boxes"] = lootBoxItems;
         result["gore"] = goreItems;
     }
     QJsonObject lootTableItems;
@@ -404,7 +484,8 @@ void Project::save(const QString &path) const {
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly))
         fail(file.errorString());
-    auto bytes = QJsonDocument(toJson()).toJson(QJsonDocument::Indented);
+    // Hand-formatted instead of QJsonDocument::Indented: fixed key order, one line per wall / door / box.
+    QByteArray bytes = (blockText(toJson(), 0) + "\n").toUtf8();
     if (file.write(bytes) != bytes.size() || !file.commit())
         fail(file.errorString());
     qInfo() << "Project saved:" << path;

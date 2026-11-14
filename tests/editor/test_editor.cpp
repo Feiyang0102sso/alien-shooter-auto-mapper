@@ -164,6 +164,26 @@ class EditorTest : public QObject {
             QCOMPARE(json.contains("is_door_open"), project.isAS1());
             QCOMPARE(json.contains("loot_boxes"), !project.isAS1());
             QCOMPARE(json.contains("gore"), !project.isAS1());
+            QVERIFY(!json.value("segments").toArray().first().toObject().contains("floor_type"));
+
+            // Saved text: fixed key order, one line per record, empty sections kept as [].
+            QTemporaryDir directory;
+            QString path = directory.filePath("project.json");
+            project.save(path);
+            QFile savedFile(path);
+            QVERIFY(savedFile.open(QIODevice::ReadOnly));
+            QString text = QString::fromUtf8(savedFile.readAll());
+            QVERIFY(text.startsWith("{\n    \"version\": \"" + project.version + "\",\n    \"map_size_x\": "));
+            QVERIFY(text.contains("\n        {\"wall_type\": 0, \"start\": {\"x\": 0, \"y\": 0}, \"end\": {\"x\": 0, \"y\": 3}}"));
+            QVERIFY(text.contains("{\"type\": \"room_stamp\", \"profile_id\": \"01dorm:1\", \"center\": {\"x\": 430, \"y\": 290}}"));
+            QVERIFY(text.contains("{\"text\": \"Obj_money1\", \"percent\": 9.5}"));
+            if (project.isAS1()) {
+                QVERIFY(!text.contains("curve_walls"));
+            } else {
+                QVERIFY(text.contains("\"curve_walls\": [],"));
+                QVERIFY(text.contains("{\"vid\": 1225, \"x\": 300.5, \"y\": 410, \"z\": 25, \"direction\": 28}"));
+            }
+            QCOMPARE(Project::load(path).toJson(), json);
         }
         QJsonObject as1Gore{{"gore", QJsonArray{QJsonObject{{"vid", 1532}, {"x", 1}, {"y", 1}}}}};
         QVERIFY_EXCEPTION_THROWN(Project::fromJson(as1Gore), std::runtime_error);
@@ -672,7 +692,10 @@ class EditorTest : public QObject {
         QVERIFY(reloaded.curveWalls[0].closed);
         json["version"] = "AS1";
         QVERIFY_EXCEPTION_THROWN(Project::fromJson(json), std::runtime_error);
-        QVERIFY(!Project::createEmpty(PROJECT_VERSION_AS2R).toJson().contains("curve_walls"));
+        // An empty AS2 Series project still lists its curve wall section.
+        QJsonObject emptyJson = Project::createEmpty(PROJECT_VERSION_AS2R).toJson();
+        QVERIFY(emptyJson.contains("curve_walls"));
+        QVERIFY(emptyJson.value("curve_walls").toArray().isEmpty());
         QTemporaryDir directory;
         QVERIFY(window.project.generate(directory.filePath("curve.map"), false, false, true));
 
