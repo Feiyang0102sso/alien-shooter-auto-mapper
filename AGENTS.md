@@ -8,8 +8,10 @@
 
 项目分成两层，全部是 C++20，一起编译成一个 `AutoMapper.exe`：
 
-- `src/auto_mapper/`：核心算法，静态库 `auto_mapper_core`。
+- `src/auto_mapper/`：核心算法（common → io → core）。
 - `src/editor/`：Qt Widgets 编辑器，直接使用核心的 C++ 类型和函数，没有中间的 C API 层。
+
+两层和 `src/game_assets/` 一起编进静态库 `AutoMapper.Core`（见下文“构建与运行”），只有 `src/editor/main.cpp` 在 exe 项目里。
 
 旧的 Python/PySide6 编辑器（`src/app/`）已删除，需要对照时查 git 历史（`5334e04 v1.0` 及之前）。
 仓库里剩下的 Python 只有离线数据工具 `_prepare/`，使用 `.venv`。
@@ -363,8 +365,10 @@ AS2 系列专用的第四个货架，四张卡：骨头堆 1532、怪物尸体�
 
 ## 测试与 Golden 文件
 
-核心测试在 `tests/test_*.cpp`，编辑器测试在 `tests/editor/test_editor.cpp`（交互、旧 JSON 兼容、四种输出、中文路径、
+核心测试在 `tests/test_*.cpp`（GoogleTest），编辑器测试在 `tests/editor/test_editor.cpp`（Qt Test：交互、旧 JSON 兼容、四种输出、中文路径、
 多语言 key 集合、快捷键分发）；四种 Project Version（AS1 / AS2 / AS2R / AS2OE）都要能生成。
+两者编进同一个 `AutoMapper.Tests.exe`：`tests/main.cpp` 先跑 gtest，再在 offscreen 平台跑 `run_editor_tests()`，任一失败退出码非 0。
+新增测试文件要加进 `vs/AutoMapper.Tests.vcxproj`。
 
 重点测试：
 
@@ -387,25 +391,39 @@ Golden 文件在 `tests/golden/`。改动导致 golden 输出变化时，必须�
 
 ## 构建与运行
 
-编辑器使用 MSVC + Qt 6.11.1（Qt Base、Qt Image Formats）。
-只维护 `msvc-release` 一个预设；Qt SDK 路径在 `CMakePresets.json` 的 `CMAKE_PREFIX_PATH`。
+MSVC（VS 2026，工具集 v145）+ Qt 6.11.1（Qt Base、Qt Image Formats），x64，Debug / Release 两种配置。
+没有 CMake，也不需要 Qt VS Tools 扩展；所有 VS 配置都在 `vs/`：
 
-CMake 分四个文件：根 `CMakeLists.txt` 只放全局设置、依赖（spdlog、gtest、Qt，以及 `src/3rdparty/simpleini/` 里随仓库提交的
-SimpleIni v4.22 头文件，INTERFACE 库 `simpleini`，只有编辑器链接）和三个 `add_subdirectory`；
-`src/auto_mapper/` 放核心静态库，`src/editor/` 放编辑器、exe、部署与打包，`tests/` 放核心测试、编辑器测试和 golden 导出工具。
-所有 exe 都输出到 `build/msvc-release/` 同一目录，共用 Qt DLL 和 `assets/`。
-`builder.bat` 构建并运行核心与原生 UI 测试；
-CLion 运行目标为 `auto_mapper_editor`。`pack_release.bat` 先清空 `build/` 里旧的 `AutoMapper V *` 目录和 zip，再生成 `build/AutoMapper V x.y.z/` 与同名 zip。
+| 文件 | 作用 |
+|---|---|
+| `AutoMapper.sln` | 三个项目；启动项目是 `AutoMapper` |
+| `AutoMapper.Core.vcxproj` | 静态库：`src/auto_mapper/`、`src/game_assets/`、`src/editor/`（除 `main.cpp`）和嵌入资源 |
+| `AutoMapper.vcxproj` | `AutoMapper.exe`：`main.cpp` + `AutoMapper.rc`；构建后同步 `assets/`、`loot_presets.ini` 到 exe 旁 |
+| `AutoMapper.Tests.vcxproj` | `AutoMapper.Tests.exe`：全部测试 + golden 导出；调试工作目录是仓库根 |
+| `AutoMapper.rc` | 图标和版本号 |
+| `common.props` | C++20、`/utf-8`、include 根 `src/`、输出目录 |
+| `qt.props` / `qt.targets` | Qt 路径（可用环境变量 `QTDIR` 覆盖）、库、自写的 moc / rcc / windeployqt 规则 |
 
-版本号只写在 `src/editor/editor.rc` 的 `AUTO_MAPPER_VERSION_TEXT` / `AUTO_MAPPER_VERSION_NUMBER` 两行（三段式，两行一起改）；exe 文件属性、`--version`、日志和打包名都从这里来，CMake 不管版本。
-具体 SDK 配置和独立运行方式见 README 的“Windows 开发构建（MSVC）”。
-原生测试详细结果保存在对应构建目录的 `native-editor-results.txt`。
+- 输出：`bin/x64/<配置>/` 放两个 exe 和配套文件（Qt DLL、插件、`assets/`、`loot_presets.ini`），
+  `out/<项目>/x64/<配置>/` 放中间产物（obj、`moc/`、`rcc/`、`AutoMapper.Core.lib`）。两者都在仓库根、都不提交。
+- moc：带 `Q_OBJECT` 的头文件在 vcxproj 里加 `<QtMoc>true</QtMoc>` 元数据（`test_editor.cpp` 同理，生成 `test_editor.moc`）；
+  新建 `Q_OBJECT` 类时别忘了加，否则链接报 vtable / `staticMetaObject` 未定义。
+- rcc：`src/editor/resources/editor_assets.qrc`（`Q_INIT_RESOURCE(editor_assets)`）；新增资源要同时写进 qrc，
+  并在 `AutoMapper.Core.vcxproj` 里加成 `None` 项（rcc 的增量依据）。
+- 第三方库随仓库提交在 `src/3rdparty/`：spdlog v1.13.0（header-only，`SPDLOG_USE_STD_FORMAT`）、
+  googletest v1.14.0（只编 `gtest-all.cc`）、SimpleIni v4.22（只有编辑器用）。
+- `src/editor/config.cpp` / `logger.cpp` 与 `common/` 里的同名，vcxproj 给它们单独指定了 `ObjectFileName`。
+- `builder.bat`：vcvars → MSBuild Release → 在仓库根运行 `AutoMapper.Tests.exe`（编辑器测试明细写进 `bin/x64/Release/native-editor-results.txt`）。
+- `pack_release.bat`：不构建、不跑测试，直接打包 `bin/x64/Release/AutoMapper.exe`（不存在就报错，先跑 `builder.bat`）。
+  先清空 `bin/` 里旧的 `AutoMapper V *` 目录和 zip，再生成 `bin/AutoMapper V x.y.z/` 与同名 zip：
+  exe 取自 bin，`assets/`、`loot_presets.ini` 取自仓库（bin 里的副本会留着已删的库地图和运行时存的预设），
+  Qt 运行时重新跑精简的 windeployqt（bin 里的还带 Qt6Test、qoffscreen），外加 5 个 app-local CRT DLL。
+- Golden 候选：`AutoMapper.Tests.exe --export-golden <目录>`，不覆盖 `tests/golden/`。
+- 本机注意：MSBuild 先读 64 位注册表 `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots\KitsRoot10` 找 UCRT 头文件；
+  它指向没有 `Include\` 的目录时会报找不到 `crtdbg.h` / `stddef.h`。`builder.bat` 已用 vcvars 找到的 SDK 兜底，IDE 里构建需要修正该注册表项。
 
-C++ 构建由 CMake 管理，测试目标是：
-
-```text
-auto_mapper_tests
-```
+版本号只写在 `vs/AutoMapper.rc` 的 `AUTO_MAPPER_VERSION_TEXT` / `AUTO_MAPPER_VERSION_NUMBER` 两行（三段式，两行一起改）；
+exe 文件属性、`--version`、日志和打包名都从这里来。
 
 运行离线 Python 工具（`_prepare/`）前先启用虚拟环境：
 
@@ -415,8 +433,7 @@ auto_mapper_tests
 
 打包相关文件：
 
-- `pack_release.bat`
-- `src/editor/CMakeLists.txt` 里的 `install()` 规则
+- `pack_release.bat`（windeployqt 参数、CRT 列表）
 - `AutoMapper.cfg`（运行时语言配置）
 
 不要在没有确认的情况下改打包配置或 `release/` 输出。

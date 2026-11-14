@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <ProjectGuid>{21ABFB85-CC0F-5EB7-825C-1737CD592352}</ProjectGuid>
+    <RootNamespace>AutoMapperCore</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)' == 'Debug'">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)' == 'Release'">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="common.props" />
+    <Import Project="qt.props" />
+  </ImportGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- SimpleIni (header only, vendored) reads loot_presets.ini in the editor. -->
+      <AdditionalIncludeDirectories>$(RepoRoot)src\3rdparty\simpleini;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <!-- Core (common, io, core), game data readers and the Qt editor UI; main.cpp lives in AutoMapper.vcxproj. -->
+  <ItemGroup>
+    <ClCompile Include="..\src\auto_mapper\common\config.cpp" />
+    <ClCompile Include="..\src\auto_mapper\common\logger.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\decoration_builder\decoration_builder.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\decoration_builder\decoration_library.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\decoration_builder\placeholder_vids.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\door_builder\door_builder.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\geometry.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\indoor_decorations\array_layout.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\indoor_decorations\desk_builder.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\indoor_decorations\incubator_builder.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\map_generator.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\randomizer.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\scatter\gore\gore_builder.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\scatter\loot\loot_box_builder.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\scatter\loot\loot_table.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\scatter\scatter_fill.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\wall_builder\curve_wall_builder.cpp" />
+    <ClCompile Include="..\src\auto_mapper\core\wall_builder\wall_builder.cpp" />
+    <ClCompile Include="..\src\auto_mapper\io\as1_map_writer.cpp" />
+    <ClCompile Include="..\src\auto_mapper\io\as2_map_writer.cpp" />
+    <ClCompile Include="..\src\auto_mapper\io\map_writer.cpp" />
+    <ClCompile Include="..\src\game_assets\objects\object_table.cpp" />
+    <ClCompile Include="..\src\game_assets\res\res_file.cpp" />
+    <ClCompile Include="..\src\game_assets\vid\vid_file.cpp" />
+    <ClCompile Include="..\src\game_assets\vid\vid_library.cpp" />
+    <ClCompile Include="..\src\editor\catalog\catalog.cpp" />
+    <ClCompile Include="..\src\editor\config.cpp">
+      <ObjectFileName>$(IntDir)editor_config.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\hotkeys\hotkey_config.cpp" />
+    <ClCompile Include="..\src\editor\hotkeys\hotkey_dialog.cpp" />
+    <ClCompile Include="..\src\editor\hotkeys\hotkey_manager.cpp" />
+    <ClCompile Include="..\src\editor\i18n\locale.cpp" />
+    <ClCompile Include="..\src\editor\logger.cpp">
+      <ObjectFileName>$(IntDir)editor_logger.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\loot_presets.cpp" />
+    <ClCompile Include="..\src\editor\project\project.cpp" />
+    <ClCompile Include="..\src\editor\ui\canvas\stamp_sprites.cpp" />
+    <ClCompile Include="..\src\editor\ui\canvas\viewport.cpp" />
+    <ClCompile Include="..\src\editor\ui\colors.cpp" />
+    <ClCompile Include="..\src\editor\ui\main_window.cpp" />
+    <ClCompile Include="..\src\editor\ui\panels\as1_ceiling.cpp" />
+    <ClCompile Include="..\src\editor\ui\panels\gore_brush.cpp" />
+    <ClCompile Include="..\src\editor\ui\panels\inspector.cpp" />
+    <ClCompile Include="..\src\editor\ui\panels\left_shelf.cpp" />
+    <ClCompile Include="..\src\editor\ui\panels\loot_brush.cpp" />
+    <ClCompile Include="..\src\editor\ui\panels\loot_table_dialog.cpp" />
+    <ClCompile Include="..\src\editor\ui\panels\sprite_preview_dialog.cpp" />
+    <ClCompile Include="..\src\editor\ui\panels\theme_shelf.cpp" />
+    <ClCompile Include="..\src\editor\ui\tools\drawing_toolbar.cpp" />
+    <ClCompile Include="..\src\editor\ui\tools\eraser\eraser_geometry.cpp" />
+    <ClCompile Include="..\src\editor\ui\tools\eraser\eraser_properties.cpp" />
+  </ItemGroup>
+  <!-- QtMoc marks headers with Q_OBJECT (vs/qt.targets). -->
+  <ItemGroup>
+    <ClInclude Include="..\src\auto_mapper\common\config.h" />
+    <ClInclude Include="..\src\auto_mapper\common\logger.h" />
+    <ClInclude Include="..\src\auto_mapper\core\decoration_builder\decoration_builder.h" />
+    <ClInclude Include="..\src\auto_mapper\core\decoration_builder\decoration_library.h" />
+    <ClInclude Include="..\src\auto_mapper\core\decoration_builder\decoration_stamp.h" />
+    <ClInclude Include="..\src\auto_mapper\core\decoration_builder\placeholder_vids.h" />
+    <ClInclude Include="..\src\auto_mapper\core\door_builder\door_builder.h" />
+    <ClInclude Include="..\src\auto_mapper\core\door_builder\door_profile_types.h" />
+    <ClInclude Include="..\src\auto_mapper\core\door_builder\door_profiles_as1.h" />
+    <ClInclude Include="..\src\auto_mapper\core\door_builder\door_profiles_as2.h" />
+    <ClInclude Include="..\src\auto_mapper\core\geometry.h" />
+    <ClInclude Include="..\src\auto_mapper\core\indoor_decorations\array_layout.h" />
+    <ClInclude Include="..\src\auto_mapper\core\indoor_decorations\desk_builder.h" />
+    <ClInclude Include="..\src\auto_mapper\core\indoor_decorations\incubator_builder.h" />
+    <ClInclude Include="..\src\auto_mapper\core\map_generator.h" />
+    <ClInclude Include="..\src\auto_mapper\core\randomizer.h" />
+    <ClInclude Include="..\src\auto_mapper\core\scatter\gore\gore_builder.h" />
+    <ClInclude Include="..\src\auto_mapper\core\scatter\loot\loot_box_builder.h" />
+    <ClInclude Include="..\src\auto_mapper\core\scatter\loot\loot_table.h" />
+    <ClInclude Include="..\src\auto_mapper\core\scatter\scatter_fill.h" />
+    <ClInclude Include="..\src\auto_mapper\core\vid_properties\vid_armies_as2.h" />
+    <ClInclude Include="..\src\auto_mapper\core\vid_properties\vid_property_types.h" />
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\ceiling_profiles_as1.h" />
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\curve_wall_builder.h" />
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\wall_builder.h" />
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\wall_profile_types.h" />
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\wall_profiles_as1.h" />
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\wall_profiles_as2.h" />
+    <ClInclude Include="..\src\auto_mapper\io\as1_map_writer.h" />
+    <ClInclude Include="..\src\auto_mapper\io\as2_map_writer.h" />
+    <ClInclude Include="..\src\auto_mapper\io\map_writer.h" />
+    <ClInclude Include="..\src\auto_mapper\io\map_writer_binary.h" />
+    <ClInclude Include="..\src\auto_mapper\io\templates.h" />
+    <ClInclude Include="..\src\game_assets\game_family.h" />
+    <ClInclude Include="..\src\game_assets\objects\object_table.h" />
+    <ClInclude Include="..\src\game_assets\res\byte_reader.h" />
+    <ClInclude Include="..\src\game_assets\res\res_file.h" />
+    <ClInclude Include="..\src\game_assets\vid\vid_file.h" />
+    <ClInclude Include="..\src\game_assets\vid\vid_library.h" />
+    <ClInclude Include="..\src\editor\catalog\catalog.h" />
+    <ClInclude Include="..\src\editor\config.h" />
+    <ClInclude Include="..\src\editor\hotkeys\hotkey_config.h" />
+    <ClInclude Include="..\src\editor\hotkeys\hotkey_dialog.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\hotkeys\hotkey_manager.h" />
+    <ClInclude Include="..\src\editor\i18n\locale.h" />
+    <ClInclude Include="..\src\editor\i18n\text_keys.h" />
+    <ClInclude Include="..\src\editor\logger.h" />
+    <ClInclude Include="..\src\editor\loot_presets.h" />
+    <ClInclude Include="..\src\editor\project\project.h" />
+    <ClInclude Include="..\src\editor\ui\canvas\stamp_sprites.h" />
+    <ClInclude Include="..\src\editor\ui\canvas\viewport.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\colors.h" />
+    <ClInclude Include="..\src\editor\ui\main_window.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\as1_ceiling.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\gore_brush.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\inspector.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\left_shelf.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\loot_brush.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\loot_table_dialog.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\sprite_preview_dialog.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\theme_shelf.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\tools\drawing_modes.h" />
+    <ClInclude Include="..\src\editor\ui\tools\drawing_toolbar.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\tools\eraser\eraser_geometry.h" />
+    <ClInclude Include="..\src\editor\ui\tools\eraser\eraser_properties.h">
+      <QtMoc>true</QtMoc>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\widget_helpers.h" />
+  </ItemGroup>
+  <!-- Embedded resources: :/catalog.json, :/i18n/*.json, :/styles/*.qss. -->
+  <ItemGroup>
+    <None Include="..\src\editor\resources\editor_assets.qrc">
+      <QtRcc>true</QtRcc>
+    </None>
+    <None Include="..\src\editor\resources\catalog.json" />
+    <None Include="..\src\editor\resources\i18n\en_US.json" />
+    <None Include="..\src\editor\resources\i18n\zh_CN.json" />
+    <None Include="..\src\editor\resources\styles\dark_theme.qss" />
+    <None Include="..\src\editor\resources\styles\hotkeys.qss" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="qt.targets" />
+</Project>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Settings shared by every AutoMapper project (MSVC, x64, C++20).
+    bin\<Platform>\<Configuration>\              AutoMapper.exe, AutoMapper.Tests.exe, Qt DLLs, assets\
+    out\<Project>\<Platform>\<Configuration>\    intermediate files (obj, moc, rcc, tlog)
+  Both folders sit in the repository root.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <!-- Repository root with a trailing backslash. -->
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</RepoRoot>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutDir>$(RepoRoot)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(RepoRoot)out\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <!-- AutoMapper.Core.lib is only linked into the exes, so it stays with the intermediate files. -->
+  <PropertyGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
+    <OutDir>$(IntDir)</OutDir>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <WarningLevel>Level3</WarningLevel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <!-- Sources are UTF-8; Qt also needs the real __cplusplus value. -->
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <!-- src\ is the include root: #include "auto_mapper/common/logger.h". -->
+      <AdditionalIncludeDirectories>$(RepoRoot)src;$(RepoRoot)src\3rdparty\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- spdlog is used header-only; its bundled fmt 9 uses stdext iterators removed by recent MSVC, so format with std::format. -->
+      <PreprocessorDefinitions>SPDLOG_USE_STD_FORMAT;WIN32;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Debug'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Release'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

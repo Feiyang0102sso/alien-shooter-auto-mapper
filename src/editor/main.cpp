@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     app.setApplicationName("AutoMapper");
     app.setOrganizationName("AutoMapper");
 
-    // Qt reads PRODUCTVERSION from editor.rc as four numbers ("1.0.1.0");
+    // Qt reads PRODUCTVERSION from vs/AutoMapper.rc as four numbers ("1.0.1.0");
     // AutoMapper versions have three parts, so drop the unused fourth one.
     QStringList versionParts = QCoreApplication::applicationVersion().split('.');
     if (versionParts.size() == 4)

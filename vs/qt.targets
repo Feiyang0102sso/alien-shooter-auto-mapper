@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Minimal moc / rcc / windeployqt rules, so the solution builds without the Qt VS Tools extension.
+
+  Mark files in the project with QtMoc / QtRcc metadata:
+    <ClInclude Include="...\main_window.h"><QtMoc>true</QtMoc></ClInclude>    -> moc_main_window.cpp, compiled
+    <ClCompile Include="...\test_editor.cpp"><QtMoc>true</QtMoc></ClCompile>  -> test_editor.moc, #included by the cpp
+    <None Include="...\editor_assets.qrc"><QtRcc>true</QtRcc></None>          -> qrc_editor_assets.cpp, compiled
+  The resource name passed to rcc is the qrc file name: Q_INIT_RESOURCE(editor_assets).
+  Every None item is treated as an rcc input, so list the files the qrc embeds as None items.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <QtMocExe>$(QtDir)bin\moc.exe</QtMocExe>
+    <QtRccExe>$(QtDir)bin\rcc.exe</QtRccExe>
+    <QtDeployExe>$(QtDir)bin\windeployqt.exe</QtDeployExe>
+  </PropertyGroup>
+
+  <!-- The IDE's fast up-to-date check does not know about qrc contents; list them explicitly. -->
+  <ItemGroup>
+    <UpToDateCheckInput Include="@(None)" />
+  </ItemGroup>
+
+  <!-- Collect the marked files. Runs every build; the actual tools run only for changed inputs. -->
+  <Target Name="QtCollectInputs">
+    <ItemGroup>
+      <QtMocHeader Include="@(ClInclude)" Condition="'%(ClInclude.QtMoc)' == 'true'" />
+      <QtMocSource Include="@(ClCompile)" Condition="'%(ClCompile.QtMoc)' == 'true'" />
+      <QtRccFile Include="@(None)" Condition="'%(None.QtRcc)' == 'true'" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Header with Q_OBJECT -> moc_<name>.cpp. Inputs/Outputs map one to one, so only changed headers rerun. -->
+  <Target Name="QtMocHeaders" DependsOnTargets="QtCollectInputs"
+          Inputs="@(QtMocHeader)" Outputs="@(QtMocHeader->'$(QtMocDir)moc_%(Filename).cpp')">
+    <MakeDir Directories="$(QtMocDir)" />
+    <Message Importance="high" Text="moc %(QtMocHeader.Filename)%(QtMocHeader.Extension)" />
+    <Exec Command="&quot;$(QtMocExe)&quot; --compiler-flavor=msvc -I&quot;$(RepoRoot)src&quot; &quot;%(QtMocHeader.FullPath)&quot; -o &quot;$(QtMocDir)moc_%(QtMocHeader.Filename).cpp&quot;" />
+  </Target>
+
+  <!-- Source with Q_OBJECT (QTest classes) -> <name>.moc, included at the end of that source. -->
+  <Target Name="QtMocSources" DependsOnTargets="QtCollectInputs"
+          Inputs="@(QtMocSource)" Outputs="@(QtMocSource->'$(QtMocDir)%(Filename).moc')">
+    <MakeDir Directories="$(QtMocDir)" />
+    <Message Importance="high" Text="moc %(QtMocSource.Filename)%(QtMocSource.Extension)" />
+    <Exec Command="&quot;$(QtMocExe)&quot; --compiler-flavor=msvc -I&quot;$(RepoRoot)src&quot; &quot;%(QtMocSource.FullPath)&quot; -o &quot;$(QtMocDir)%(QtMocSource.Filename).moc&quot;" />
+  </Target>
+
+  <!-- qrc -> qrc_<name>.cpp. Any None item (the embedded json / qss files) counts as an input. -->
+  <Target Name="QtRcc" DependsOnTargets="QtCollectInputs"
+          Inputs="@(None)" Outputs="@(QtRccFile->'$(QtRccDir)qrc_%(Filename).cpp')">
+    <MakeDir Directories="$(QtRccDir)" />
+    <Message Importance="high" Text="rcc %(QtRccFile.Filename)%(QtRccFile.Extension)" />
+    <Exec Command="&quot;$(QtRccExe)&quot; --name %(QtRccFile.Filename) &quot;%(QtRccFile.FullPath)&quot; -o &quot;$(QtRccDir)qrc_%(QtRccFile.Filename).cpp&quot;" />
+  </Target>
+
+  <!--
+    Add the generated sources to the compile list. Kept apart from the targets above because a skipped
+    (up-to-date) target would not add them.
+  -->
+  <Target Name="QtGenerate" BeforeTargets="ClCompile" DependsOnTargets="QtMocHeaders;QtMocSources;QtRcc">
+    <ItemGroup>
+      <ClCompile Include="@(QtMocHeader->'$(QtMocDir)moc_%(Filename).cpp')" />
+      <ClCompile Include="@(QtRccFile->'$(QtRccDir)qrc_%(Filename).cpp')" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Copy the Qt DLLs and plugins next to each exe so it runs straight from bin\. Reruns only after a relink.
+    qoffscreen is for the editor tests (tests/main.cpp runs them offscreen).
+    windeployqt prints "Translations will not be available" because the Qt SDK has no translations\ folder;
+    IgnoreStandardErrorWarningFormat keeps that line from counting as a build warning.
+    The portable package runs windeployqt again without qoffscreen (builder.bat package).
+  -->
+  <Target Name="QtDeploy" AfterTargets="Build" Condition="'$(ConfigurationType)' == 'Application'"
+          Inputs="$(TargetPath)" Outputs="$(IntDir)windeployqt.stamp">
+    <Exec IgnoreStandardErrorWarningFormat="true"
+          Command="&quot;$(QtDeployExe)&quot; --$(Configuration.ToLower()) --no-translations --no-compiler-runtime --no-opengl-sw --no-system-d3d-compiler --skip-plugin-types generic,networkinformation,tls --include-plugins qoffscreen &quot;$(TargetPath)&quot;" />
+    <Touch Files="$(IntDir)windeployqt.stamp" AlwaysCreate="true" />
+  </Target>
+</Project>

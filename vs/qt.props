@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Qt 6 (shared, MSVC x64) settings for every AutoMapper project. qt.targets runs moc and rcc.
+  The Qt SDK path can be overridden with a QTDIR environment variable.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <QtDir Condition="'$(QtDir)' == ''">E:\Qt\6.11.1\msvc2022_64\</QtDir>
+    <QtDir>$([MSBuild]::EnsureTrailingSlash('$(QtDir)'))</QtDir>
+    <!-- Debug builds link Qt6Cored.lib and friends. -->
+    <QtLibSuffix></QtLibSuffix>
+    <QtLibSuffix Condition="'$(Configuration)' == 'Debug'">d</QtLibSuffix>
+    <!-- Generated moc_*.cpp / *.moc and qrc_*.cpp. -->
+    <QtMocDir>$(IntDir)moc\</QtMocDir>
+    <QtRccDir>$(IntDir)rcc\</QtRccDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Qt headers are external: /external:I with warnings off. -->
+    <ExternalIncludePath>$(QtDir)include;$(QtDir)include\QtCore;$(QtDir)include\QtGui;$(QtDir)include\QtWidgets;$(QtDir)include\QtConcurrent;$(QtDir)mkspecs\win32-msvc;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <!-- test_editor.cpp includes its generated "test_editor.moc". -->
+      <AdditionalIncludeDirectories>$(QtMocDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- QT_MESSAGELOGCONTEXT keeps file/line in Release Qt messages so AutoMapper.log can point at the source. -->
+      <PreprocessorDefinitions>QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_CONCURRENT_LIB;QT_MESSAGELOGCONTEXT;WIN64;_WIN64;_ENABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(QtDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt6Core$(QtLibSuffix).lib;Qt6Gui$(QtLibSuffix).lib;Qt6Widgets$(QtLibSuffix).lib;Qt6Concurrent$(QtLibSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>QT_NO_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

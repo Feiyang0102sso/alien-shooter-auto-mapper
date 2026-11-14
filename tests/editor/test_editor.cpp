@@ -1142,5 +1142,12 @@ class EditorTest : public QObject {
         QVERIFY(window.close());
     }
 };
-QTEST_MAIN(EditorTest)
+// Called by tests/main.cpp after the core tests; same setup as QTEST_MAIN for a widgets test.
+int run_editor_tests(int argc, char **argv) {
+    QApplication app(argc, argv);
+    app.setAttribute(Qt::AA_Use96Dpi, true);
+    EditorTest test;
+    return QTest::qExec(&test, argc, argv);
+}
+
 #include "test_editor.moc"

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="editor">
+      <UniqueIdentifier>{C921C9FC-C036-534C-910E-CD45E688F8E1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vs">
+      <UniqueIdentifier>{9CE8C33D-3F0A-5684-9351-79E82C2E1BB0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\editor\main.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ResourceCompile Include="..\vs\AutoMapper.rc">
+      <Filter>vs</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

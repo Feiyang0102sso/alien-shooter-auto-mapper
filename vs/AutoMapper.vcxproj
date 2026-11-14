@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <ProjectGuid>{511EC081-3E21-5EC6-B58C-27EA9B8135AD}</ProjectGuid>
+    <RootNamespace>AutoMapper</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)' == 'Debug'">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)' == 'Release'">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="common.props" />
+    <Import Project="qt.props" />
+  </ImportGroup>
+  <PropertyGroup>
+    <TargetName>AutoMapper</TargetName>
+    <!-- Run like the shipped exe: AutoMapper.cfg, AutoMapper.log and assets\ beside it. -->
+    <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <!-- WinMain that forwards to main(). -->
+      <AdditionalDependencies>Qt6EntryPoint$(QtLibSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\editor\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Icon and the application version (the only place the version is written). -->
+    <ResourceCompile Include="AutoMapper.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="AutoMapper.Core.vcxproj">
+      <Project>{21ABFB85-CC0F-5EB7-825C-1737CD592352}</Project>
+    </ProjectReference>
+  </ItemGroup>
+
+  <!--
+    Keep bin\<Platform>\<Configuration>\ runnable: preview images, decoration library maps and loot_presets.ini.
+    Runs on every build, so a newly added library map is copied even when the exe does not relink.
+    Files deleted from assets\ are not removed from bin\.
+    loot_presets.ini: the repository-root copy is the source; a build overwrites presets saved into the bin\ copy
+    (run with the repository root as working directory to edit the source).
+  -->
+  <ItemGroup>
+    <PreviewAsset Include="$(RepoRoot)assets\preview\**\*" />
+    <DecorationMapAsset Include="$(RepoRoot)assets\decoration_maps\**\*" />
+    <UpToDateCheckInput Include="@(PreviewAsset);@(DecorationMapAsset);$(RepoRoot)loot_presets.ini" />
+  </ItemGroup>
+  <Target Name="SyncRuntimeAssets" AfterTargets="Build">
+    <Copy SourceFiles="@(PreviewAsset)" DestinationFolder="$(OutDir)assets\preview\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(DecorationMapAsset)" DestinationFolder="$(OutDir)assets\decoration_maps\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(RepoRoot)loot_presets.ini" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="qt.targets" />
+</Project>

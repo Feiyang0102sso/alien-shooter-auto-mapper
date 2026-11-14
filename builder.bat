@@ -1,10 +1,12 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-rem Build and test AutoMapper (MSVC Release).
-rem   Output: build\msvc-release\AutoMapper.exe  (runs in place: Qt DLLs and assets\ are copied next to it)
-rem   builder.bat package "<folder>"  -> also installs the portable app into <folder> (used by pack_release.bat)
+rem Build and test AutoMapper (MSVC Release x64) with vs\AutoMapper.sln.
+rem   Output: bin\x64\Release\AutoMapper.exe  (runs in place: Qt DLLs and assets\ are copied next to it)
+rem   Tests:  bin\x64\Release\AutoMapper.Tests.exe, editor test details in bin\x64\Release\native-editor-results.txt
+rem pack_release.bat packages what this script built; it does not build by itself.
 set "EXIT_CODE=0"
+set "BIN_DIR=bin\x64\Release"
 
 rem Discover MSVC so builds also work outside a developer command prompt.
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -22,29 +24,18 @@ if not defined VS_INSTALL (
 call "%VS_INSTALL%\VC\Auxiliary\Build\vcvars64.bat"
 if errorlevel 1 goto failed
 
-rem Use the CMake and Ninja shipped with Visual Studio.
-set "VS_CMAKE=%VS_INSTALL%\Common7\IDE\CommonExtensions\Microsoft\CMake"
-set "PATH=%VS_CMAKE%\CMake\bin;%VS_CMAKE%\Ninja;%PATH%"
-rem Only one build flavour is maintained: MSVC Release.
-set "BUILD_PRESET=msvc-release"
+rem MSBuild looks up the UCRT headers through the 64-bit registry first; use the SDK that vcvars found instead,
+rem in case that registry entry points at a folder without headers.
+set "UCRTContentRoot=%UniversalCRTSdkDir%"
 
-cmake --preset %BUILD_PRESET%
+msbuild vs\AutoMapper.sln /m /nologo /v:minimal /p:Configuration=Release /p:Platform=x64
 if errorlevel 1 goto failed
-cmake --build --preset %BUILD_PRESET% --target auto_mapper_tests auto_mapper_editor auto_mapper_editor_tests
-if errorlevel 1 goto failed
-ctest --preset %BUILD_PRESET%
+
+rem Tests resolve tests\golden from the working directory (the repository root).
+"%BIN_DIR%\AutoMapper.Tests.exe" -o "%BIN_DIR%\native-editor-results.txt,txt" -o "-,txt"
 if errorlevel 1 goto failed
 echo.
-echo [OK] Built build\%BUILD_PRESET%\AutoMapper.exe
-
-if /i not "%~1"=="package" goto finish
-if "%~2"=="" (
-    echo [Error] builder.bat package needs the install folder as its second argument.
-    goto failed
-)
-cmake --install "build/%BUILD_PRESET%" --prefix "%~2" --component NativeEditor
-if errorlevel 1 goto failed
-echo [OK] Installed portable app into %~2
+echo [OK] Built %BIN_DIR%\AutoMapper.exe
 goto finish
 
 :failed
@@ -53,6 +44,5 @@ echo.
 echo [Error] Build failed. See the messages above.
 
 :finish
-rem pack_release.bat calls this script with "package" and pauses once at its own end.
-if /i not "%~1"=="package" @pause
+@pause
 exit /b %EXIT_CODE%

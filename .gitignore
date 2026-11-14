@@ -20,29 +20,18 @@ ENV/
 *.tmp
 ui_settings.json
 
-# --- C / C++ / CMake ---
-build*/
-build_cmake/
-cmake-build-*/
-bin/
-obj/
-lib/
-*.o
+# --- C / C++ / Visual Studio ---
+# vs/AutoMapper.sln: bin/ holds the exes and their runtime files, out/ the intermediate files.
+/bin/
+/out/
+.vs/
+*.vcxproj.user
 *.obj
 *.exe
 *.dll
-*.so
-*.dylib
-*.a
 *.lib
-CMakeCache.txt
-CMakeFiles/
-CMakeScripts/
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-include/
+*.pdb
+*.ilk
 
 # --- Project Specific (Auto Mapper) ---
 *.map

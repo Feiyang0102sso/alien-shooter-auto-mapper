@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="editor">
+      <UniqueIdentifier>{4B5670E5-4ECE-5236-A1C0-98BC8BC38042}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{D9C5ACC7-81B8-51C3-9037-EF036FEA2C51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\3rdparty">
+      <UniqueIdentifier>{1A7406F6-2A5A-5E65-9EE3-2C4B2777926A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\3rdparty\googletest">
+      <UniqueIdentifier>{FDAF7BA4-E579-57BF-ACED-5B226D3F67B1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\3rdparty\googletest\src">
+      <UniqueIdentifier>{DEBE512F-7906-56E9-9BF0-AF1EAB520349}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{BFE960C8-E703-5E4E-BB77-F9F869BEA406}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\tests\main.cpp" />
+    <ClCompile Include="..\tests\test_array_layout.cpp" />
+    <ClCompile Include="..\tests\test_curve_wall_builder.cpp" />
+    <ClCompile Include="..\tests\test_decoration_builder.cpp" />
+    <ClCompile Include="..\tests\test_desk_builder.cpp" />
+    <ClCompile Include="..\tests\test_door_builder.cpp" />
+    <ClCompile Include="..\tests\test_geometry.cpp" />
+    <ClCompile Include="..\tests\test_gore.cpp" />
+    <ClCompile Include="..\tests\test_incubator_builder.cpp" />
+    <ClCompile Include="..\tests\test_loot.cpp" />
+    <ClCompile Include="..\tests\test_map_generator.cpp" />
+    <ClCompile Include="..\tests\test_map_writer.cpp" />
+    <ClCompile Include="..\tests\test_randomizer.cpp" />
+    <ClCompile Include="..\tests\test_vid_armies.cpp" />
+    <ClCompile Include="..\tests\test_wall_builder.cpp" />
+    <ClCompile Include="..\tests\golden_candidates.cpp" />
+    <ClCompile Include="..\tests\editor\test_editor.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\3rdparty\googletest\src\gtest-all.cc">
+      <Filter>src\3rdparty\googletest\src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\tests\utils\test_utils.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

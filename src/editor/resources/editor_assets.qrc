@@ -1,0 +1,12 @@
+<!-- Small text resources embedded in the exe: :/catalog.json, :/i18n/*.json, :/styles/*.qss.
+     Preview images and decoration library maps stay outside the exe in <exe dir>/assets.
+     A new file here must also be listed as a None item in vs/AutoMapper.Core.vcxproj. -->
+<RCC>
+    <qresource prefix="/">
+        <file>catalog.json</file>
+        <file>i18n/en_US.json</file>
+        <file>i18n/zh_CN.json</file>
+        <file>styles/dark_theme.qss</file>
+        <file>styles/hotkeys.qss</file>
+    </qresource>
+</RCC>

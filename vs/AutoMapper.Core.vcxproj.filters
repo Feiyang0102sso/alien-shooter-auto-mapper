@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="auto_mapper">
+      <UniqueIdentifier>{DF59D07D-25A3-5304-AFEE-1E6931794806}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\common">
+      <UniqueIdentifier>{4637EEDD-8F3E-5876-971F-26EAB8D06793}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core">
+      <UniqueIdentifier>{12568882-8CF0-5342-9363-82D71F1F6588}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core\decoration_builder">
+      <UniqueIdentifier>{7FCF1B7E-9A61-5FDE-92E4-E2CB15E59B27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core\door_builder">
+      <UniqueIdentifier>{5677A811-D684-5F36-A32D-0A8DC8843094}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core\indoor_decorations">
+      <UniqueIdentifier>{23CA2B51-1917-5997-94EC-D002088B58D2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core\scatter">
+      <UniqueIdentifier>{64388FD2-F9F8-5403-999E-497CEF4148A1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core\scatter\gore">
+      <UniqueIdentifier>{A7193E87-97A3-5DC1-BA46-9343ECC9F29A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core\scatter\loot">
+      <UniqueIdentifier>{79A8719F-4048-574A-94D7-814DA5BE65E5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core\vid_properties">
+      <UniqueIdentifier>{53C5DF01-7E95-5983-9B24-0F1CC87A6D06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\core\wall_builder">
+      <UniqueIdentifier>{C2CE4FE8-5AE6-5A34-9D0D-F2D8CD4C5AFD}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="auto_mapper\io">
+      <UniqueIdentifier>{8B756E77-B568-56BB-BA1B-CE51CE2AD92A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor">
+      <UniqueIdentifier>{34DCA3A6-EF4E-5B02-9461-024D6756857B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\catalog">
+      <UniqueIdentifier>{5112FA6D-4FD5-53B8-B368-812FDAD380F8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\hotkeys">
+      <UniqueIdentifier>{E5EBE1FB-98DE-52EC-8461-0CC807FA3BB5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\i18n">
+      <UniqueIdentifier>{5AAF0848-87A8-5CF1-ABDE-324E4BF3CB59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\project">
+      <UniqueIdentifier>{A8264865-AD54-598A-8DB2-2DF877C2FD06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\resources">
+      <UniqueIdentifier>{7A445D24-2269-50ED-9E15-7662261F2D12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\resources\i18n">
+      <UniqueIdentifier>{0AC23A5F-B0A7-5903-93B7-9389DE9F1F1E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\resources\styles">
+      <UniqueIdentifier>{847E7DE7-E306-551E-AE6C-110A2FD6D5DC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\ui">
+      <UniqueIdentifier>{741873BB-088D-5611-A256-7A6BF1D9C6DA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\ui\canvas">
+      <UniqueIdentifier>{E033BC8C-6205-52FB-82EF-18468B649C35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\ui\panels">
+      <UniqueIdentifier>{DCC91639-10BF-59B3-9D34-F8AE294F76AA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\ui\tools">
+      <UniqueIdentifier>{8178BA25-68A1-569E-B207-6CA47F027435}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor\ui\tools\eraser">
+      <UniqueIdentifier>{2A10873E-625C-5C6E-90AD-75EE0D6A8411}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="game_assets">
+      <UniqueIdentifier>{0D3617EA-4224-5701-BA2E-1C2E565672B4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="game_assets\objects">
+      <UniqueIdentifier>{4F29E49A-FFC3-5B1B-9AF6-295957A102F6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="game_assets\res">
+      <UniqueIdentifier>{05C3A8DA-194E-5994-BA8E-59E0B601B101}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="game_assets\vid">
+      <UniqueIdentifier>{82879ECB-A980-5045-A09B-6AEEC4A0D4AB}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\auto_mapper\common\config.cpp">
+      <Filter>auto_mapper\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\common\logger.cpp">
+      <Filter>auto_mapper\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\decoration_builder\decoration_builder.cpp">
+      <Filter>auto_mapper\core\decoration_builder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\decoration_builder\decoration_library.cpp">
+      <Filter>auto_mapper\core\decoration_builder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\decoration_builder\placeholder_vids.cpp">
+      <Filter>auto_mapper\core\decoration_builder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\door_builder\door_builder.cpp">
+      <Filter>auto_mapper\core\door_builder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\geometry.cpp">
+      <Filter>auto_mapper\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\indoor_decorations\array_layout.cpp">
+      <Filter>auto_mapper\core\indoor_decorations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\indoor_decorations\desk_builder.cpp">
+      <Filter>auto_mapper\core\indoor_decorations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\indoor_decorations\incubator_builder.cpp">
+      <Filter>auto_mapper\core\indoor_decorations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\map_generator.cpp">
+      <Filter>auto_mapper\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\randomizer.cpp">
+      <Filter>auto_mapper\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\scatter\gore\gore_builder.cpp">
+      <Filter>auto_mapper\core\scatter\gore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\scatter\loot\loot_box_builder.cpp">
+      <Filter>auto_mapper\core\scatter\loot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\scatter\loot\loot_table.cpp">
+      <Filter>auto_mapper\core\scatter\loot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\scatter\scatter_fill.cpp">
+      <Filter>auto_mapper\core\scatter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\wall_builder\curve_wall_builder.cpp">
+      <Filter>auto_mapper\core\wall_builder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\core\wall_builder\wall_builder.cpp">
+      <Filter>auto_mapper\core\wall_builder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\io\as1_map_writer.cpp">
+      <Filter>auto_mapper\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\io\as2_map_writer.cpp">
+      <Filter>auto_mapper\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\auto_mapper\io\map_writer.cpp">
+      <Filter>auto_mapper\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game_assets\objects\object_table.cpp">
+      <Filter>game_assets\objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game_assets\res\res_file.cpp">
+      <Filter>game_assets\res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game_assets\vid\vid_file.cpp">
+      <Filter>game_assets\vid</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game_assets\vid\vid_library.cpp">
+      <Filter>game_assets\vid</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\catalog\catalog.cpp">
+      <Filter>editor\catalog</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\config.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\hotkeys\hotkey_config.cpp">
+      <Filter>editor\hotkeys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\hotkeys\hotkey_dialog.cpp">
+      <Filter>editor\hotkeys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\hotkeys\hotkey_manager.cpp">
+      <Filter>editor\hotkeys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\i18n\locale.cpp">
+      <Filter>editor\i18n</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\logger.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\loot_presets.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\project\project.cpp">
+      <Filter>editor\project</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\canvas\stamp_sprites.cpp">
+      <Filter>editor\ui\canvas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\canvas\viewport.cpp">
+      <Filter>editor\ui\canvas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\colors.cpp">
+      <Filter>editor\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\main_window.cpp">
+      <Filter>editor\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\panels\as1_ceiling.cpp">
+      <Filter>editor\ui\panels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\panels\gore_brush.cpp">
+      <Filter>editor\ui\panels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\panels\inspector.cpp">
+      <Filter>editor\ui\panels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\panels\left_shelf.cpp">
+      <Filter>editor\ui\panels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\panels\loot_brush.cpp">
+      <Filter>editor\ui\panels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\panels\loot_table_dialog.cpp">
+      <Filter>editor\ui\panels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\panels\sprite_preview_dialog.cpp">
+      <Filter>editor\ui\panels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\panels\theme_shelf.cpp">
+      <Filter>editor\ui\panels</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\tools\drawing_toolbar.cpp">
+      <Filter>editor\ui\tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\tools\eraser\eraser_geometry.cpp">
+      <Filter>editor\ui\tools\eraser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ui\tools\eraser\eraser_properties.cpp">
+      <Filter>editor\ui\tools\eraser</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\auto_mapper\common\config.h">
+      <Filter>auto_mapper\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\common\logger.h">
+      <Filter>auto_mapper\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\decoration_builder\decoration_builder.h">
+      <Filter>auto_mapper\core\decoration_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\decoration_builder\decoration_library.h">
+      <Filter>auto_mapper\core\decoration_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\decoration_builder\decoration_stamp.h">
+      <Filter>auto_mapper\core\decoration_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\decoration_builder\placeholder_vids.h">
+      <Filter>auto_mapper\core\decoration_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\door_builder\door_builder.h">
+      <Filter>auto_mapper\core\door_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\door_builder\door_profile_types.h">
+      <Filter>auto_mapper\core\door_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\door_builder\door_profiles_as1.h">
+      <Filter>auto_mapper\core\door_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\door_builder\door_profiles_as2.h">
+      <Filter>auto_mapper\core\door_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\geometry.h">
+      <Filter>auto_mapper\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\indoor_decorations\array_layout.h">
+      <Filter>auto_mapper\core\indoor_decorations</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\indoor_decorations\desk_builder.h">
+      <Filter>auto_mapper\core\indoor_decorations</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\indoor_decorations\incubator_builder.h">
+      <Filter>auto_mapper\core\indoor_decorations</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\map_generator.h">
+      <Filter>auto_mapper\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\randomizer.h">
+      <Filter>auto_mapper\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\scatter\gore\gore_builder.h">
+      <Filter>auto_mapper\core\scatter\gore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\scatter\loot\loot_box_builder.h">
+      <Filter>auto_mapper\core\scatter\loot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\scatter\loot\loot_table.h">
+      <Filter>auto_mapper\core\scatter\loot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\scatter\scatter_fill.h">
+      <Filter>auto_mapper\core\scatter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\vid_properties\vid_armies_as2.h">
+      <Filter>auto_mapper\core\vid_properties</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\vid_properties\vid_property_types.h">
+      <Filter>auto_mapper\core\vid_properties</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\ceiling_profiles_as1.h">
+      <Filter>auto_mapper\core\wall_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\curve_wall_builder.h">
+      <Filter>auto_mapper\core\wall_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\wall_builder.h">
+      <Filter>auto_mapper\core\wall_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\wall_profile_types.h">
+      <Filter>auto_mapper\core\wall_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\wall_profiles_as1.h">
+      <Filter>auto_mapper\core\wall_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\core\wall_builder\wall_profiles_as2.h">
+      <Filter>auto_mapper\core\wall_builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\io\as1_map_writer.h">
+      <Filter>auto_mapper\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\io\as2_map_writer.h">
+      <Filter>auto_mapper\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\io\map_writer.h">
+      <Filter>auto_mapper\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\io\map_writer_binary.h">
+      <Filter>auto_mapper\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\auto_mapper\io\templates.h">
+      <Filter>auto_mapper\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game_assets\game_family.h">
+      <Filter>game_assets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game_assets\objects\object_table.h">
+      <Filter>game_assets\objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game_assets\res\byte_reader.h">
+      <Filter>game_assets\res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game_assets\res\res_file.h">
+      <Filter>game_assets\res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game_assets\vid\vid_file.h">
+      <Filter>game_assets\vid</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game_assets\vid\vid_library.h">
+      <Filter>game_assets\vid</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\catalog\catalog.h">
+      <Filter>editor\catalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\config.h">
+      <Filter>editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\hotkeys\hotkey_config.h">
+      <Filter>editor\hotkeys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\hotkeys\hotkey_dialog.h">
+      <Filter>editor\hotkeys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\hotkeys\hotkey_manager.h">
+      <Filter>editor\hotkeys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\i18n\locale.h">
+      <Filter>editor\i18n</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\i18n\text_keys.h">
+      <Filter>editor\i18n</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\logger.h">
+      <Filter>editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\loot_presets.h">
+      <Filter>editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\project\project.h">
+      <Filter>editor\project</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\canvas\stamp_sprites.h">
+      <Filter>editor\ui\canvas</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\canvas\viewport.h">
+      <Filter>editor\ui\canvas</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\colors.h">
+      <Filter>editor\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\main_window.h">
+      <Filter>editor\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\as1_ceiling.h">
+      <Filter>editor\ui\panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\gore_brush.h">
+      <Filter>editor\ui\panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\inspector.h">
+      <Filter>editor\ui\panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\left_shelf.h">
+      <Filter>editor\ui\panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\loot_brush.h">
+      <Filter>editor\ui\panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\loot_table_dialog.h">
+      <Filter>editor\ui\panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\sprite_preview_dialog.h">
+      <Filter>editor\ui\panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\panels\theme_shelf.h">
+      <Filter>editor\ui\panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\tools\drawing_modes.h">
+      <Filter>editor\ui\tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\tools\drawing_toolbar.h">
+      <Filter>editor\ui\tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\tools\eraser\eraser_geometry.h">
+      <Filter>editor\ui\tools\eraser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\tools\eraser\eraser_properties.h">
+      <Filter>editor\ui\tools\eraser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ui\widget_helpers.h">
+      <Filter>editor\ui</Filter>
+    </ClInclude>
+    <None Include="..\src\editor\resources\editor_assets.qrc">
+      <Filter>editor\resources</Filter>
+    </None>
+    <None Include="..\src\editor\resources\catalog.json">
+      <Filter>editor\resources</Filter>
+    </None>
+    <None Include="..\src\editor\resources\i18n\en_US.json">
+      <Filter>editor\resources\i18n</Filter>
+    </None>
+    <None Include="..\src\editor\resources\i18n\zh_CN.json">
+      <Filter>editor\resources\i18n</Filter>
+    </None>
+    <None Include="..\src\editor\resources\styles\dark_theme.qss">
+      <Filter>editor\resources\styles</Filter>
+    </None>
+    <None Include="..\src\editor\resources\styles\hotkeys.qss">
+      <Filter>editor\resources\styles</Filter>
+    </None>
+  </ItemGroup>
+</Project>

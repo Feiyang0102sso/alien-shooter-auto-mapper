@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <ProjectGuid>{543C74A4-138B-5A58-9BC0-6CEE536E3A9E}</ProjectGuid>
+    <RootNamespace>AutoMapperTests</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)' == 'Debug'">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)' == 'Release'">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="common.props" />
+    <Import Project="qt.props" />
+  </ImportGroup>
+  <PropertyGroup>
+    <!-- Tests look up tests/golden from the working directory. -->
+    <LocalDebuggerWorkingDirectory>$(RepoRoot)</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <ExternalIncludePath>$(QtDir)include\QtTest;$(ExternalIncludePath)</ExternalIncludePath>
+    <!-- The editor tests read loot_presets.ini and the decoration maps from the source tree. -->
+    <RepoRootForwardSlash>$(RepoRoot.TrimEnd('\').Replace('\', '/'))</RepoRootForwardSlash>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RepoRoot)tests;$(RepoRoot)src\3rdparty\googletest\include;$(RepoRoot)src\3rdparty\googletest;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>QT_TESTLIB_LIB;AUTO_MAPPER_SOURCE_DIR="$(RepoRootForwardSlash)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>Qt6Test$(QtLibSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <!-- Core tests (GoogleTest), editor tests (Qt Test) and the golden candidate exporter in one exe. -->
+  <ItemGroup>
+    <ClCompile Include="..\tests\main.cpp" />
+    <ClCompile Include="..\tests\test_array_layout.cpp" />
+    <ClCompile Include="..\tests\test_curve_wall_builder.cpp" />
+    <ClCompile Include="..\tests\test_decoration_builder.cpp" />
+    <ClCompile Include="..\tests\test_desk_builder.cpp" />
+    <ClCompile Include="..\tests\test_door_builder.cpp" />
+    <ClCompile Include="..\tests\test_geometry.cpp" />
+    <ClCompile Include="..\tests\test_gore.cpp" />
+    <ClCompile Include="..\tests\test_incubator_builder.cpp" />
+    <ClCompile Include="..\tests\test_loot.cpp" />
+    <ClCompile Include="..\tests\test_map_generator.cpp" />
+    <ClCompile Include="..\tests\test_map_writer.cpp" />
+    <ClCompile Include="..\tests\test_randomizer.cpp" />
+    <ClCompile Include="..\tests\test_vid_armies.cpp" />
+    <ClCompile Include="..\tests\test_wall_builder.cpp" />
+    <ClCompile Include="..\tests\golden_candidates.cpp" />
+    <ClCompile Include="..\tests\editor\test_editor.cpp">
+      <QtMoc>true</QtMoc>
+    </ClCompile>
+    <ClCompile Include="..\src\3rdparty\googletest\src\gtest-all.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\tests\utils\test_utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="AutoMapper.Core.vcxproj">
+      <Project>{21ABFB85-CC0F-5EB7-825C-1737CD592352}</Project>
+    </ProjectReference>
+    <!-- Build order only: AutoMapper.exe brings assets\ into bin\ that the editor tests load. -->
+    <ProjectReference Include="AutoMapper.vcxproj">
+      <Project>{511EC081-3E21-5EC6-B58C-27EA9B8135AD}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="qt.targets" />
+</Project>
