@@ -99,7 +99,7 @@
   "status.canvas_cleared": "Canvas cleared",
   "status.exported_project": "Exported {segment_count} wall segments and {door_count} doors: {file_path}",
   "status.imported_project": "Imported {segment_count} wall segments and {door_count} doors: {file_path}",
-  "status.generated_map": "Generated map: {output_path}",
+  "status.generated_map": "Generated map: {output_path}; project saved alongside: {project_path}",
   "status.eraser_size": "Eraser size: {size}",
   "status.language_saved": "Language saved: {language_name}. Restart to apply it fully.",
   "message.language_changed": "Language has been changed to {language_name}. Restart Auto Mapper to apply it fully.",

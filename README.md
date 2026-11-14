@@ -46,7 +46,8 @@ Auto Mapper currently cannot edit an existing map. The recommended workflow is:
 2. Choose the game on the left (AS1 / AS2 series and its version) and set the map size in the right panel. Switching between AS1 and the AS2 series starts a new project.
 3. Pick a shelf on the left: **Wall Sets**, **Decoration Sets**, and, in AS2 series projects, **Loot Boxes** and **Gore**.
 4. Draw on the canvas and tune the current tool in the right panel. F1 clears the canvas to start over.
-5. **Generate Map** (F4) writes the `.map` file; **Export JSON** (F3) saves the project so you can keep editing later.
+5. **Generate Map** (F4) writes the `.map` file and saves the project as a `.json` file with the same name next to it (overwriting any existing one),
+   so you can import it (F2) and keep editing later. **Export JSON** (F3) saves the project on its own at any time.
 
 The `assets/` folder next to `AutoMapper.exe` holds the decoration library maps and previews. Do not delete it.
 
@@ -87,6 +88,7 @@ Output goes to `bin/x64/<Configuration>/`.
   - Added curve walls (AS2 series): freehand rock, alien nest, and cliff, with matching floors laid automatically.
   - Added the Loot Boxes shelf (AS2 series): wood box, metal box, and alien egg brushes, with loot tables and loot presets (`loot_presets.ini`).
   - Added the Gore shelf (AS2 series): bone pile, monster corpse, soldier corpse, and blood pool brushes.
+  - Generating a map also saves the project as a `.json` file with the same name next to the `.map`.
 - **v1.1.0 (2026-10-12):**
   - Rewrote the UI in C++ / Qt.
 - **v1.0 (2026-09-06):**

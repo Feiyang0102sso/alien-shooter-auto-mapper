@@ -81,7 +81,15 @@ MainWindow::MainWindow(const QString &localeName, QWidget *parent)
         ExportResult result = exportWatcher_.result();
         if (result.success) {
             qInfo() << "Generated map:" << outputPath_;
-            showStatus(locale.tr(TextKey::STATUS_GENERATED_MAP, {{"output_path", outputPath_}}), STATUS_LONG_MS);
+            // Save the project next to the map (same name, .json) so the map can be edited again later.
+            QFileInfo mapInfo(outputPath_);
+            QString projectPath = mapInfo.dir().filePath(mapInfo.completeBaseName() + ".json");
+            if (!saveProject(projectPath))
+                return;
+            qInfo() << "Saved project with map:" << projectPath;
+            showStatus(locale.tr(TextKey::STATUS_GENERATED_MAP,
+                                 {{"output_path", outputPath_}, {"project_path", projectPath}}),
+                       STATUS_LONG_MS);
             return;
         }
         QString message = locale.tr(TextKey::ERROR_CPP_ENGINE_GENERATE_FAILED);

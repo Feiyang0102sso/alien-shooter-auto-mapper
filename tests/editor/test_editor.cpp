@@ -1128,6 +1128,10 @@ class EditorTest : public QObject {
         QVERIFY(!window.isEnabled());
         QTRY_VERIFY_WITH_TIMEOUT(window.isEnabled(), 10000);
         QVERIFY(QFileInfo(output).size() > 280);
+        // The project is saved next to the map with the same name and becomes the current project file.
+        auto projectOutput = directory.filePath("异步导出.json");
+        QCOMPARE(Project::load(projectOutput).segments.size(), size_t(2));
+        QVERIFY(!window.isDirty());
         window.findChild<QDoubleSpinBox *>("mapWidth")->setValue(800);
         window.findChild<QPushButton *>("applyMapSize")->click();
         QCOMPARE(window.project.width, 800.0);

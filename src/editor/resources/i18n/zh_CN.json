@@ -92,7 +92,7 @@
   "status.canvas_cleared": "画布已清空",
   "status.exported_project": "已导出 {segment_count} 条墙体线段和 {door_count} 个门：{file_path}",
   "status.imported_project": "已导入 {segment_count} 条墙体线段和 {door_count} 个门：{file_path}",
-  "status.generated_map": "已生成地图：{output_path}",
+  "status.generated_map": "已生成地图：{output_path}，项目已一并保存：{project_path}",
   "status.eraser_size": "橡皮擦尺寸：{size}",
   "group.decoration_property": "装饰属性",
   "label.item_spacing": "物件间距",
